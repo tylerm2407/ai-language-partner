@@ -2,12 +2,13 @@
  * Home, UI 2.0 — the lower page: continue-learning unit rows, the daily
  * three, the week strip, and the talk / hands-free action rows.
  *
- * Every card here is `glass` (Atmosphere, 2026-09-14) — see HomeSections.
+ * Every card here is `clay` (2026-09-16): raised volumes, sunken grooves for
+ * the bars, raised solid tiles for the icons — see HomeSections and `useClay`.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { SlabCard } from '../SlabCard';
+import { SlabCard, useClay } from '../SlabCard';
 import { useHomeEnter } from './HomeSections';
 import { haptic } from '../../../lib/haptics';
 import { localDayKey } from '../../../lib/dates';
@@ -48,13 +49,14 @@ interface UnitRowsProps {
 
 export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: UnitRowsProps) {
   const { c, type } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
 
   if (!loading && error && (!tiles || tiles.length === 0)) {
     return (
       <Animated.View entering={enter(4)} style={styles.section}>
         <SectionTitle title="Continue learning" />
-        <SlabCard glass style={{ gap: 8 }}>
+        <SlabCard clay style={{ gap: 8 }}>
           <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>Couldn&apos;t load your lessons.</Text>
           <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Retry loading lessons" style={styles.retry}>
             <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: c.primary }}>Try again</Text>
@@ -69,7 +71,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
       <Animated.View entering={enter(4)} style={styles.section}>
         <SectionTitle title="Continue learning" />
         {[0, 1].map((i) => (
-          <SlabCard key={i} glass style={styles.unitRow}>
+          <SlabCard key={i} clay style={styles.unitRow}>
             <View style={[styles.pctTile, { backgroundColor: c.surface2 }]} />
             <View style={{ flex: 1, gap: 8 }}>
               <View style={[styles.skeleton, { backgroundColor: c.trackOnCard, width: '55%' }]} />
@@ -102,8 +104,8 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
             accessibilityRole="button"
             accessibilityLabel={`${tile.title}, ${tile.completedCount} of ${tile.lessonCount} lessons, ${pct} percent complete`}
           >
-            <SlabCard glass style={styles.unitRow}>
-              <View style={[styles.pctTile, { backgroundColor: tint, borderWidth: 1, borderColor: c.glassBorder }]}>
+            <SlabCard clay style={styles.unitRow}>
+              <View style={[styles.pctTile, { backgroundColor: tint }, clay.bowl]}>
                 <Text style={{ fontFamily: type.heading, fontSize: 13, color: onPct }}>{pct}%</Text>
               </View>
               <View style={{ flex: 1, gap: 7, minWidth: 0 }}>
@@ -115,7 +117,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
                     {tile.completedCount} / {tile.lessonCount}
                   </Text>
                 </View>
-                <View style={[styles.bar, { backgroundColor: c.trackOnCard }]}>
+                <View style={[styles.bar, { backgroundColor: c.trackOnCard }, clay.well]}>
                   <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: color }]} />
                 </View>
               </View>
@@ -145,6 +147,7 @@ interface DailyThreeProps {
 
 export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
   const { c, type } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
 
   // A failed load and "nothing to show today" used to render identically —
@@ -157,7 +160,7 @@ export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
     return (
       <Animated.View entering={enter(5)} style={styles.section}>
         <SectionTitle title="Your daily three" />
-        <SlabCard glass style={{ gap: 8 }}>
+        <SlabCard clay style={{ gap: 8 }}>
           <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>
             Couldn&apos;t load today&apos;s challenges.
           </Text>
@@ -174,13 +177,13 @@ export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
   return (
     <Animated.View entering={enter(5)} style={styles.section}>
       <SectionTitle title="Your daily three" />
-      <SlabCard glass style={{ gap: 14 }}>
+      <SlabCard clay style={{ gap: 14 }}>
         {items.map((it) => {
           const done = it.target > 0 && it.current >= it.target;
           const pct = it.target > 0 ? Math.min(it.current / it.target, 1) * 100 : 0;
           return (
             <View key={it.type} style={styles.dailyRow} accessibilityLabel={`${it.title}: ${it.current} of ${it.target}${done ? ', done' : ''}`}>
-              <View style={[styles.dot, { backgroundColor: done ? c.green : c.trackOnCard }]}>
+              <View style={[styles.dot, done ? clay.raised(c.green) : [{ backgroundColor: c.trackOnCard }, clay.well]]}>
                 {done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
               </View>
               <View style={{ flex: 1, gap: 6 }}>
@@ -192,7 +195,7 @@ export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
                     {Math.min(it.current, it.target)} / {it.target}
                   </Text>
                 </View>
-                <View style={[styles.bar, { backgroundColor: c.trackOnCard, height: 6 }]}>
+                <View style={[styles.bar, { backgroundColor: c.trackOnCard, height: 6 }, clay.well]}>
                   <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: c.green }]} />
                 </View>
               </View>
@@ -209,6 +212,7 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; error?: ErrorCopy | null; onRetry?: () => void }) {
   const { c, type } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
 
   // Monday-first week, keyed by local day so a late-night session lands on
@@ -232,7 +236,7 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
   return (
     <Animated.View entering={enter(6)} style={styles.section}>
       <SectionTitle title="This week" />
-      <SlabCard glass style={{ gap: 12 }}>
+      <SlabCard clay style={{ gap: 12 }}>
         {error ? (
           <>
             <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>{error.title}</Text>
@@ -255,7 +259,7 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
             <View style={styles.week} accessibilityLabel={`Minutes practised this week: ${days.map((d) => `${d.label} ${displayMinutes(d.minutes)}`).join(', ')}`}>
               {days.map((d) => (
                 <View key={d.key} style={styles.dayCol}>
-                  <View style={[styles.dayTrack, { backgroundColor: c.trackOnCard }]}>
+                  <View style={[styles.dayTrack, { backgroundColor: c.trackOnCard }, clay.well]}>
                     <View
                       style={[
                         styles.dayFill,
@@ -289,6 +293,7 @@ interface ActionRowProps {
 
 export function ActionRow({ icon, tint, title, subtitle, onPress, accessibilityHint, index }: ActionRowProps) {
   const { c, type } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
   const color = tint === 'primary' ? c.primary : tint === 'pink' ? c.pink : tint === 'yellow' ? c.yellow : c.green;
   return (
@@ -302,8 +307,8 @@ export function ActionRow({ icon, tint, title, subtitle, onPress, accessibilityH
         accessibilityLabel={title}
         accessibilityHint={accessibilityHint}
       >
-        <SlabCard glass style={styles.unitRow}>
-          <View style={[styles.pctTile, { backgroundColor: color }]}>
+        <SlabCard clay style={styles.unitRow}>
+          <View style={[styles.pctTile, clay.raised(color)]}>
             <Ionicons name={icon} size={18} color={tint === 'yellow' ? '#23203A' : '#FFFFFF'} />
           </View>
           <View style={{ flex: 1, gap: 1, minWidth: 0 }}>
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   unitRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 },
   unitTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  pctTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  pctTile: { width: 40, height: 40, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   bar: { height: 8, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
   skeleton: { height: 12, borderRadius: 6 },

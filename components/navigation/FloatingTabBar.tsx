@@ -1,37 +1,30 @@
 /**
  * FloatingTabBar — a 56px-tall pill, 40px active circle, 44pt hit targets.
  *
- * The BlurView + translucent fill are gone: the pill is an opaque `c.card`
- * with a 1px border, matching every other surface (and no longer smearing the
- * glow blobs behind it). That also drops the iOS/Android fork — both platforms
- * render identically.
- *
- * UI 2.0: the pill carries a 5px slab bottom edge. In dark, `card` already
- * separates from `bg` on its own; in LIGHT both are #FFFFFF, so a hairline
- * border is the only thing holding a white pill off a white screen. The slab
- * edge is how UI 2.0 makes depth everywhere else, and it is the reason the bar
- * still reads as a floating object once the phone is set to light. It eats 4px
- * of the pill's inner height (54 -> 50), which still clears the 44pt targets,
- * and it does not touch the width arithmetic below.
+ * Clay (canvas "Fluenci Home · Depth", board 4; Tyler asked for its bar
+ * 2026-09-16): the pill is a clay volume — `useClay().card`, an inner light
+ * edge, an inner shade and a soft drop — so it floats off white screens and
+ * the lilac Home ground alike without a border. No `overflow: hidden`: that
+ * would clip the drop. The active disc is a raised `primary` clay button.
+ * Every tab screen gets this bar, not only Home.
  *
  * The WIDTH is no longer a constant. It is a measured value per tab count
  * (`tabPillWidth`), because the pill spaces its buttons with `space-evenly`
  * and that only looks right when the leftover room divides into a gap wide
  * enough to keep two 40px circles apart. See tabPillWidth for the arithmetic.
  *
- * The active disc is a still `primary` → `slab` gradient. It carried the app
- * icon's cyan-to-magenta ramp for a day (2026-09-10) and drifted for another
- * (2026-09-11); Tyler then asked for it back — the logo colours read as
- * "vibe coded" and are the same colourway as a competitor. Do not bring the
- * ramp or the motion back here.
+ * The active disc carried the app icon's cyan-to-magenta ramp for a day
+ * (2026-09-10) and drifted for another (2026-09-11); Tyler then asked for it
+ * back — the logo colours read as "vibe coded" and are the same colourway as
+ * a competitor. Do not bring the ramp or the motion back here.
  */
 
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { radii, ui2Shape } from '../../config/theme';
+import { radii } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useClay } from '../ui2/SlabCard';
 import { useImmersive } from '../../hooks/useImmersive';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
@@ -181,6 +174,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   // must never sit above a hook, or the hook order changes the moment the tutor
   // call is focused and React tears the tree down.
   const { c } = useUi2Theme();
+  const clay = useClay();
   const immersive = useImmersive();
   if (shouldHideTabBar(state, immersive)) return null;
 
@@ -216,14 +210,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             accessibilityLabel={descriptors[route.key]?.options.title ?? route.name}
           >
             {isFocused ? (
-              <LinearGradient
-                colors={[c.primary, c.slab]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.activeCircle}
-              >
+              <View style={[styles.activeCircle, clay.raised(c.primary)]}>
                 <Ionicons name={iconName as any} size={22} color={c.onPrimary} />
-              </LinearGradient>
+              </View>
             ) : (
               <View style={styles.inactiveCircle}>
                 <Ionicons name={iconName as any} size={22} color={c.idle} />
@@ -237,7 +226,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   return (
     <View style={[styles.container, { bottom: bottomOffset }]}>
-      <View style={[styles.pill, { width: tabPillWidth(visibleRoutes.length), backgroundColor: c.card, borderColor: c.cardBorder }]}>{inner}</View>
+      <View style={[styles.pill, clay.card, styles.pillShape, { width: tabPillWidth(visibleRoutes.length) }]}>{inner}</View>
     </View>
   );
 }
@@ -254,12 +243,9 @@ const styles = StyleSheet.create({
     // width comes from tabPillWidth(), applied inline — it depends on how many
     // tabs are actually mounted, which a static stylesheet cannot know.
     height: TAB_BAR_HEIGHT,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    // The slab edge; fill and border colour are applied inline from the palette.
-    borderBottomWidth: ui2Shape.slab,
-    overflow: 'hidden',
   },
+  // After `clay.card`, whose radius is a card's, not a pill's.
+  pillShape: { borderRadius: radii.pill },
   tabRow: {
     flex: 1,
     flexDirection: 'row',

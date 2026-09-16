@@ -24,7 +24,6 @@ import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
-import { Atmosphere } from '../../components/ui2/home/Atmosphere';
 import { CefrExplainerSheet, useCefrExplainer } from '../../components/ui2/CefrExplainerSheet';
 import { LanguageSwitcherSheet } from '../../components/ui2/LanguageSwitcherSheet';
 import { useLanguageEnrollments } from '../../hooks/useLanguageEnrollments';
@@ -229,7 +228,8 @@ export default function HomeScreen() {
   }, [user?.id, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
 
   return (
-    <View style={[styles.root, { backgroundColor: c.bg }]}>
+    // Home alone sits on the lilac clay ground; its cards are raised off it.
+    <View style={[styles.root, { backgroundColor: c.clayGround }]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <ScrollView
         style={styles.root}
@@ -237,9 +237,6 @@ export default function HomeScreen() {
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
-        {/* The colour glows every glass card on this page sits over. Inside the
-            scroll view so they move with the content, behind it in z-order. */}
-        <Atmosphere />
         <SafeAreaView edges={['top']} style={styles.stack}>
           <HomeHeader
             greeting={greeting}

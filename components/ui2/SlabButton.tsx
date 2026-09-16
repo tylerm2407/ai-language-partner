@@ -29,6 +29,9 @@ interface SlabButtonProps {
   /** Trailing chevron. Off for terminal actions ("Skip", "Save"). */
   arrow?: boolean;
   style?: ViewStyle;
+  /** Applied to the filled pill itself rather than its touch target — for an
+   *  inset `boxShadow`, which the fill would otherwise paint over. */
+  fillStyle?: ViewStyle;
   accessibilityHint?: string;
 }
 
@@ -44,6 +47,7 @@ export function SlabButton({
   loading,
   arrow = true,
   style,
+  fillStyle,
   accessibilityHint,
 }: SlabButtonProps) {
   const { c, type, shape } = useUi2Theme();
@@ -108,6 +112,7 @@ export function SlabButton({
             borderRadius: shape.radiusButton,
             opacity: inactive ? 0.6 : 1,
           },
+          fillStyle,
           animated,
         ]}
       >
