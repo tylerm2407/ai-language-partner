@@ -461,7 +461,14 @@ export function gradeAnswer(
         `"${twin}". The correct answer is: ${correctAnswer}`,
       normalizedUserAnswer: normalized,
       normalizedCorrectAnswer: normalizedCorrect,
-      errorType: hints ? classifyError(userAnswer, correctAnswer, hints) : null,
+      // NOT `classifyError`, which sees one character's difference and says
+      // spelling. It is not a spelling slip: `accentOnlyPartner` has just
+      // established that stripping the accent lands on a different word the
+      // course also teaches. Calling it spelling routes the feedback into a
+      // card headed "Small typo", which tells the learner the mistake is
+      // trivial in the same breath as refusing it — the one reading this
+      // refusal exists to prevent.
+      errorType: 'lexical',
     };
   }
 
