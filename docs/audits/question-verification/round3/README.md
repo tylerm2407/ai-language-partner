@@ -5,7 +5,11 @@ is ruled: accept the reading.** On a written-production row whose cue is an
 English gloss, a correct Japanese word written in the other script is a correct
 answer. 61 rows, 66 readings.
 
-Ruled 2026-09-16. Decision 2 (register) is **not** ruled and remains open.
+**Decision 2 is also ruled: fix the cue, not the grading.** Seven prompts gain
+an explicit register marker; no accepted answer moves. See
+[Decision 2](#decision-2--register) below.
+
+Both ruled 2026-09-16. `round2-triage/needs-human.md` is now closed.
 
 ## The ruling
 
@@ -88,3 +92,62 @@ the corpus as it actually stands and not the frozen pre-patch one.
 | `draft-patches.json` | the guarded patch objects — empty of pending writes, kept as the record |
 | `withdraw.sql` | the guarded undo, **not applied**, if kanji is ever required explicitly |
 | `widening-check.json` | the full harness output |
+
+
+---
+
+# Decision 2 — register
+
+**Ruling: fix the cue, not the grading.** Applied as
+`supabase/migrations/137_register_cues.sql`, 7 rows, prompt copy only.
+
+## Why not accept-upward / refuse-downward
+
+The triage recommended accepting a raised register and refusing a dropped one.
+Upward turned out to be live already — round two added 料理します, でしょう,
+아닙니다, 공부했습니다, 갔습니다, 해야 합니다, 해야 해요, 바라요, 바랍니다 and
+저는 바랍니다 — so the only thing still refused anywhere in this class was
+downward, on seven rows.
+
+And refusing downward fails by the triage's own argument. It justified accepting
+upward with "hard to justify refusing on a cue that names no register", and
+`Translate to Korean: I studied` names no register in either direction. The
+asymmetry is pedagogical (A1 teaches the polite greeting), not evidential, and a
+grading rule cannot carry a distinction the prompt does not make.
+
+So the prompt makes it:
+
+| ref | was | is now | now honestly refuses |
+|---|---|---|---|
+| `ja-E0014` | `Translate to Japanese: Good morning` | `Translate to Japanese (polite): Good morning` | おはよう |
+| `ja-E0038` | `Translate to Japanese: Good night` | `Translate to Japanese (polite): Good night` | おやすみ |
+| `ko-E0066` | `Translate to Korean: No` | `Translate to Korean (polite): No` | 아니 |
+| `ko-E0856` | `Translate to Korean: I studied` | `Translate to Korean (polite): I studied` | 공부했다 |
+| `ko-E0862` | `Translate to Korean: I went` | `Translate to Korean (polite): I went` | 갔다 |
+| `ko-E0889` | `Fill in the missing word: _____ means I studied` | `Fill in the missing word (polite form): _____ means I studied` | 공부했다 |
+| `ko-E0901` | `Fill in the missing word: _____ means I played` | `Fill in the missing word (polite form): _____ means I played` | 놀았다 |
+
+## This resolves the §2 inconsistency without touching those rows
+
+The triage flags `JA-POLITE-AFFIX` refusing おはよう while `lexical` accepts
+ごめん for すみません, うん for はい and ううん for いいえ — the same casual-for-polite
+move on the same kind of bare A1 gloss — and says one position has to give.
+
+Neither has to. Those four keep bare-gloss cues, and a bare gloss accepting
+either register is right. The grading now differs because the **cues** differ,
+which is a distinction the learner can see. Withdrawing three live acceptances
+was the other way to make it consistent, and the worse one: it newly rejects
+correct answers to fix a wording problem.
+
+## Five of the twelve rows need no cue
+
+`ja-E0462` is the script decision. `ja-E0712`, `ja-E1642`, `ko-E1670` and
+`ko-E1684` are keyed at the PLAIN level with the polite forms already accepted,
+so they refuse nothing and a marker would only narrow a row that is currently
+correct.
+
+## No widening check is needed here
+
+Round three part one needed one because it added accepted answers. This adds
+none — it is prompt copy — so no typo neighbourhood moves and nothing new can
+be admitted. `reverse.sql` is the guarded undo, unapplied.

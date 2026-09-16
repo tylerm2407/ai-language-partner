@@ -1,0 +1,79 @@
+[
+  {
+    "ref": "ja-E0014",
+    "id": "aabbccdd-6666-1001-0002-e00000000002",
+    "type": "translate_to_target",
+    "key": "おはようございます",
+    "from": "Translate to Japanese: Good morning",
+    "to": "Translate to Japanese (polite): Good morning",
+    "refuses": [
+      "おはよう"
+    ]
+  },
+  {
+    "ref": "ja-E0038",
+    "id": "aabbccdd-6666-1001-0004-e00000000002",
+    "type": "translate_to_target",
+    "key": "おやすみなさい",
+    "from": "Translate to Japanese: Good night",
+    "to": "Translate to Japanese (polite): Good night",
+    "refuses": [
+      "おやすみ"
+    ]
+  },
+  {
+    "ref": "ko-E0066",
+    "id": "aabbccdd-7777-1001-0006-e00000000006",
+    "type": "translate_to_target",
+    "key": "아니요",
+    "from": "Translate to Korean: No",
+    "to": "Translate to Korean (polite): No",
+    "refuses": [
+      "아니"
+    ]
+  },
+  {
+    "ref": "ko-E0856",
+    "id": "aabbccdd-7777-2005-0001-e00000000008",
+    "type": "translate_to_target",
+    "key": "공부했어요",
+    "from": "Translate to Korean: I studied",
+    "to": "Translate to Korean (polite): I studied",
+    "refuses": [
+      "공부했다"
+    ]
+  },
+  {
+    "ref": "ko-E0862",
+    "id": "aabbccdd-7777-2005-0002-e00000000002",
+    "type": "translate_to_target",
+    "key": "갔어요",
+    "from": "Translate to Korean: I went",
+    "to": "Translate to Korean (polite): I went",
+    "refuses": [
+      "갔다"
+    ]
+  },
+  {
+    "ref": "ko-E0889",
+    "id": "aabbccdd-7777-2005-0004-e00000000005",
+    "type": "cloze_deletion",
+    "key": "공부했어요",
+    "from": "Fill in the missing word: _____ means I studied",
+    "to": "Fill in the missing word (polite form): _____ means I studied",
+    "refuses": [
+      "공부했다"
+    ]
+  },
+  {
+    "ref": "ko-E0901",
+    "id": "aabbccdd-7777-2005-0005-e00000000005",
+    "type": "cloze_deletion",
+    "key": "놀았어요",
+    "from": "Fill in the missing word: _____ means I played",
+    "to": "Fill in the missing word (polite form): _____ means I played",
+    "refuses": [
+      "놀았다"
+    ]
+  }
+]

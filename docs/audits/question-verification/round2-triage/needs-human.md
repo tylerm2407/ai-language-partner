@@ -1,4 +1,4 @@
-# Needs a human — 1 decision left, 12 rows
+# Needs a human — CLOSED, both decisions ruled 2026-09-16
 
 > **Decision 1 is RULED (2026-09-16): accept the reading.** See
 > [`../round3/README.md`](../round3/README.md). All 66 readings were already

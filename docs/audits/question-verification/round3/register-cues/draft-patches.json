@@ -1,0 +1,120 @@
+{
+  "snapshot_sha256": "b982b1e00c0f",
+  "status": "built",
+  "round": 3,
+  "part": "register cues (Decision 2)",
+  "ruled_on": "2026-09-16",
+  "apply_precondition": "None. Prompt copy only — no accepted answer is added or withdrawn, so no grading behaviour changes and no widening is possible.",
+  "patches": [
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1001-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Good morning",
+        "correct_answer": "おはようございます",
+        "accepted_answers": []
+      },
+      "after": {
+        "prompt": "Translate to Japanese (polite): Good morning"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Good night",
+        "correct_answer": "おやすみなさい",
+        "accepted_answers": []
+      },
+      "after": {
+        "prompt": "Translate to Japanese (polite): Good night"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1001-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1001-0006-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Korean: No",
+        "correct_answer": "아니요",
+        "accepted_answers": [
+          "아닙니다"
+        ]
+      },
+      "after": {
+        "prompt": "Translate to Korean (polite): No"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2005-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0001-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Korean: I studied",
+        "correct_answer": "공부했어요",
+        "accepted_answers": [
+          "저는 공부했어요",
+          "공부했습니다"
+        ]
+      },
+      "after": {
+        "prompt": "Translate to Korean (polite): I studied"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2005-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0002-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Korean: I went",
+        "correct_answer": "갔어요",
+        "accepted_answers": [
+          "저는 갔어요",
+          "갔습니다"
+        ]
+      },
+      "after": {
+        "prompt": "Translate to Korean (polite): I went"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2005-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0004-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means I studied",
+        "correct_answer": "공부했어요",
+        "accepted_answers": [
+          "공부했습니다"
+        ]
+      },
+      "after": {
+        "prompt": "Fill in the missing word (polite form): _____ means I studied"
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2005-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0005-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means I played",
+        "correct_answer": "놀았어요",
+        "accepted_answers": [
+          "놀았습니다"
+        ]
+      },
+      "after": {
+        "prompt": "Fill in the missing word (polite form): _____ means I played"
+      }
+    }
+  ]
+}
