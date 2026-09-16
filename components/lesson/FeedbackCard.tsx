@@ -138,7 +138,13 @@ export function FeedbackCard({
         <Text className="text-warning text-sm font-sans-semibold mb-1">
           Not quite
         </Text>
-        <Text className="text-text-primary text-[15px] mb-2">{cue}</Text>
+        {/* The grader sets `explanation` only where this card's typed copy
+            would mislead — an accent that distinguishes two taught words is
+            not "word choice", it is those two words. It names the answer, so
+            it waits for the reveal exactly as the block below does. */}
+        <Text className="text-text-primary text-[15px] mb-2">
+          {revealAnswer && result.explanation?.trim() ? result.explanation : cue}
+        </Text>
 
         {revealAnswer ? (
           <View className="mt-1 mb-2">

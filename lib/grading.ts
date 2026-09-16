@@ -19,6 +19,22 @@ export interface GradeResult {
    * confident classification is possible.
    */
   errorType?: FeedbackErrorType | null;
+  /**
+   * A sentence naming what actually went wrong, set only where the generic
+   * card copy would mislead.
+   *
+   * Ten of the eleven feedback strings this module produces are boilerplate
+   * ("Correct!", "Incorrect. The correct answer is: X"), and `FeedbackCard`
+   * rightly prefers its own typed copy to any of them. One is not: when an
+   * answer strips an accent that distinguishes two words the course both
+   * teaches, the only useful thing to say names both words, and no label
+   * chosen from `errorType` can.
+   *
+   * It NAMES THE CORRECT ANSWER, so a caller must not show it before the
+   * answer is revealed — the card gates it on `revealAnswer` for the same
+   * reason its other branches do.
+   */
+  explanation?: string;
 }
 
 /**
@@ -459,6 +475,8 @@ export function gradeAnswer(
       feedback:
         `Not quite — the accent is the whole difference between "${correctAnswer}" and ` +
         `"${twin}". The correct answer is: ${correctAnswer}`,
+      explanation:
+        `The accent is the whole difference between "${correctAnswer}" and "${twin}".`,
       normalizedUserAnswer: normalized,
       normalizedCorrectAnswer: normalizedCorrect,
       // NOT `classifyError`, which sees one character's difference and says
