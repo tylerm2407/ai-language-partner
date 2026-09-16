@@ -51,6 +51,56 @@ const path = fileArg !== -1 && process.argv[fileArg + 1]
     : resolve(root, 'supabase/migrations/134_question_audit_content_patch.sql');
 const body = await readFile(path, 'utf8');
 
+/**
+ * A patch that declares a precondition does not get applied by someone who has
+ * not read it.
+ *
+ * Round two carried `apply_precondition` in its own `draft-patches.json`, in its
+ * migration header and in the remaining-work register: it must ship in the same
+ * release as the grading work, because seven of its rows have no other defence
+ * than the Japanese edit-distance gate. It was applied anyway, on 2026-09-16,
+ * by a session that had the file in front of it. Sixteen wrong answers became
+ * acceptable on every build without that gate, and nothing stopped it, because
+ * a precondition written in a document is a hope rather than a control.
+ *
+ * So it lives here now. If a draft beside this SQL declares one, applying needs
+ * `--precondition-met "<evidence>"`, and the evidence is echoed into the run log
+ * so the claim has an author and a date. This cannot verify the claim — no
+ * script can know whether a build shipped — but it can make the claim a
+ * deliberate, recorded act instead of an omission.
+ *
+ * Deliberately keyed on the DRAFT beside the SQL rather than on a flag in the
+ * SQL, so a future round inherits the guard by declaring the field, with no
+ * change here.
+ */
+if (!reverse) {
+  const draftCandidates = [
+    path.replace(/supabase\/migrations\/\d+_question_audit_round_two\.sql$/, 'docs/audits/question-verification/round2/draft-patches.json'),
+    path.replace(/\/draft\.sql$/, '/draft-patches.json'),
+  ];
+  let declared = null;
+  for (const candidate of draftCandidates) {
+    if (candidate === path) continue;
+    try {
+      const draft = JSON.parse(await readFile(candidate, 'utf8'));
+      declared = draft.apply_precondition ?? draft.APPLY_PRECONDITION ?? null;
+      if (declared) break;
+    } catch { /* no draft beside this SQL; nothing declared */ }
+  }
+  if (declared) {
+    const metArg = process.argv.indexOf('--precondition-met');
+    const evidence = metArg !== -1 ? process.argv[metArg + 1] : null;
+    if (!evidence?.trim()) {
+      console.error('\nThis patch declares a precondition:\n');
+      console.error(`  ${String(declared).trim()}\n`);
+      console.error('Applying it needs --precondition-met "<evidence>" — what makes it true, in your words.');
+      console.error('Merging a branch is not shipping a build. A learner is protected by the code on their phone.\n');
+      process.exit(2);
+    }
+    console.log(JSON.stringify({ precondition: String(declared).trim(), declared_met_because: evidence.trim(), by: 'apply-remediation.mjs', at: new Date().toISOString() }, null, 2));
+  }
+}
+
 // The block walks 5,556 rows with a lock and an update each, which is well past
 // the API's default statement timeout. SET is transaction-local, so this does
 // not linger on the connection.

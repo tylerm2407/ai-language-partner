@@ -21,20 +21,39 @@ narrative.
 | Semantic-grading caps | settled: 20 starter, 300 paid |
 | Rollback for round one | `reverse.sql`, tested, **not applied** |
 
-## What is built and not shipped
+## Where this actually stands
 
-**The app binary.** Twelve commits of grading fixes are merged and green — 1,461
-app tests, 43 audit tests, typecheck clean — and **none of it has been on a
-screen.** The hint rendering alone changes what a learner sees on 398 rows and
-is verified by typecheck and lint only. This is the single blocking item.
+**Both content rounds are live.** Round one landed 2026-09-14 (5,556 rows) and
+round two on 2026-09-16 (820 rows). Round two's apply was clean — all 909 fields
+match the intended end state — but its precondition was not met.
 
-**Round two.** 640 rows, 723 fields, in `../round2/`. It carries an
-`apply_precondition` in its own `draft-patches.json` and must ship in the same
-release as the grader branch, never before it: its 391 accepted-answer additions
-widen typo tolerance while the Japanese edit-distance gate is absent from the
-shipped binary. A SQL patch cannot enforce that, which is why it is written into
-the artifact rather than only into a report. **So the app build now gates a
-database patch, not just the app.**
+**The precondition was violated, and the cost is measured rather than feared.**
+Round two declared that it must ship in the same release as the grading work,
+because seven of its rows have no defence but the Japanese edit-distance gate.
+It was applied while that gate existed only on a branch. Graded against a copy
+of `lib/grading.ts` with the gate removed — which is what every installed build
+runs — **sixteen wrong answers are currently accepted**:
+
+| row | now accepts |
+|---|---|
+| Grandmother | mother, father, older sister, young lady, neighbour |
+| Grandfather | mother, father, older sister, young lady, neighbour |
+| Shorter | cheaper, more expensive, better, faster, slower, worse |
+
+**The next app build closes all sixteen** and is the only thing that does. The
+audit is merged into the trunk as of 2026-09-16, so the gate and the content now
+travel together; nothing further is needed from the curriculum side.
+
+Reverting those four rows was considered and rejected: it optimises for a
+five-account test window at the cost of churn, and the build is coming anyway.
+
+**A guard now exists so this cannot recur quietly.**
+`scripts/question-audit/apply-remediation.mjs` refuses to apply any patch whose
+draft declares `apply_precondition` unless the operator passes
+`--precondition-met "<evidence>"`, which is echoed into the run log. It cannot
+verify a build shipped — no script can — but it makes the claim a deliberate,
+attributed act instead of an omission. A future round inherits the guard simply
+by declaring the field.
 
 ## Closed since the last revision
 
