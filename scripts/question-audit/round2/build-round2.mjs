@@ -19,6 +19,7 @@ import { restoredWithdrawals } from './restored-withdrawals.mjs';
 import { sameGlossLevelling } from './same-gloss-levelling.mjs';
 import { alternativesAxisRemainder } from './alternatives-axis-remainder.mjs';
 import { wuerdeCapitalisation } from './wuerde-capitalisation.mjs';
+import { travelBookingRuling } from './travel-booking-ruling.mjs';
 
 const set = await createRound2PatchSet();
 // Four blocks reach `accepted_answers` and five rows fall to more than one of
@@ -42,6 +43,9 @@ const counts = {
   // Before the ledger writes, so that a row this touches and an addition block
   // also claims would collide loudly instead of one silently winning.
   register_removals: registerRemovals(set),
+  // Same placement and same reason: it removes two accepted answers and adds
+  // one, so it must collide with an addition block rather than be overwritten.
+  travel_booking_ruling: travelBookingRuling(set),
 };
 counts.accepted_answer_rows = ledger.write(set).length;
 const patches = set.patches();

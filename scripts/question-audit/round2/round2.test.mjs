@@ -12,7 +12,8 @@ import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA } from './restored-withdrawals.mjs';
 import { LEVELLED, PROPAGATION_LEVELLED } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
-import { WUERDE_EDITS, WUERDE_LEFT_WRONG } from './wuerde-capitalisation.mjs';
+import { WUERDE_EDITS, WUERDE_SPEAKING_ROW } from './wuerde-capitalisation.mjs';
+import { TRAVEL_BOOKING_RULING } from './travel-booking-ruling.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -156,12 +157,12 @@ test('the build is reproducible: a second compile emits byte-identical patches',
   const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
     { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase, registerRemovals },
     { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }, { alternativesAxisRemainder },
-    { wuerdeCapitalisation }] = await Promise.all([
+    { wuerdeCapitalisation }, { travelBookingRuling }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
     import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'), import('./restored-withdrawals.mjs'),
     import('./same-gloss-levelling.mjs'), import('./alternatives-axis-remainder.mjs'),
-    import('./wuerde-capitalisation.mjs'),
+    import('./wuerde-capitalisation.mjs'), import('./travel-booking-ruling.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
@@ -175,6 +176,7 @@ test('the build is reproducible: a second compile emits byte-identical patches',
     wuerdeCapitalisation(set);
     frenchCheckpointParaphrase(set);
     registerRemovals(set);
+    travelBookingRuling(set);
     ledger.write(set);
     return set.patches();
   };
@@ -263,9 +265,20 @@ test('the patch stays inside its declared scope', () => {
   for (const patch of patches.filter(p => p.table === 'exercises')) {
     const original = byId.get(patch.id);
     assert(original, patch.id);
-    assert.notEqual(original.type, 'speaking');
-    assert.notEqual(original.response_mode, 'speak');
     assert.equal(original.user_id ?? null, null);
+    const spoken = original.type === 'speaking' || original.response_mode === 'speak';
+    if (!spoken) continue;
+    // Exactly one speaking row is in scope, and only for capitalisation. If a
+    // second appears, or this one gains an edit that changes a word, the
+    // exception in patch-set-round2.mjs has been widened and needs re-reading.
+    assert.equal(patch.id, WUERDE_SPEAKING_ROW.id, 'the only speaking row in scope is the Würde one');
+    for (const [field, value] of Object.entries(patch.after)) {
+      const before = original[field];
+      const flat = (v) => (Array.isArray(v) ? v.join('\u0000') : String(v));
+      assert.equal(Array.isArray(value), Array.isArray(before), `${field}: shape changed`);
+      if (Array.isArray(value)) assert.equal(value.length, before.length, `${field}: entries added or removed`);
+      assert.equal(flat(value).toLowerCase(), flat(before).toLowerCase(), `${field}: more than capitalisation changed`);
+    }
   }
   // Every reason carries the row it belongs to, and nothing is unexplained.
   for (const patch of patches) assert(patch.reasons.length && patch.reasons.every(r => r.trim().length > 20), patch.id);
@@ -330,8 +343,10 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
     ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id), ...PROPAGATION_LEVELLED.map(([id]) => id), ...AXIS_REMAINDER.map(([id]) => id)]);
   const wuerdeIds = new Set(WUERDE_EDITS.map(([id]) => id));
+  const travelIds = new Set(TRAVEL_BOOKING_RULING.rows);
   const touched = patches.filter(p => p.table === 'exercises'
-    && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id) && !wuerdeIds.has(p.id));
+    && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id) && !wuerdeIds.has(p.id)
+    && !travelIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
   const languages = new Set();
   for (const patch of touched) {
@@ -466,14 +481,16 @@ test('the two register removals withdraw exactly what was argued, and the keeps 
     const after = patch ? patch.after.accepted_answers ?? byId.get(entry.id).accepted_answers : byId.get(entry.id).accepted_answers;
     assert(after.includes(entry.kept), `${entry.ref}: ${entry.kept} was removed after all`);
   }
-  // Only these two rows lose an accepted answer while keeping their key. The
-  // three Film & Theater "Sculpture -> Stage" rows also drop alternatives, but
-  // they rewrite the key in the same patch, so keeping "Skulptur" on a row that
-  // now asks for "Bühne" would be the defect.
+  // Only three rows lose an accepted answer while keeping their key: these two
+  // register removals and the Travel ruling's 预约 row, each argued separately.
+  // The three Film & Theater "Sculpture -> Stage" rows also drop alternatives,
+  // but they rewrite the key in the same patch, so keeping "Skulptur" on a row
+  // that now asks for "Bühne" would be the defect.
   const losing = patches.filter(p => Array.isArray(p.after.accepted_answers)
     && !Object.hasOwn(p.after, 'correct_answer')
     && (p.before.accepted_answers ?? []).some(v => !p.after.accepted_answers.includes(v)));
-  assert.deepEqual(losing.map(p => p.id).sort(), REGISTER_REMOVALS.map(e => e.id).sort(),
+  const allowedToLose = [...REGISTER_REMOVALS.map(e => e.id), TRAVEL_BOOKING_RULING.rows[0]];
+  assert.deepEqual(losing.map(p => p.id).sort(), allowedToLose.sort(),
     'some other patch silently drops an accepted answer without replacing the key');
   passedChecks++;
 });
@@ -629,31 +646,37 @@ test('the alternatives-axis remainder adds only what was adjudicated, and refuse
 
 test('the Würde correction changes capitalisation only, and says so in the reason', () => {
   const byId = new Map([...snapshot.exercises, ...snapshot.cards].map(e => [e.id, e]));
-  assert.equal(WUERDE_EDITS.length, 7);
+  assert.equal(WUERDE_EDITS.length, 10);
+  const flat = (v) => (Array.isArray(v) ? v.join('\u0000') : String(v));
   for (const [id, table, field, before, after] of WUERDE_EDITS) {
-    assert.equal(byId.get(id)[field], before, `${id}.${field}: frozen value moved`);
-    assert.equal(before.toLowerCase(), after.toLowerCase(), `${id}.${field}: more than capitalisation changed`);
+    assert.equal(flat(byId.get(id)[field]), flat(before), `${id}.${field}: frozen value moved`);
+    assert.equal(flat(before).toLowerCase(), flat(after).toLowerCase(), `${id}.${field}: more than capitalisation changed`);
     const patch = patches.find(p => p.id === id && p.table === table);
     assert(patch, `${id}: not in the patch`);
-    assert.equal(patch.after[field], after);
+    assert.equal(flat(patch.after[field]), flat(after));
     // Anyone reading the diff will assume the gloss was wrong; the reason must
     // say otherwise on the row itself, not only in findings.json.
     const reason = patch.reasons.join(' ');
     assert(reason.includes('correction is to the KEY, not to the gloss'), `${id}: the reason does not invert the obvious reading`);
   }
-  // Exactly five rows, one of them the card, and no gloss anywhere is touched.
+  // Six rows now, one of them the card and one the speaking row; no gloss is
+  // touched anywhere.
   const touched = patches.filter(p => WUERDE_EDITS.some(([id, table]) => id === p.id && table === p.table));
-  assert.equal(touched.length, 5);
+  assert.equal(touched.length, 6);
   assert.equal(touched.filter(p => p.table === 'cards').length, 1);
   for (const patch of touched) {
     for (const value of Object.values(patch.after)) assert(!/dignity/i.test(String(value)));
   }
-  // The speaking row is still there and still wrong, on purpose.
-  const spoken = snapshot.exercises.find(e => e.id === WUERDE_LEFT_WRONG.id);
+  // The speaking row is now corrected too, so the cluster is uniform. It is the
+  // only speaking content this audit touches, and only for capitalisation.
+  const spoken = snapshot.exercises.find(e => e.id === WUERDE_SPEAKING_ROW.id);
   assert.equal(spoken.type, 'speaking');
   assert.equal(spoken.correct_answer, 'Würde');
-  assert(!patches.some(p => p.id === WUERDE_LEFT_WRONG.id), 'the speaking row must not be patched');
-  assert.ok(WUERDE_LEFT_WRONG.why.trim().length > 120, 'the row left wrong needs its reason recorded');
+  const spokenPatch = patches.find(p => p.id === WUERDE_SPEAKING_ROW.id);
+  assert(spokenPatch, 'the speaking row is in scope now and must be patched');
+  assert.deepEqual(Object.keys(spokenPatch.after).sort(), ['accepted_answers', 'correct_answer', 'prompt']);
+  assert.deepEqual(spokenPatch.after.accepted_answers, ['würde']);
+  assert.ok(WUERDE_SPEAKING_ROW.why.trim().length > 120, 'why it was held, and why that changed, must be recorded');
   passedChecks++;
 });
 

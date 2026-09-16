@@ -11,6 +11,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { gradeAnswer } from '../../../lib/grading.ts';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
+import { TRAVEL_BOOKING_RULING } from './travel-booking-ruling.mjs';
 import { derivationalRows, alreadyStrict } from './productive-paradigm-fixes.mjs';
 import { loadTriage, DEPENDENT_ROWS } from './triage-accepted-answers.mjs';
 import { GATE_DEPENDENT_COMPARATIVES } from './restored-withdrawals.mjs';
@@ -224,6 +225,10 @@ for (const entry of acceptedAnswerRows) {
       // regression and fails the run.
       if (withdrawn.get(entry.id) === candidate) intendedRemovals.push({ ref: entry.ref, candidate });
       else if (strictened.has(entry.id)) intendedLosses.push({ ref: entry.ref, candidate });
+      // The Travel unit ruling withdraws "To reserve" from the 预约 row on
+      // purpose, argued in travel-booking-ruling.mjs. Declared here so it is a
+      // recorded decision rather than an unexplained loss.
+      else if (entry.id === TRAVEL_BOOKING_RULING.rows[0]) intendedRemovals.push({ ref: entry.ref, candidate, ruling: 'travel-booking' });
       else failures.push({ ref: entry.ref, kind: 'previously_accepted_string_lost', candidate });
     }
     if (!was && now && !entry.additions.includes(candidate)) {
@@ -234,11 +239,29 @@ for (const entry of acceptedAnswerRows) {
     }
   }
 }
+const alreadyRefusedByTheFixedGrader = [];
+const graderSource = await readFile(new URL('../../../lib/grading.ts', import.meta.url), 'utf8');
+const gatePresent = /kanji/i.test(graderSource);
+
 counts.collateral_acceptances = observedCollateral.size;
 counts.intended_losses_on_rows_made_strict = intendedLosses.length;
-if (intendedLosses.length !== 5) failures.push({ kind: 'intended_loss_count_changed', intendedLosses });
+/**
+ * How many strings the paradigm block withdraws by making a row strict.
+ *
+ * Grader-dependent, like everything else on this page. Five of them are
+ * accepted by the grader as it shipped; four of those five are already refused
+ * once the audit's grading fixes are in, so on a branch carrying them only one
+ * loss is left for strictness to cause. Both numbers are the correct answer for
+ * their own grader, and pinning either alone makes the check wrong on the other
+ * branch — which is how this run came to fail on a change that improved things.
+ */
+const expectedIntendedLosses = gatePresent ? 1 : 5;
+counts.intended_loss_expectation = `${expectedIntendedLosses} (grader ${gatePresent ? 'with' : 'without'} the audit's fixes)`;
+if (intendedLosses.length !== expectedIntendedLosses) {
+  failures.push({ kind: 'intended_loss_count_changed', expected: expectedIntendedLosses, intendedLosses });
+}
 counts.argued_register_removals = intendedRemovals.length;
-if (intendedRemovals.length !== REGISTER_REMOVALS.length) {
+if (intendedRemovals.length !== REGISTER_REMOVALS.length + 1) {
   failures.push({ kind: 'register_removal_not_observed', expected: REGISTER_REMOVALS.map(e => e.remove), observed: intendedRemovals });
 }
 // The withdrawn strings must be rejected on their own row and nowhere else must
@@ -250,8 +273,29 @@ for (const entry of REGISTER_REMOVALS) {
     if (!grade(after.get(entry.id), kept)) failures.push({ ref: entry.ref, kind: 'kept_answer_lost', candidate: kept });
   }
 }
+/**
+ * Whether the grader this run is measuring HAS the Japanese kanji gate.
+ *
+ * This check was written on a branch that could not execute the gate, where the
+ * declared collateral is the honest expectation and failing to reproduce it
+ * would mean the declaration had gone stale. On a branch where the gate IS
+ * present the expectation inverts: the gate exists precisely to close these,
+ * so every one of them must be ABSENT, and any that survives is the gate
+ * failing at the job the apply precondition rests on.
+ *
+ * Detected from the source rather than assumed, so a run always states which
+ * grader it measured instead of which branch someone thought they were on.
+ */
+
 for (const declared of declaredCollateral) {
-  if (!observedCollateral.has(declared)) failures.push({ kind: 'declared_collateral_not_reproduced', declared });
+  const observed = observedCollateral.has(declared);
+  if (gatePresent && observed) {
+    failures.push({ kind: 'gate_present_but_collateral_survives', declared,
+      note: 'The kanji gate is in this grader and should have closed this. The apply precondition rests on it closing all of them.' });
+  }
+  if (!gatePresent && !observed) {
+    failures.push({ kind: 'declared_collateral_not_reproduced', declared });
+  }
 }
 
 /**
@@ -306,11 +350,20 @@ for (const side of ['russian', 'chinese']) {
     const strict = { ...original, target_grammar: 'refusal-probe' };
     for (const candidate of entry.would_start_rejecting) {
       counts.refusal_claims++;
-      if (!grade(original, candidate)) failures.push({ id: entry.id, kind: 'refusal_claim_not_accepted_today', candidate });
+      // "accepted today" was measured against the grader as it shipped. On a
+      // branch carrying the grading fixes the candidate may already be refused
+      // — the claim is then satisfied more strongly than it asked, not broken —
+      // so it is recorded rather than failed.
+      if (!grade(original, candidate)) {
+        if (gatePresent) alreadyRefusedByTheFixedGrader.push({ id: entry.id, candidate });
+        else failures.push({ id: entry.id, kind: 'refusal_claim_not_accepted_today', candidate });
+      }
       if (grade(strict, candidate)) failures.push({ id: entry.id, kind: 'refusal_claim_would_not_be_rejected', candidate });
     }
   }
 }
+
+counts.refusal_claims_already_closed_by_the_fixed_grader = alreadyRefusedByTheFixedGrader.length;
 
 const record = {
   round: 2,
@@ -323,7 +376,10 @@ const record = {
     ...Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(s => ({ ref, string: s, source: 'kinship' }))),
     ...GATE_DEPENDENT_COMPARATIVES.flatMap(e => e.admits_without_the_gate.map(s => ({ ref: e.ref, string: s, source: 'comparative' }))),
   ],
-  gate_note: 'This branch has no Japanese kanji gate (verified: zero occurrences in lib/grading.ts, and audit/grader-behaviour is not an ancestor of this history). Every collateral acceptance recorded here is gate-dependent and measured on a grader that will not ship; the merged branch measures none of them.',
+  gate_present: gatePresent,
+  gate_note: gatePresent
+    ? 'The Japanese kanji gate IS present in this grader, so every declared gate-dependent collateral acceptance must be absent and this run asserts that. A survivor would mean the gate is not doing the job the apply precondition rests on.'
+    : 'This branch has no Japanese kanji gate (detected from lib/grading.ts). Every collateral acceptance recorded here is gate-dependent and measured on a grader that will not ship; a branch carrying the gate measures none of them.',
   intended_losses_on_rows_made_strict: intendedLosses,
   argued_register_removals: REGISTER_REMOVALS.map(entry => ({ ref: entry.ref, key: entry.key, removed: entry.remove, remaining: entry.after, why_downward: entry.why_downward })),
   failures,
@@ -332,7 +388,9 @@ const record = {
     'Mechanical routing only: says nothing about whether an authored string is linguistically right.',
     'Corpus-attested strings only. The productive hole is on the learner\'s side, so the strings a learner would actually type are not enumerable here.',
     'Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures.',
-    'Runs lib/grading.ts as it stands on this branch. The grader branch\'s Japanese edit-distance gate is not present, so the 12 collateral acceptances are expected here and are the reason this patch must ship with that branch; the strict-grading probe shows they vanish under strictness.',
+    gatePresent
+      ? 'Runs lib/grading.ts as it stands on this branch, WITH the Japanese edit-distance gate. Zero collateral acceptances is the expected result and the assertion: the gate closes every one the ungated grader shows, which is what the apply precondition rests on.'
+      : 'Runs lib/grading.ts as it stands on this branch. The grader branch\'s Japanese edit-distance gate is not present, so the collateral acceptances are expected here and are the reason this patch must ship with that branch; the strict-grading probe shows they vanish under strictness.',
   ],
 };
 await writeFile('docs/audits/question-verification/round2/runtime-checks.json', JSON.stringify(record, null, 2) + '\n');
