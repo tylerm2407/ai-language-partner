@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useAppStore } from '../../../../stores/useAppStore';
+import { getTargetLanguage } from '../../../../lib/language';
 import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries';
 import type { WritingSubmissionWithPrompt } from '../../../../lib/supabase-queries';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
@@ -20,6 +22,8 @@ export default function WritingHistoryScreen() {
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
+  // The history belongs to the language the learner is in (migration 133).
+  const targetLanguage = getTargetLanguage(useAppStore((s) => s.profile));
   const [submissions, setSubmissions] = useState<WritingSubmissionWithPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ErrorCopy | null>(null);
@@ -31,14 +35,14 @@ export default function WritingHistoryScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      setSubmissions(await fetchAllUserWritingSubmissions(user.id));
+      setSubmissions(await fetchAllUserWritingSubmissions(user.id, targetLanguage));
     } catch (err) {
       console.error('Failed to load writing history:', err);
       setError(loadErrorCopy(err, 'your writing history'));
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, targetLanguage]);
 
   useEffect(() => {
     load();

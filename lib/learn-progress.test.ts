@@ -22,6 +22,7 @@ function makeUnit(id: string, orderIndex: number, lessonCount: number): UnitWith
     id: `${id}-l${i}`,
     unitId: id,
     courseId: 'course-1',
+    targetLanguage: 'es',
     title: `Lesson ${i + 1}`,
     description: '',
     orderIndex: i,

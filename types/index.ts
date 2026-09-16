@@ -188,6 +188,19 @@ export interface Lesson {
   id: string;
   unitId: string;
   courseId: string | null;
+  /**
+   * The language of the course this lesson belongs to.
+   *
+   * Carried on the lesson so a screen can tell whether the lesson in front of
+   * it belongs to the language the learner is currently in (migration 133) —
+   * a lesson id alone cannot answer that without another round trip.
+   *
+   * Null when the lesson was read by a path that does not join the course, or
+   * came from an offline snapshot written before this field existed. Treat
+   * null as "unknown", never as a mismatch: stranding an offline learner is
+   * worse than showing them the lesson they asked for.
+   */
+  targetLanguage: LanguageCode | null;
   title: string;
   description: string;
   orderIndex: number;

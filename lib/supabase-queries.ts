@@ -373,10 +373,47 @@ export async function fetchLessonsForUnits(unitIds: string[]): Promise<Map<strin
   return grouped;
 }
 
+/**
+ * The ids of every course in one language.
+ *
+ * The bridge between a language and the learner history that carries no
+ * language column of its own — completions, writing submissions, reading
+ * progress all point at a course, and the course knows its language. Resolved
+ * as a list rather than a two-level embed filter (`x.courses.target_language`)
+ * because a one-level `x.course_id` filter is the shape this file already
+ * relies on everywhere else.
+ *
+ * Bounded at 200: a language has a handful of courses, and a curriculum that
+ * outgrows that has a paging problem to solve here deliberately rather than a
+ * silent truncation to inherit.
+ */
+export async function courseIdsForLanguage(language: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id')
+    .in('target_language', languageVariants(language))
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []).map((row: { id: string }) => row.id);
+}
+
+/**
+ * PostgREST's `in` with an empty list matches nothing, which is the right
+ * answer for a language with no courses — but spell it out so the intent
+ * survives a driver that treats `in ()` as an error.
+ */
+export function courseIdFilter(courseIds: string[]): string[] {
+  return courseIds.length > 0 ? courseIds : ['00000000-0000-0000-0000-000000000000'];
+}
+
 export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson | null> {
+  // The course's language rides along with its id: the lesson screen has to
+  // know whether this lesson belongs to the language the learner is in
+  // (migration 133), and asking afterwards would be a second round trip on
+  // the path that opens a lesson.
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
-    .select('*, units!inner(course_id)')
+    .select('*, units!inner(course_id, courses!inner(target_language))')
     .eq('id', lessonId)
     .single();
 
@@ -384,8 +421,14 @@ export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson
   if (!lessonData) return null;
 
   // Flatten the joined course_id onto the lesson row so mapLesson can read it.
-  const unitJoin = lessonData.units as { course_id?: string } | null;
-  const lessonRow = { ...lessonData, course_id: unitJoin?.course_id ?? null };
+  const unitJoin = lessonData.units as
+    | { course_id?: string; courses?: { target_language?: string } | null }
+    | null;
+  const lessonRow = {
+    ...lessonData,
+    course_id: unitJoin?.course_id ?? null,
+    target_language: unitJoin?.courses?.target_language ?? null,
+  };
 
   const { data: exerciseData, error: exerciseError } = await supabase
     .from('exercises')
@@ -1119,17 +1162,7 @@ export async function fetchProficiencyEvidence(
   // `reading_passages.course_id` — which is the shape this file already relies
   // on, rather than a two-level `reading_passages.courses.target_language`
   // path that nothing else here exercises.
-  const courseRes = await supabase
-    .from('courses')
-    .select('id')
-    .eq('target_language', targetLanguage)
-    .limit(200);
-  if (courseRes.error) throw courseRes.error;
-  const courseIds = (courseRes.data ?? []).map((row: { id: string }) => row.id);
-  // PostgREST's `in` with an empty list matches nothing, which is the right
-  // answer for a language with no courses, but spell it out so the intent
-  // survives a driver that treats `in ()` as an error.
-  const courseFilter = courseIds.length > 0 ? courseIds : ['00000000-0000-0000-0000-000000000000'];
+  const courseFilter = courseIdFilter(await courseIdsForLanguage(targetLanguage));
 
   const [
     vocabRes,
@@ -1584,6 +1617,7 @@ function mapLesson(row: Record<string, unknown>, exercises: Exercise[]): Lesson 
     id: row.id as string,
     unitId: row.unit_id as string,
     courseId: (row.course_id as string) ?? null,
+    targetLanguage: (row.target_language as LanguageCode) ?? null,
     title: row.title as string,
     description: row.description as string,
     orderIndex: row.order_index as number,
@@ -1932,13 +1966,29 @@ export interface CompletedLessonsPage {
 export async function fetchCompletedLessonsWithTitles(
   userId: string,
   limit = 25,
+  language: LanguageCode | null = null,
 ): Promise<CompletedLessonsPage> {
+  // Scoped through the course list rather than a join: `lesson_completions`
+  // has no foreign key to `courses` (see the note on titles below), so
+  // PostgREST cannot embed one. The id list is small — a language has a
+  // handful of courses — and it is the only way to answer "what have I
+  // finished in Spanish" without counting the Russian lessons too
+  // (migration 133).
+  let courseIds: string[] | null = null;
+  if (language) {
+    courseIds = await courseIdsForLanguage(language);
+    // No courses in this language means no completions in it either.
+    if (courseIds.length === 0) return { rows: [], total: 0 };
+  }
+
   // `count: 'exact'` rides along on the same request — PostgREST answers with
   // the full match count in Content-Range regardless of the limit.
-  const { data, error, count } = await supabase
+  let completionsQuery = supabase
     .from('lesson_completions')
     .select('*', { count: 'exact' })
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  if (courseIds) completionsQuery = completionsQuery.in('course_id', courseIds);
+  const { data, error, count } = await completionsQuery
     .order('completed_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -3001,16 +3051,23 @@ export interface WritingSubmissionWithPrompt extends WritingSubmission {
 
 export async function fetchAllUserWritingSubmissions(
   userId: string,
-  cefrLevel?: string
+  language: LanguageCode | null = null,
 ): Promise<WritingSubmissionWithPrompt[]> {
+  // A submission's language is its prompt's course's (migration 133). Without
+  // this the writing history listed a learner's Russian paragraphs among their
+  // Spanish ones, with nothing on the row to say which was which.
+  const promptJoin = language ? 'writing_prompts!inner(prompt_text)' : 'writing_prompts(prompt_text)';
   let query = supabase
     .from('user_writing_submissions')
-    .select('*, writing_prompts(prompt_text)')
+    .select(`*, ${promptJoin}`)
     .eq('user_id', userId)
     .order('submitted_at', { ascending: false })
     .limit(200);
 
-  // Note: cefrLevel filtering requires a join; we'll filter client-side for simplicity
+  if (language) {
+    query = query.in('writing_prompts.course_id', courseIdFilter(await courseIdsForLanguage(language)));
+  }
+
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -3813,15 +3870,26 @@ export async function saveCorrectionAsCard(params: {
   return { cardId: card.id };
 }
 
-/** List recent chat sessions for a user. */
+/**
+ * List recent chat sessions for a user, newest first.
+ *
+ * `language` is not optional politeness: callers scan a bounded window of
+ * sessions, so a learner with a run of Russian conversations could push their
+ * one resumable Spanish session off the end of an unfiltered page and be told
+ * they had none (migration 133). Pass null only to look across languages
+ * deliberately.
+ */
 export async function listChatSessions(
   userId: string,
-  limit = 20
+  limit = 20,
+  language: LanguageCode | string | null = null,
 ): Promise<ChatSession[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('chat_sessions')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  if (language) query = query.in('target_language', languageVariants(language));
+  const { data, error } = await query
     .order('updated_at', { ascending: false })
     .limit(limit);
 
@@ -4567,12 +4635,18 @@ export interface LastTutorSession {
  */
 export async function fetchLastTutorSession(
   userId: string,
+  language: LanguageCode | null,
 ): Promise<LastTutorSession | null> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('tutor_sessions')
     .select('observed_seconds, debrief, ended_at')
     .eq('user_id', userId)
-    .not('ended_at', 'is', null)
+    .not('ended_at', 'is', null);
+  // "Last time you spoke for 6 minutes about your weekend" has to be about the
+  // language the lobby is in (migration 133) — a learner who studies Russian
+  // and Spanish would otherwise open the Spanish tutor to a Russian debrief.
+  if (language) query = query.in('target_language', languageVariants(language));
+  const { data, error } = await query
     .order('ended_at', { ascending: false })
     .limit(1)
     .maybeSingle();

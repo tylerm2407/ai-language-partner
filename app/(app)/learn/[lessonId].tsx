@@ -1,7 +1,7 @@
 import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
@@ -84,6 +84,33 @@ export default function LessonScreen() {
   const targetLanguage = getTargetLanguage(profile);
 
   /**
+   * A lesson belonging to a language the learner has switched away from.
+   *
+   * The navigator keeps each tab's stack across a language switch, and
+   * lib/language-switch-navigation.ts pops them for exactly that reason — but
+   * a pop is one code path, and a stale route can also arrive from a
+   * notification, a deep link, or Home's "Continue learning" tiles read a
+   * moment before the switch landed. This is the invariant rather than the
+   * cleanup: a lesson in Russian is never playable while the app is in
+   * Spanish, whatever route asked for it.
+   *
+   * An unknown language (an offline snapshot written before the field
+   * existed) is NOT a mismatch — see the `targetLanguage` field on `Lesson`.
+   */
+  const foreignLesson = Boolean(
+    lesson?.targetLanguage && targetLanguage && lesson.targetLanguage !== targetLanguage,
+  );
+
+  // On focus rather than on sight: the screen is still mounted in the Learn
+  // stack while the learner is on Home, and replacing a route from a blurred
+  // screen would yank them out of whatever they are actually looking at.
+  useFocusEffect(
+    useCallback(() => {
+      if (foreignLesson) router.replace('/learn');
+    }, [foreignLesson, router]),
+  );
+
+  /**
    * Whether this lesson was finished, and when it began.
    *
    * `handleExit` is called for BOTH finishing and quitting, so without this
@@ -131,6 +158,13 @@ export default function LessonScreen() {
   // (app/(public)/onboarding.tsx) and the ask lands right after sign-up.
   // Finishing a lesson in the app is now just finishing a
   // lesson — no sales pitch attached to the celebration.
+
+  // Nothing is drawn for a lesson in the wrong language — the focus effect
+  // above is already replacing this route, and a frame of Russian exercises
+  // inside a Spanish app is the thing being prevented.
+  if (foreignLesson) {
+    return <View style={{ flex: 1, backgroundColor: c.bg }} />;
+  }
 
   if (loading || !targetLanguage) {
     return (

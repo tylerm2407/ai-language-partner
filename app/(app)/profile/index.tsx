@@ -339,7 +339,11 @@ export default function ProfileScreen() {
         <AchievementGridView {...achievements} />
 
         {/* Completed Lessons */}
-        <CompletedLessonsSection userId={user?.id} onSummary={setLessonsSummary} />
+        <CompletedLessonsSection
+          userId={user?.id}
+          language={profile?.targetLanguage ?? null}
+          onSummary={setLessonsSummary}
+        />
 
         {/* My Classes — hidden when school features are disabled */}
         {SCHOOL_ENABLED && (
