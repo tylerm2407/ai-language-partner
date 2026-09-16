@@ -128,7 +128,15 @@ serve(async (req: Request) => {
     // Cleaned up with the service client either way: if the caller was
     // authorised the row exists, and a stray probe row must not sit in a pool.
     await supabase.from('checkpoint_items').delete().eq('id', probeId);
-    if (probeError) return json({ error: 'Unauthorized' }, 401);
+    if (probeError) {
+      // Logged, never returned. The 401 body stays bland because this endpoint
+      // is reachable by anyone — but throwing the reason away entirely made a
+      // failed seed run indistinguishable from a wrong key, a schema drift, or
+      // an outage, and cost an hour of guessing at exactly that. The operator
+      // running a seed can read this in the function logs; the caller cannot.
+      console.warn('[checkpoint] seed probe rejected:', probeError.message);
+      return json({ error: 'Unauthorized' }, 401);
+    }
 
     return handleSeed(supabase, body);
   }
