@@ -294,7 +294,7 @@ export function LessonRunner({
       timedOut = true;
       setWarmupResolved(true);
     }, WARMUP_FETCH_TIMEOUT_MS);
-    fetchDueReviewItemsWithCards(userId, WARMUP_MAX_ITEMS)
+    fetchDueReviewItemsWithCards(userId, WARMUP_MAX_ITEMS, targetLanguage)
       .then((entries) => {
         if (timedOut) return;
         clearTimeout(timeout);
@@ -309,7 +309,7 @@ export function LessonRunner({
         setWarmupResolved(true);
       });
     return () => clearTimeout(timeout);
-  }, [userId, restoreChecked]);
+  }, [userId, restoreChecked, targetLanguage]);
 
   const warmupExercise = warmupEntries[warmupIndex]
     ? warmupToExercise(warmupEntries[warmupIndex])

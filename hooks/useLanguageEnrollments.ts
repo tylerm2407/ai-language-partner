@@ -1,0 +1,146 @@
+/**
+ * useLanguageEnrollments — the languages this learner studies, and the switch
+ * between them (migration 133).
+ *
+ * A learner may be part-way through Spanish and starting Russian. Each of
+ * those is an enrollment: its own declared level, its own placement band, its
+ * own course. `profile.targetLanguage` names whichever one is active, and
+ * every screen keeps reading the profile — so the only thing that has to know
+ * enrollments exist is the switcher.
+ *
+ * Switching is a server call (`switch_target_language`), not a profile write:
+ * it snapshots the language being left before restoring the one being entered,
+ * and half of that applying would lose a learner's course.
+ *
+ * What the switch has to invalidate on the client, and why:
+ *  - `measuredBand` is the proficiency report's answer for the OLD language.
+ *    Left in place it would price the first Russian chat at the learner's
+ *    Spanish B1. Cleared; `useProficiencyReport` measures the new one.
+ *  - the due-review badge is counted per language (`fetchReviewItemCount`), so
+ *    it is refreshed rather than left showing the other deck's number.
+ * The read caches need no purge: every language-sensitive key already carries
+ * the language (review queue, insights, ranked books, courses).
+ */
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
+import { useAppStore } from '../stores/useAppStore';
+import {
+  fetchCourses,
+  fetchLanguageEnrollments,
+  switchTargetLanguage,
+} from '../lib/supabase-queries';
+import { resolvePlacement } from '../lib/course-placement';
+import { loadErrorCopy, type ErrorCopy } from '../lib/error-copy';
+import { trackEvent } from '../lib/analytics';
+import type { LanguageCode, LanguageEnrollment, ProficiencyLevel } from '../types';
+
+export interface UseLanguageEnrollments {
+  enrollments: LanguageEnrollment[];
+  /** Which language the app is showing right now. */
+  active: LanguageCode | null;
+  loading: boolean;
+  /** Non-null when the list could not be read and there is nothing to show. */
+  error: ErrorCopy | null;
+  /** The language a switch is currently in flight for, or null. */
+  switching: LanguageCode | null;
+  reload: () => Promise<void>;
+  /** Move to a language the learner already studies. */
+  switchTo: (language: LanguageCode) => Promise<void>;
+  /** Start a language the learner has never studied, at `level`. */
+  addLanguage: (language: LanguageCode, level: ProficiencyLevel) => Promise<void>;
+}
+
+export function useLanguageEnrollments(): UseLanguageEnrollments {
+  const { user } = useAuth();
+  const active = useAppStore((s) => s.profile?.targetLanguage ?? null);
+  const setProfile = useAppStore((s) => s.setProfile);
+  const setMeasuredBand = useAppStore((s) => s.setMeasuredBand);
+  const refreshReviewCount = useAppStore((s) => s.refreshReviewCount);
+
+  const [enrollments, setEnrollments] = useState<LanguageEnrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ErrorCopy | null>(null);
+  const [switching, setSwitching] = useState<LanguageCode | null>(null);
+
+  const reload = useCallback(async () => {
+    if (!user) {
+      setEnrollments([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      setEnrollments(await fetchLanguageEnrollments());
+      setError(null);
+    } catch (err) {
+      // An empty list and a failed read look identical in the switcher, and
+      // "you study no languages" is a claim (CLAUDE.md §5).
+      setError(loadErrorCopy(err, 'your languages'));
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void reload();
+    // `active` is in the deps so the list re-reads after a switch made
+    // elsewhere (Settings and the Home chip are two mounts of this hook).
+  }, [reload, active]);
+
+  /** Shared tail of both switch paths: adopt the new profile, drop the old
+   *  language's derived state, and re-read the list. */
+  const adopt = useCallback(
+    async (profile: Awaited<ReturnType<typeof switchTargetLanguage>>) => {
+      setProfile(profile);
+      setMeasuredBand(null);
+      if (user) void refreshReviewCount(user.id);
+      await reload();
+    },
+    [setProfile, setMeasuredBand, refreshReviewCount, user, reload],
+  );
+
+  const switchTo = useCallback(
+    async (language: LanguageCode) => {
+      if (!user || language === active) return;
+      setSwitching(language);
+      try {
+        const profile = await switchTargetLanguage(language);
+        await adopt(profile);
+        // `source` says which of the two switcher paths this was — the fixed
+        // vocabulary the event schema already carries (lib/analytics.ts).
+        trackEvent('language_selected', { screen: 'switcher', language, source: 'switch' });
+      } finally {
+        setSwitching(null);
+      }
+    },
+    [user, active, adopt],
+  );
+
+  const addLanguage = useCallback(
+    async (language: LanguageCode, level: ProficiencyLevel) => {
+      if (!user) return;
+      setSwitching(language);
+      try {
+        // `lib/course-placement.ts` is the one place that turns a level into a
+        // course; the server only checks that the course it is handed belongs
+        // to the language.
+        const courses = await fetchCourses(language);
+        const placement = resolvePlacement(courses, level, 'start');
+        const profile = await switchTargetLanguage(language, { level, ...placement });
+        await adopt(profile);
+        trackEvent('language_selected', { screen: 'switcher', language, source: 'added' });
+        trackEvent('course_placement_set', {
+          screen: 'settings',
+          source: 'start',
+          band: placement.placementBand,
+          language,
+        });
+      } finally {
+        setSwitching(null);
+      }
+    },
+    [user, adopt],
+  );
+
+  return { enrollments, active, loading, error, switching, reload, switchTo, addLanguage };
+}

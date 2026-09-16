@@ -117,6 +117,30 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko'
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 
 /**
+ * One language this learner is studying (migration 133).
+ *
+ * The account may hold several. `user_profiles.target_language` names which of
+ * them is active right now, and the profile's `level`, `placementBand` and
+ * `currentCourseId` are a copy of that enrollment's — so screens keep reading
+ * the profile, and only the switcher reads this.
+ *
+ * Durable: switching away snapshots the active row here rather than
+ * overwriting it, so Spanish is exactly where it was left when the learner
+ * comes back from Japanese.
+ */
+export interface LanguageEnrollment {
+  language: LanguageCode;
+  /** Declared level for THIS language — beginner in Japanese, B1 in Spanish. */
+  level: ProficiencyLevel;
+  /** Band this language's lessons start at; null means no lesson path. */
+  placementBand: string | null;
+  currentCourseId: string | null;
+  startedAt: string;
+  /** Orders the switcher, most recent first. */
+  lastActiveAt: string;
+}
+
+/**
  * Motivation — why the learner is here. Persisted on
  * `user_profiles.motivation_reason` (migration 028).
  *

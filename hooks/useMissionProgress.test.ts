@@ -110,7 +110,7 @@ describe('useMissionProgress', () => {
     expect(queries.fetchMissionProgress).toHaveBeenCalledWith('u1', 'es');
     expect(queries.fetchOpenMissionAttempts).toHaveBeenCalledWith('u1', 'es');
     expect(queries.listChatSessions).toHaveBeenCalledWith('u1', 50);
-    expect(queries.fetchGoalTrack).toHaveBeenCalledWith('u1');
+    expect(queries.fetchGoalTrack).toHaveBeenCalledWith('u1', 'es');
 
     const s = latest.current!;
     expect(s.loading).toBe(false);

@@ -24,6 +24,7 @@ import {
 } from '../lib/insights';
 import { cachedFetch, getCached, readCacheKey } from '../lib/read-cache';
 import { loadErrorCopy, type ErrorCopy } from '../lib/error-copy';
+import type { LanguageCode } from '../types';
 
 export interface LearnerInsights {
   mistakes: RecurringMistake[];
@@ -44,8 +45,9 @@ function insightsKey(userId: string, language: string): string {
 async function loadInsights(userId: string, language: string): Promise<LearnerInsights> {
   const [corrections, pairs, wordsLearned] = await Promise.all([
     fetchRecentCorrections(userId, language),
-    fetchStrugglingReviewItems(userId),
-    fetchLearnedCardCount(userId),
+    // Scoped: a Spanish leech is not something to show a learner mid-Russian.
+    fetchStrugglingReviewItems(userId, undefined, language as LanguageCode),
+    fetchLearnedCardCount(userId, language as LanguageCode),
   ]);
   return {
     mistakes: rankRecurringMistakes(corrections, { limit: MAX_MISTAKES }),

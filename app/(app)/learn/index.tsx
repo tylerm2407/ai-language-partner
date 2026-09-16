@@ -332,13 +332,13 @@ export default function LearnScreen() {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
       if (!userId) return;
-      setGoalTrack(await fetchGoalTrack(userId));
+      setGoalTrack(await fetchGoalTrack(userId, profile?.targetLanguage ?? null));
     } catch (err) {
       // Non-fatal: the goal track is an addition to Learn, not Learn itself.
       // A failure here must not take the lesson path down with it.
       console.warn('[learn] goal track load failed:', err);
     }
-  }, []);
+  }, [profile?.targetLanguage]);
 
   useEffect(() => {
     loadGoalTrack();

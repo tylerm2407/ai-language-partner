@@ -45,19 +45,56 @@ export function useHomeEnter() {
 }
 
 // ─── Masthead ──────────────────────────────────────────────────────────────
-export function HomeHeader({ greeting, name }: { greeting: string; name?: string | null }) {
+/**
+ * `languageChip` is the switcher's handle (migration 133): the two-letter code
+ * of the language the app is currently in, with a caret. It sits beside the
+ * greeting — which is already spoken IN that language — so the chip reads as a
+ * label for what the learner is looking at rather than a stray control. Absent
+ * (null) it renders nothing, which is what a single-language account gets
+ * until it has a second one to switch to.
+ */
+export function HomeHeader({
+  greeting,
+  name,
+  languageChip,
+  onSwitchLanguage,
+}: {
+  greeting: string;
+  name?: string | null;
+  languageChip?: string | null;
+  onSwitchLanguage?: () => void;
+}) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
   const now = new Date();
   return (
     <Animated.View entering={enter(0)} style={styles.header}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontFamily: type.heading, fontSize: 34, lineHeight: 38, letterSpacing: -0.6, color: c.ink }}
-      >
-        {greeting}
-        {name ? `, ${name}` : ''}
-      </Text>
+      <View style={styles.headerTop}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontFamily: type.heading, fontSize: 34, lineHeight: 38, letterSpacing: -0.6, color: c.ink, flex: 1 }}
+        >
+          {greeting}
+          {name ? `, ${name}` : ''}
+        </Text>
+        {languageChip && onSwitchLanguage ? (
+          <Pressable
+            onPress={() => {
+              haptic('buttonPress');
+              onSwitchLanguage();
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Language: ${languageChip}. Switch language`}
+            style={[styles.langChip, { backgroundColor: c.primaryTint, borderColor: c.primary }]}
+          >
+            <Text style={{ fontFamily: type.uiBold, fontSize: 13, color: c.onTint, letterSpacing: 0.5 }}>
+              {languageChip}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={c.onTint} />
+          </Pressable>
+        ) : null}
+      </View>
       <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.muted }}>
         {DAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}
       </Text>
@@ -428,6 +465,18 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
 
 const styles = StyleSheet.create({
   header: { gap: 4 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  langChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    // 32pt tall inside a 44pt hit area (hitSlop): the greeting is the tallest
+    // thing on the row and a full-height pill beside it reads as a button bar.
+    height: 32,
+  },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
   statRow: { flexDirection: 'row', gap: 12 },
   levelPress: { flex: 1.5 },

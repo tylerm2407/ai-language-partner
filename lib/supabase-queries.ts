@@ -72,6 +72,7 @@ import type {
   ConversationGrade,
   SchoolContractConfig,
   LanguageCode,
+  LanguageEnrollment,
   ProficiencyLevel,
   SubmissionStatus,
   TutorDebrief,
@@ -81,7 +82,7 @@ import type {
   TutorMemoryKind,
 } from '../types';
 
-import type { NewsTier } from '../config/app';
+import { SUPPORTED_LANGUAGES, type NewsTier } from '../config/app';
 
 // ─── User Profile ───────────────────────────────────────────────
 
@@ -185,6 +186,65 @@ export async function applyOnboardingDraft(input: OnboardingDraftWrite): Promise
   });
   if (error) throw error;
   if (!data) throw new Error('apply_onboarding_draft returned no row');
+  return mapProfile(data as Record<string, unknown>);
+}
+
+// ─── Language Enrollments (multi-language) ──────────────────────
+
+function mapLanguageEnrollment(row: Record<string, unknown>): LanguageEnrollment {
+  return {
+    language: row.language as LanguageCode,
+    level: row.level as ProficiencyLevel,
+    placementBand: (row.placement_band as string | null) ?? null,
+    currentCourseId: (row.current_course_id as string | null) ?? null,
+    startedAt: row.started_at as string,
+    lastActiveAt: row.last_active_at as string,
+  };
+}
+
+/**
+ * Every language this learner is studying, most recently practised first
+ * (migration 133). The active one is `profile.targetLanguage`; this is the
+ * list the switcher offers and what "Add a language" appends to.
+ */
+export async function fetchLanguageEnrollments(): Promise<LanguageEnrollment[]> {
+  const { data, error } = await supabase
+    .from('user_language_enrollments')
+    .select('*')
+    .order('last_active_at', { ascending: false })
+    // A learner cannot study more languages than the product teaches, so this
+    // is the whole table for one account, not a page of it.
+    .limit(SUPPORTED_LANGUAGES.length);
+
+  if (error) throw error;
+  return (data ?? []).map(mapLanguageEnrollment);
+}
+
+/**
+ * Make `language` the active one and return the profile that results.
+ *
+ * Server-side (`switch_target_language`) because the switch snapshots the
+ * language being left before restoring the one being entered, and a half-
+ * applied swap would lose a learner's course. The RPC also rejects a course
+ * that does not belong to the language, so the client cannot cross the two.
+ *
+ * `placement` is required only the first time a language is started: the
+ * caller resolves it with `lib/course-placement.ts` (the one source of truth
+ * for level → course) and hands the answer in. Passing it for a language
+ * already enrolled re-places it, which is what a level change in Settings is.
+ */
+export async function switchTargetLanguage(
+  language: LanguageCode,
+  placement?: { level: ProficiencyLevel; currentCourseId: string | null; placementBand: string | null },
+): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc('switch_target_language', {
+    p_language: language,
+    p_level: placement?.level ?? null,
+    p_current_course_id: placement?.currentCourseId ?? null,
+    p_placement_band: placement?.placementBand ?? null,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('switch_target_language returned no row');
   return mapProfile(data as Record<string, unknown>);
 }
 
@@ -391,17 +451,41 @@ export async function fetchCardsBySkillType(
 
 // ─── Review Items (SRS) ─────────────────────────────────────────
 
-export async function fetchDueReviewItems(userId: string, limit = 50): Promise<ReviewItem[]> {
-  const { data, error } = await supabase
+/**
+ * Why every read here takes a language (migration 133).
+ *
+ * `review_items` is keyed on (user, card) alone — it has never known which
+ * language a row belongs to, because until multi-language there was only one.
+ * A learner studying Russian was still dealt their Spanish deck, and the
+ * multiple-choice distractors came from it too, which makes the question
+ * unanswerable rather than hard.
+ *
+ * The language lives on `cards.language`, so each read joins `cards!inner` and
+ * filters on it. Rows in the other languages keep their SM-2 schedule
+ * untouched and come back the moment the learner switches back — nothing is
+ * lost, it is just not dealt today. `null` means "every language", which only
+ * account-wide maintenance should ask for.
+ */
+export async function fetchDueReviewItems(
+  userId: string,
+  limit = 50,
+  language?: LanguageCode | null,
+): Promise<ReviewItem[]> {
+  // The join is unconditional so the row type stays one shape; `!inner` on a
+  // NOT NULL foreign key drops nothing when no language filter is applied.
+  let query = supabase
     .from('review_items')
-    .select('*')
+    .select('*, cards!inner(language)')
     .eq('user_id', userId)
-    .lte('next_due', new Date().toISOString())
+    .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('next_due', { ascending: true })
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []).map(mapReviewItem);
+  return ((data ?? []) as Record<string, unknown>[]).map(mapReviewItem);
 }
 
 /**
@@ -413,12 +497,16 @@ export async function fetchDueReviewItems(userId: string, limit = 50): Promise<R
 export async function fetchDueReviewItemsWithCardsStrict(
   userId: string,
   limit: number,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('review_items')
     .select('*, cards!inner(*)')
     .eq('user_id', userId)
-    .lte('next_due', new Date().toISOString())
+    .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('next_due', { ascending: true })
     .limit(limit);
   if (error) throw error;
@@ -440,9 +528,10 @@ export async function fetchDueReviewItemsWithCardsStrict(
 export async function fetchDueReviewItemsWithCards(
   userId: string,
   limit = 5,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
   try {
-    return await fetchDueReviewItemsWithCardsStrict(userId, limit);
+    return await fetchDueReviewItemsWithCardsStrict(userId, limit, language);
   } catch (err) {
     console.warn('[warmup] fetchDueReviewItemsWithCards failed (non-fatal):', err);
     return [];
@@ -458,11 +547,20 @@ export async function fetchDueReviewItemsWithCards(
  * session needs a couple of hundred candidates at most. review_items is
  * unique on (user_id, card_id), so no card repeats.
  */
-export async function fetchReviewDeckCards(userId: string, limit = 200): Promise<Card[]> {
-  const { data, error } = await supabase
+export async function fetchReviewDeckCards(
+  userId: string,
+  limit = 200,
+  language?: LanguageCode | null,
+): Promise<Card[]> {
+  let query = supabase
     .from('review_items')
     .select('cards!inner(*)')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  // A distractor has to be a word the learner might actually confuse with the
+  // answer, which a word from another language never is.
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('last_reviewed_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -473,23 +571,35 @@ export async function fetchReviewDeckCards(userId: string, limit = 200): Promise
     .map(mapCard);
 }
 
-export async function fetchReviewItemCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchReviewItemCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;
 }
 
-export async function fetchNewCardCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchNewCardCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('status', 'new');
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;
@@ -2463,13 +2573,22 @@ export async function fetchCohortLeaderboard(): Promise<LeaderboardRow[]> {
  * track's lessons are shared while its completions are the learner's own, so
  * they would not belong in the same embed anyway.
  */
-export async function fetchGoalTrack(userId: string): Promise<GoalTrackProgress | null> {
-  const { data, error } = await supabase
+export async function fetchGoalTrack(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<GoalTrackProgress | null> {
+  let query = supabase
     .from('user_goal_tracks')
     .select(
-      'goal_key, scenarios, course_id, courses!inner(id, title, description, units(id, order_index, lessons(id, title, description, order_index, generation_state)))'
+      'goal_key, scenarios, course_id, courses!inner(id, target_language, title, description, units(id, order_index, lessons(id, title, description, order_index, generation_state)))'
     )
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  // A track generated from a Spanish goal is a Spanish course; showing it on
+  // the Learn tab while the learner is in Russian offers lessons they cannot
+  // read (migration 133). The learner keeps one track per language.
+  if (language) query = query.eq('courses.target_language', language);
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -4485,31 +4604,38 @@ export async function fetchRecentCorrections(
 export async function fetchStrugglingReviewItems(
   userId: string,
   limit = 40,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
   const columns = '*, cards!inner(*)';
+  // The three builders differ in type, and all of them accept `.in` — the cast
+  // keeps one filter definition instead of three copies of the same line.
+  const inLanguage = <T>(q: T): T =>
+    language
+      ? (q as unknown as { in: (col: string, values: string[]) => T }).in('cards.language', languageVariants(language))
+      : q;
   const [lowEase, stalled, leeches] = await Promise.all([
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
       .lt('ease_factor', 2.2)
-      .not('last_reviewed_at', 'is', null)
+      .not('last_reviewed_at', 'is', null))
       .order('ease_factor', { ascending: true })
       .limit(limit),
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
       .eq('status', 'learning')
       .eq('repetitions', 0)
-      .not('last_reviewed_at', 'is', null)
+      .not('last_reviewed_at', 'is', null))
       .order('last_reviewed_at', { ascending: false })
       .limit(limit),
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
-      .eq('status', 'leech')
+      .eq('status', 'leech'))
       .limit(limit),
   ]);
 
@@ -4535,12 +4661,19 @@ export async function fetchStrugglingReviewItems(
  * (`review` or `graduated`). A count, not a score: it is the "you know 412
  * words" number, and it only ever goes up.
  */
-export async function fetchLearnedCardCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchLearnedCardCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .in('status', ['review', 'graduated']);
+  // "You know 240 words" has to mean 240 words of the language on screen.
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;

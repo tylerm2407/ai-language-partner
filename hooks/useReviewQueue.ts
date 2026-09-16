@@ -15,7 +15,7 @@ import { CHOICE_DISTRACTOR_COUNT } from '../lib/review-choices';
 import { rankStrugglingWords } from '../lib/insights';
 import { enqueue, isNetworkError, newClientLogId } from '../lib/offline-queue';
 import { cachedFetch, readCacheKey } from '../lib/read-cache';
-import type { ReviewItem, Card, ReviewRating } from '../types';
+import type { ReviewItem, Card, ReviewRating, LanguageCode } from '../types';
 
 /** Cached together — review items are unusable without their cards. */
 interface ReviewQueuePayload {
@@ -35,9 +35,9 @@ interface ReviewQueuePayload {
  * degrades the question — fewer wrong options — and must not take the whole
  * review down with it.
  */
-async function fetchDeckSafe(userId: string): Promise<Card[]> {
+async function fetchDeckSafe(userId: string, language: LanguageCode | null): Promise<Card[]> {
   try {
-    return await fetchReviewDeckCards(userId);
+    return await fetchReviewDeckCards(userId, undefined, language);
   } catch (err) {
     console.warn('[review] distractor pool failed (non-fatal):', err);
     return [];
@@ -74,6 +74,10 @@ export type ReviewQueueMode = 'due' | 'struggling';
 
 export function useReviewQueue(mode: ReviewQueueMode = 'due') {
   const { user } = useAuth();
+  // Every read below is scoped to it: the due queue, the distractor pool and
+  // the cache key. Subscribed rather than read once, so a switch reloads the
+  // queue instead of leaving the previous language's cards on screen.
+  const language = useAppStore((s) => s.profile?.targetLanguage ?? null);
   const { reviewCount, refreshReviewCount } = useAppStore();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [cards, setCards] = useState<Record<string, Card>>({});
@@ -96,13 +100,15 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
       if (mode === 'struggling') {
         // Not cached: this list changes with every card the learner rates,
         // and a stale copy would deal a word they fixed ten minutes ago.
-        const language = useAppStore.getState().profile?.targetLanguage ?? null;
-        const ranked = rankStrugglingWords(await fetchStrugglingReviewItems(user.id), { limit: 20, language });
+        const ranked = rankStrugglingWords(
+          await fetchStrugglingReviewItems(user.id, undefined, language),
+          { limit: 20, language },
+        );
         const map: Record<string, Card> = {};
         ranked.forEach((w) => { map[w.card.id] = w.card; });
         // Pool BEFORE cards: the screen deals the first question the moment
         // cards land, and a question dealt against an empty pool has one row.
-        setPool(await topUpPool(await fetchDeckSafe(user.id), ranked[0]?.card));
+        setPool(await topUpPool(await fetchDeckSafe(user.id, language), ranked[0]?.card));
         setItems(ranked.map((w) => w.item));
         setCards(map);
         return;
@@ -111,16 +117,18 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
       // failure with a cache resolves stale instead of throwing, so callers
       // only see an error when there's nothing to show (same as before).
       const { data } = await cachedFetch<ReviewQueuePayload>(
-        readCacheKey('review-queue', user.id),
+        // The language is part of the key: one cache entry per language, so
+        // switching never paints the deck the learner just left (migration 133).
+        readCacheKey('review-queue', user.id, language ?? 'all'),
         async () => {
-          const reviewItems = await fetchDueReviewItems(user.id);
+          const reviewItems = await fetchDueReviewItems(user.id, undefined, language);
           const map: Record<string, Card> = {};
           if (reviewItems.length === 0) return { items: reviewItems, cards: map, pool: [] };
           // Cards and deck are independent, so they go out together; the
           // course top-up needs a card in hand and only a tiny deck pays it.
           const [fetched, deck] = await Promise.all([
             fetchCardsByIds(reviewItems.map((r) => r.cardId)),
-            fetchDeckSafe(user.id),
+            fetchDeckSafe(user.id, language),
           ]);
           fetched.forEach((c) => { map[c.id] = c; });
           return { items: reviewItems, cards: map, pool: await topUpPool(deck, fetched[0]) };
@@ -150,7 +158,7 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
     } finally {
       setLoading(false);
     }
-  }, [user, mode]);
+  }, [user, mode, language]);
 
   const submitReview = useCallback(async (
     item: ReviewItem,

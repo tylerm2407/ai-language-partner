@@ -48,7 +48,7 @@ import {
   type MissionProgressRow,
   type OpenMissionAttempt,
 } from '../lib/supabase-queries';
-import type { GoalTrack } from '../types';
+import type { GoalTrack, LanguageCode } from '../types';
 import { MISSION_META, MISSION_STAGE_COUNT, type MissionMeta } from '../types/missions';
 
 export interface SceneProgress {
@@ -206,7 +206,9 @@ export function useMissionProgress(userId: string | undefined, targetLanguage: s
       fetchMissionProgress(userId, targetLanguage),
       fetchOpenMissionAttempts(userId, targetLanguage),
       listChatSessions(userId, SESSION_SCAN_LIMIT),
-      fetchGoalTrack(userId),
+      // The hook takes the language as a plain string (it is also the chat
+      // scenario key's partner); the query wants the narrowed code.
+      fetchGoalTrack(userId, targetLanguage as LanguageCode),
     ]);
     if (request !== requestRef.current) return;
 

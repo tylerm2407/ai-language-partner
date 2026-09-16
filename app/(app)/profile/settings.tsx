@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,7 +34,8 @@ import {
   type SettingsPlacementDecision,
 } from '../../../lib/course-placement';
 import { trackEvent } from '../../../lib/analytics';
-import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import type { ProficiencyLevel } from '../../../types';
+import { LanguageSwitcherSheet } from '../../../components/ui2/LanguageSwitcherSheet';
 import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
 import { NotificationBuilder } from '../../../components/onboarding/NotificationBuilder';
 import {
@@ -73,10 +74,31 @@ export default function SettingsScreen() {
   const { signOut, user } = useAuth();
 
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
-  // null while the profile hasn't loaded — no language is preselected and
-  // Save won't overwrite the stored language with a default.
-  const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
+  // The language is no longer part of this form (migration 133). It is a
+  // switch between enrollments, not a field to save: it restores the level,
+  // band and course the learner already had in that language, so folding it
+  // into a Save that also carries a level would write one language's level
+  // onto another's. It opens the same sheet the Home chip opens.
+  const [languageSwitcher, setLanguageSwitcher] = useState(false);
+  const targetLanguage = getTargetLanguage(profile);
+  const activeLanguage = SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage) ?? null;
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
+  /**
+   * The level picker belongs to the ACTIVE language, so a switch has to reload
+   * it. Without this the control kept the level of the language the learner
+   * left — switching from Spanish (Elementary) to a new French enrollment
+   * (Beginner) still showed Elementary, and Save would have written that back
+   * onto French and re-placed it at A2.
+   *
+   * Keyed on the language alone, not on `profile`: resetting on every profile
+   * patch would throw away a level the learner had just tapped.
+   */
+  const syncedLanguage = useRef(profile?.targetLanguage);
+  useEffect(() => {
+    if (!profile || profile.targetLanguage === syncedLanguage.current) return;
+    syncedLanguage.current = profile.targetLanguage;
+    setLevel(profile.level);
+  }, [profile]);
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
   // The onboarding "picture a moment" answer. Until now it was write-once: the
   // goal-track error copy on the Learn tab has pointed learners here to
@@ -132,18 +154,16 @@ export default function SettingsScreen() {
 
   const hasChanges =
     displayName !== (profile?.displayName ?? '') ||
-    targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
     dailyGoal !== profile?.dailyGoalMinutes ||
     idealSelf.trim() !== (profile?.idealL2Self ?? '') ||
     JSON.stringify(notifPrefs) !== JSON.stringify(savedNotifPrefs);
 
   /**
-   * "Move your lessons too?" — asked only when the level moved and the
-   * language did not. A language change re-places without asking (the old
-   * course is in the wrong language), and a level that did not move has
-   * nothing to ask about. Wraps Alert in a promise so the save reads top to
-   * bottom.
+   * "Move your lessons too?" — asked whenever the level moved. The language
+   * cannot move in this form any more (the switcher restores each language's
+   * own placement), so a level change is the only thing with a lesson path to
+   * ask about. Wraps Alert in a promise so the save reads top to bottom.
    */
   const confirmPlacementMove = (hasCourseAtBand: boolean) =>
     new Promise<SettingsPlacementDecision>((resolve) => {
@@ -179,8 +199,8 @@ export default function SettingsScreen() {
       // level and language, so the guard trigger sees the pointer and the
       // language together.
       let placement: ReturnType<typeof placementAfterSettingsChange> = null;
-      const nextLanguage = targetLanguage ?? profile?.targetLanguage ?? null;
-      if (profile && nextLanguage && (level !== profile.level || nextLanguage !== profile.targetLanguage)) {
+      const nextLanguage = profile?.targetLanguage ?? null;
+      if (profile && nextLanguage && level !== profile.level) {
         const courses = await fetchCourses(nextLanguage);
         let decision: SettingsPlacementDecision = 'move';
         if (settingsNeedsPlacementConfirm(profile.level, level, profile.targetLanguage, nextLanguage)) {
@@ -206,8 +226,6 @@ export default function SettingsScreen() {
 
       await updateProfile({
         displayName: displayName.trim() || undefined,
-        // Only write the language when one is actually selected.
-        ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
         // Empty clears it: a learner is allowed to have no stated goal, and the
@@ -259,30 +277,32 @@ export default function SettingsScreen() {
           accessibilityLabel="Display name"
         />
 
-        {/* Target Language */}
-        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Target Language</Text>
-        <View className="mb-6">
-          {SUPPORTED_LANGUAGES.map((lang) => (
-            <Pressable
-              key={lang.code}
-              className="p-4 rounded-2xl mb-2 flex-row items-center"
-              style={{
-                borderWidth: 2,
-                backgroundColor: targetLanguage === lang.code ? c.primaryTint : c.card,
-                borderColor: targetLanguage === lang.code ? c.primary : c.cardBorder,
-              }}
-              onPress={() => setTargetLanguage(lang.code as LanguageCode)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: targetLanguage === lang.code }}
-            >
-              <Text className="text-xl mr-3">{lang.flag}</Text>
-              <Text className="text-base font-semibold" style={{ color: c.ink }}>{lang.name}</Text>
-              {targetLanguage === lang.code && (
-                <Ionicons name="checkmark-circle" size={20} color={c.onTint} style={{ marginLeft: 'auto' }} />
-              )}
-            </Pressable>
-          ))}
-        </View>
+        {/* Languages — a switch, not a field. Applies the moment it is tapped
+            (it is a server-side swap of enrollments), so it sits outside the
+            Save button's scope on purpose. */}
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Languages</Text>
+        <Pressable
+          className="p-4 rounded-2xl mb-6 flex-row items-center"
+          style={{ borderWidth: 2, backgroundColor: c.card, borderColor: c.cardBorder }}
+          onPress={() => setLanguageSwitcher(true)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            activeLanguage
+              ? `Learning ${activeLanguage.name}. Switch language or add another`
+              : 'Choose a language'
+          }
+        >
+          <Text className="text-xl mr-3">{activeLanguage?.flag ?? '🌐'}</Text>
+          <View style={{ flex: 1 }}>
+            <Text className="text-base font-semibold" style={{ color: c.ink }}>
+              {activeLanguage?.name ?? 'Choose a language'}
+            </Text>
+            <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
+              Switch language or add another
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={c.muted} />
+        </Pressable>
 
         {/* Level */}
         <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Proficiency Level</Text>
@@ -630,6 +650,10 @@ export default function SettingsScreen() {
         <SentrySmokeTrigger />
       </ScrollView>
       </KeyboardAvoidingView>
+      <LanguageSwitcherSheet
+        visible={languageSwitcher}
+        onDismiss={() => setLanguageSwitcher(false)}
+      />
     </SafeAreaView>
     </View>
   );
