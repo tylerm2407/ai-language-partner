@@ -39,9 +39,45 @@ export async function createRound2PatchSet({ file = SNAPSHOT_FILE } = {}) {
     if (matches.length !== 1) throw new Error(`Expected exactly one ${table}/${id}, found ${matches.length}`);
     return matches[0];
   };
+  /**
+   * The one thing a speaking row may receive: a correction that changes only
+   * letter case.
+   *
+   * Speaking is excluded from this audit end to end, and the rule above is what
+   * enforces that. But the exclusion has produced a worse artefact than it
+   * prevented: the de B1 `Würde` cluster is corrected on five surfaces and left
+   * wrong on the one speaking row, and the next reader will take the odd one out
+   * for a deliberate choice. It is not.
+   *
+   * This exception is deliberately too narrow to reintroduce speaking content.
+   * Every field written must be a string, must already exist, and must be equal
+   * to its new value under `toLowerCase()` — so it can fix a capital letter and
+   * can do nothing else. It cannot change a word, add an accepted answer, retime
+   * audio, or touch a pronunciation score. What is spoken is unchanged, because
+   * text-to-speech reads the same word either way, and grading is unchanged,
+   * because `normalize()` lowercases before comparing.
+   */
+  const sameButForCase = (before, value) =>
+    typeof value === 'string' && typeof before === 'string' &&
+    value.toLowerCase() === before.toLowerCase();
+
+  const caseOnly = (original, after) =>
+    Object.entries(after).every(([field, value]) => {
+      const before = original[field];
+      // An array of accepted answers is corrected element by element, in place:
+      // same length, same order, each entry equal but for case. It therefore
+      // cannot add an answer, remove one, or reorder them.
+      if (Array.isArray(value)) {
+        return Array.isArray(before) && before.length === value.length &&
+          value.every((entry, i) => sameButForCase(before[i], entry));
+      }
+      return sameButForCase(before, value);
+    });
+
   const update = (table, id, after, reason, sources = []) => {
     const original = row(table, id);
-    if (original.user_id || original.type === 'speaking' || original.strand === 'speaking' || original.response_mode === 'speak') throw new Error(`Excluded content: ${table}/${id}`);
+    const speaking = original.type === 'speaking' || original.strand === 'speaking' || original.response_mode === 'speak';
+    if (original.user_id || (speaking && !caseOnly(original, after))) throw new Error(`Excluded content: ${table}/${id}`);
     if (!reason?.trim()) throw new Error('Every correction needs a reason');
     const key = `${table}/${id}`;
     const patch = patchMap.get(key) ?? { table, id, before: {}, after: {}, reasons: [], sources: [], review_status: 'awaiting_independent_round2_review' };

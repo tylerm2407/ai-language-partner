@@ -35,13 +35,19 @@
  * curriculum owner rather than folded into a levelling count, and is authored
  * here only on an explicit yes.
  *
- * ONE ROW IS KNOWINGLY LEFT WRONG. The `speaking` row `6589a5e4` carries the
- * same capitalised prompt and this compiler refuses speaking content by a hard
- * rule, so after this patch the cluster is right on five surfaces and wrong on
- * one. That is worse to inherit than a cluster that is uniformly wrong, because
- * the next reader will assume the odd one out is deliberate. It is not: it is
- * out of scope, it is named in findings.json, and it needs whoever owns speaking
- * content. Its `accepted_answers` carries `Würde` too.
+ * THE SPEAKING ROW IS NOW INCLUDED, on Tyler's instruction (2026-09-16), and it
+ * is the only speaking content this audit has ever touched. It was held back
+ * because the compiler refuses speaking by a hard rule, which left the cluster
+ * right on five surfaces and wrong on one — worse to inherit than uniformly
+ * wrong, because the next reader takes the odd one out for a decision.
+ *
+ * It reaches the row through a case-only exception in `patch-set-round2.mjs`
+ * that is too narrow to reintroduce speaking content: every field written must
+ * already exist and must be equal to its new value but for case, and an array
+ * is corrected in place, so nothing can be added, removed or reordered. What is
+ * spoken does not change — text-to-speech reads the same word either way — and
+ * neither does grading, since `normalize()` lowercases before comparing. No
+ * pronunciation score, audio asset or speech variant is touched.
  */
 
 const CARD = 'aabbccdd-3333-3007-c002-b10000000000';
@@ -57,14 +63,19 @@ export const WUERDE_EDITS = [
   ['aabbccdd-3333-3007-0005-e00000000010', 'exercises', 'prompt', 'What does "Würde" mean in English?', 'What does "würde" mean in English?'],
   ['aabbccdd-3333-3007-0006-e00000000009', 'exercises', 'prompt', 'Write a sentence using the word: Würde (Would)', 'Write a sentence using the word: würde (Would)'],
   ['aabbccdd-3333-3007-0006-e00000000009', 'exercises', 'correct_answer', 'Würde', 'würde'],
+  // The speaking row. Case-only, through the exception described above.
+  ['6589a5e4-d510-45e6-a1d6-56ea8de56030', 'exercises', 'prompt', 'Würde', 'würde'],
+  ['6589a5e4-d510-45e6-a1d6-56ea8de56030', 'exercises', 'correct_answer', 'Würde', 'würde'],
+  ['6589a5e4-d510-45e6-a1d6-56ea8de56030', 'exercises', 'accepted_answers', ['Würde'], ['würde']],
 ];
 
-/** Out of scope for this compiler and left wrong on purpose; named so it is not
- * mistaken for a deliberate exception. */
-export const WUERDE_LEFT_WRONG = {
+/** The speaking row, formerly left wrong and now corrected. Kept as an exported
+ * record because the reason it was excluded, and the reason that changed, are
+ * both worth finding later. */
+export const WUERDE_SPEAKING_ROW = {
   id: '6589a5e4-d510-45e6-a1d6-56ea8de56030', type: 'speaking',
   fields: ['prompt', 'correct_answer', 'accepted_answers'],
-  why: 'Speaking content is refused by the compiler by a hard rule, so this row keeps the capitalised Würde on all three fields. After this patch the cluster is right on five surfaces and wrong on one, which is worse to inherit than uniformly wrong: the next reader will assume the odd one out is deliberate. It is not. It needs whoever owns speaking content.',
+  why: 'Held back until 2026-09-16 because the compiler refuses speaking content by a hard rule, which left the cluster right on five surfaces and wrong on one — worse to inherit than uniformly wrong, since the next reader takes the odd one out for a decision. Corrected on Tyler\'s instruction through a case-only exception narrow enough that it cannot reintroduce speaking content: every field must already exist and differ only in case, and an array is corrected in place, so nothing is added, removed or reordered. What is spoken is unchanged and grading is unchanged; no pronunciation score, audio asset or speech variant is touched.',
 };
 
 export function wuerdeCapitalisation(set) {
@@ -72,8 +83,9 @@ export function wuerdeCapitalisation(set) {
   const byTarget = new Map();
   for (const [id, table, field, before, after] of WUERDE_EDITS) {
     const original = row(table, id);
-    if (original[field] !== before) throw new Error(`${id}.${field} is not ${JSON.stringify(before)}; re-read before correcting`);
-    if (before.toLowerCase() !== after.toLowerCase()) throw new Error(`${id}.${field}: this producer changes capitalisation only`);
+    const asText = (v) => (Array.isArray(v) ? v.join('\u0000') : v);
+    if (asText(original[field]) !== asText(before)) throw new Error(`${id}.${field} is not ${JSON.stringify(before)}; re-read before correcting`);
+    if (asText(before).toLowerCase() !== asText(after).toLowerCase()) throw new Error(`${id}.${field}: this producer changes capitalisation only`);
     const key = `${table}|${id}`;
     byTarget.set(key, { ...(byTarget.get(key) ?? {}), [field]: after });
   }
@@ -82,10 +94,10 @@ export function wuerdeCapitalisation(set) {
     update(table, id, after, `${table}/${id}: Würde -> würde. ${WHY}`,
       ['https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden', 'https://www.duden.de/rechtschreibung/Wuerde']);
   }
-  // The row that stays wrong must still be there, and still wrong, or this
-  // producer's account of the cluster has gone stale.
-  const spoken = row('exercises', WUERDE_LEFT_WRONG.id);
-  if (spoken.type !== 'speaking') throw new Error('The out-of-scope Würde row is no longer a speaking row');
-  if (spoken.correct_answer !== 'Würde') throw new Error('The out-of-scope Würde row has changed; re-check the cluster');
-  return { rows: byTarget.size, fields: WUERDE_EDITS.length, left_wrong: 1 };
+  // The speaking row must still be a speaking row: the exception that lets this
+  // producer reach it is keyed on nothing else, so if the type ever changes the
+  // reasoning above needs re-reading rather than silently still applying.
+  const spoken = row('exercises', WUERDE_SPEAKING_ROW.id);
+  if (spoken.type !== 'speaking') throw new Error('The Würde speaking row is no longer a speaking row; re-check the exception');
+  return { rows: byTarget.size, fields: WUERDE_EDITS.length, left_wrong: 0 };
 }

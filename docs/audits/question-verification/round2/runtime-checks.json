@@ -2,19 +2,19 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "faa92037e612b593157daea25a0e309f406015e44c7bedc3d89b1de5536729c5",
+  "draft_sha256": "8afbe9148887f8f05b8f16a4dd21c5c4563892bd9c735a7acd916b7fb3f8e26a",
   "counts": {
-    "patched_rows": 806,
-    "stored_answers": 1683,
+    "patched_rows": 809,
+    "stored_answers": 1690,
     "choice_rows": 14,
-    "closed_acceptances": 279,
+    "closed_acceptances": 270,
     "still_open": 0,
     "refusal_claims": 23,
-    "triage_rows": 539,
-    "triage_additions": 615,
-    "whole_language_comparisons": 1183947,
-    "collateral_acceptances": 20,
-    "strict_additions_accepted": 615,
+    "triage_rows": 541,
+    "triage_additions": 616,
+    "whole_language_comparisons": 1188807,
+    "collateral_acceptances": 0,
+    "strict_additions_accepted": 616,
     "taught_strings_per_language": {
       "ja": 2281,
       "it": 2020,
@@ -26,9 +26,11 @@
       "ko": 2152,
       "de": 1861
     },
-    "intended_losses_on_rows_made_strict": 5,
-    "argued_register_removals": 2,
-    "checkpoint_answers_checked": 5
+    "intended_losses_on_rows_made_strict": 1,
+    "intended_loss_expectation": "1 (grader with the audit's fixes)",
+    "argued_register_removals": 3,
+    "checkpoint_answers_checked": 5,
+    "refusal_claims_already_closed_by_the_fixed_grader": 11
   },
   "triage_source": "docs/audits/question-verification/round2/triage-confirmed.json",
   "declared_collateral": [
@@ -133,24 +135,9 @@
       "source": "comparative"
     }
   ],
-  "gate_note": "This branch has no Japanese kanji gate (verified: zero occurrences in lib/grading.ts, and audit/grader-behaviour is not an ancestor of this history). Every collateral acceptance recorded here is gate-dependent and measured on a grader that will not ship; the merged branch measures none of them.",
+  "gate_present": true,
+  "gate_note": "The Japanese kanji gate IS present in this grader, so every declared gate-dependent collateral acceptance must be absent and this run asserts that. A survivor would mean the gate is not doing the job the apply precondition rests on.",
   "intended_losses_on_rows_made_strict": [
-    {
-      "ref": "ja-E0886",
-      "candidate": "ました"
-    },
-    {
-      "ref": "ja-E0886",
-      "candidate": "いました"
-    },
-    {
-      "ref": "ja-E0898",
-      "candidate": "いました"
-    },
-    {
-      "ref": "ko-E0862",
-      "candidate": "가겠어요"
-    },
     {
       "ref": "aabbccdd-7777-3007-0004-e00000000002",
       "candidate": "란다"
@@ -180,6 +167,6 @@
     "Mechanical routing only: says nothing about whether an authored string is linguistically right.",
     "Corpus-attested strings only. The productive hole is on the learner's side, so the strings a learner would actually type are not enumerable here.",
     "Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures.",
-    "Runs lib/grading.ts as it stands on this branch. The grader branch's Japanese edit-distance gate is not present, so the 12 collateral acceptances are expected here and are the reason this patch must ship with that branch; the strict-grading probe shows they vanish under strictness."
+    "Runs lib/grading.ts as it stands on this branch, WITH the Japanese edit-distance gate. Zero collateral acceptances is the expected result and the assertion: the gate closes every one the ungated grader shows, which is what the apply precondition rests on."
   ]
 }

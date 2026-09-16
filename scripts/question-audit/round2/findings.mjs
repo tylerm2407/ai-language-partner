@@ -19,7 +19,7 @@ import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
 import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_LEVELLED, PROPAGATION_REFUSED, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
-import { WUERDE_EDITS, WUERDE_LEFT_WRONG } from './wuerde-capitalisation.mjs';
+import { WUERDE_EDITS, WUERDE_SPEAKING_ROW } from './wuerde-capitalisation.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -456,7 +456,7 @@ const WUERDE = {
     every_edit_is_one_character: 'A test asserts before.toLowerCase() === after.toLowerCase() on every one, so this block can never become a content change.',
   },
   ONE_ROW_KNOWINGLY_LEFT_WRONG: {
-    ...WUERDE_LEFT_WRONG,
+    ...WUERDE_SPEAKING_ROW,
     why_it_is_named_here: 'After this patch the cluster is right on five surfaces and wrong on one. That is worse to inherit than uniformly wrong, because the next reader will assume the odd one out is deliberate. It is not: speaking content is refused by the compiler by a hard rule. It needs whoever owns speaking content.',
   },
 };

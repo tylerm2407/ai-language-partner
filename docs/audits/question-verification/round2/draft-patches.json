@@ -2384,6 +2384,34 @@
     },
     {
       "table": "exercises",
+      "id": "6589a5e4-d510-45e6-a1d6-56ea8de56030",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0002-b10000000000",
+        "type": "speaking",
+        "prompt": "Würde",
+        "correct_answer": "Würde",
+        "accepted_answers": [
+          "Würde"
+        ]
+      },
+      "after": {
+        "prompt": "würde",
+        "correct_answer": "würde",
+        "accepted_answers": [
+          "würde"
+        ]
+      },
+      "reasons": [
+        "exercises/6589a5e4-d510-45e6-a1d6-56ea8de56030: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "6595af8a-67e1-4d5f-ad60-dcab906d6e10",
       "before": {
         "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
@@ -14208,6 +14236,55 @@
         "zh-E0982 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will work\" already accepts \"我将工作\", \"我将会工作\", \"我要工作\" on the identical question — group to_target|I will work|我会工作: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-3003-0002-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-8888-3003-0002-b10000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "Appointment",
+          "Booking",
+          "To reserve"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Appointment",
+          "Booking"
+        ]
+      },
+      "reasons": [
+        "Travel unit ruling 2026-09-16: REMOVES one accepted answer, \"To reserve\". It is the only verb on this row and exactly what this curriculum teaches 预订 to mean, in all six of 预订's rows, so accepting it on a 预约 row erases the part-of-speech contrast that is the learner's only signal for telling the two words apart — 预约 is glossed as a noun throughout, 预订 as a verb. \"Booking\" is deliberately KEPT, against the held proposal: the same row exists in all nine languages and the other eight all accept it, so removing it from Chinese alone would trade one inconsistency for another. \"Appointment\" is the curriculum's own other gloss for 预约. No wrong answer was being graded right either way; the cost of leaving this was teaching clarity rather than scoring."
+      ],
+      "sources": [
+        "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E7%BA%A6",
+        "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E8%AE%A2"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-3003-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-3003-0003-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "预订"
+        ]
+      },
+      "reasons": [
+        "Travel unit ruling 2026-09-16: a hotel reservation is 预订. A room is a space, not an appointment, so a learner answering 预订 on this Hotel Check-in row is correct and was being told otherwise. The KEY is deliberately left as 预约: three Travel rows gloss 预约 as \"Reservation\", and rekeying one leaves the other two teaching the opposite. Whether Travel should gloss 预约 that way at all is a question about those three rows together and stays open."
+      ],
+      "sources": [
+        "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E7%BA%A6",
+        "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E8%AE%A2"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
