@@ -5,12 +5,6 @@
  * routing — fixed first, grader second, fixed-and-labelled third — and that a
  * remote failure lands in the result rather than being thrown or hidden.
  */
-const mockInvoke = jest.fn();
-
-jest.mock('./ai', () => ({
-  invokeWithRetry: (...args: unknown[]) => mockInvoke(...args),
-}));
-
 import { gradeToRating } from './grading';
 import {
   gradeOpenResponse,
@@ -18,6 +12,12 @@ import {
   PARTIAL_ACCURACY,
   type OpenResponseArgs,
 } from './semantic-grading';
+
+const mockInvoke = jest.fn();
+
+jest.mock('./ai', () => ({
+  invokeWithRetry: (...args: unknown[]) => mockInvoke(...args),
+}));
 
 // Deliberately far from the key: the client's fixed grader tolerates up to two
 // edits, so a one-letter change (hermana/hermano) would never reach the grader.

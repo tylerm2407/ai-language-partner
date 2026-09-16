@@ -104,7 +104,7 @@ function ComprehensionQuestionsBody({ questions, onComplete, onExit, cefrLevel }
     } else {
       haptic('incorrect');
     }
-  }, [question, textAnswer, selectedOption, isRevealed, isGrading, cefrLevel, siblingKeys]);
+  }, [question, textAnswer, selectedOption, isRevealed, cefrLevel, siblingKeys]);
 
   const handleNext = useCallback(() => {
     if (currentIndex + 1 < questions.length) {
