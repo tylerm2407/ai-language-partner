@@ -62,7 +62,15 @@ jest.mock('../../components/animations/CorrectSparkle', () => ({
 jest.mock('../../components/animations/WrongShake', () => ({
   WrongShake: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('../../components/ui/CelebrationOverlay', () => ({ CelebrationOverlay: () => null }));
+// Rendered as null, but its props are recorded: which mascot the finish screen
+// asks for is the only place that decision is observable.
+const celebrationProps: { mood?: string }[] = [];
+jest.mock('../../components/ui/CelebrationOverlay', () => ({
+  CelebrationOverlay: (props: { mood?: string }) => {
+    celebrationProps.push(props);
+    return null;
+  },
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -237,5 +245,40 @@ describe('second chance in a real lesson', () => {
     expect(result.correctCount).toBe(1);
     expect(result.accuracy).toBe(1);
     expect(result.skippedCount).toBe(0);
+  });
+});
+
+/**
+ * Lives here because this file already drives a lesson to accuracy 0 — the
+ * second-chance path scores a recovered answer as wrong — which is exactly the
+ * finish the rule is about.
+ */
+describe('the finish celebration', () => {
+  beforeEach(() => {
+    celebrationProps.length = 0;
+  });
+
+  it('breathes fire on a weak finish, not just a strong one', () => {
+    const r = runner(jest.fn());
+
+    // Wrong, then right on the second try: recorded as accuracy 0.
+    pressLabel(r, 'Option B: milk');
+    pressLabel(r, 'Option A: water');
+    pressLabel(r, 'Finish');
+
+    // The overlay used to be asked for 'correct' — the small approving nod —
+    // below 80% accuracy, so the learner who worked hardest for the finish got
+    // the smallest reaction. Finishing is what is being celebrated; the title
+    // and the score line are where the honesty about accuracy lives.
+    expect(celebrationProps.at(-1)?.mood).toBe('lessonComplete');
+  });
+
+  it('asks for the same celebration on a perfect finish', () => {
+    const r = runner(jest.fn());
+
+    pressLabel(r, 'Option A: water');
+    pressLabel(r, 'Finish');
+
+    expect(celebrationProps.at(-1)?.mood).toBe('lessonComplete');
   });
 });
