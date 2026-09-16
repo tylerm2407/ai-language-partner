@@ -952,6 +952,10 @@ function renderExercise(
 
   switch (exercise.type) {
     case 'multiple_choice':
+    // Same component, different question. `script_choice` offers written forms
+    // rather than meanings, and is a separate type only so the report can count
+    // it as orthography rather than as vocabulary.
+    case 'script_choice':
       return (
         <MultipleChoice
           exercise={exercise}

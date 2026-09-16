@@ -46,6 +46,9 @@ interface ExerciseCardProps {
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   multiple_choice: 'Choose the correct answer',
+  // Not "choose the correct spelling": the kana reading in the cue is correct
+  // Japanese too, and the 2026-09-16 orthography ruling turns on saying so.
+  script_choice: 'Choose the written form',
   listening_choice: 'What did you hear?',
   listening_type: 'Type what you hear',
   translate_to_target: 'Translate to target language',

@@ -1,0 +1,5567 @@
+[
+  {
+    "id": "3dbad588-b6fe-8e83-8885-28bd351cb2cb",
+    "card_id": "aabbccdd-6666-1001-c006-000000000000",
+    "lesson_id": "aabbccdd-6666-1001-0001-000000000000",
+    "prompt": "Which is the kanji for おねがいします (Please)?",
+    "correct_answer": "お願いします",
+    "options": [
+      "鶏肉",
+      "水",
+      "お願いします",
+      "よろしくお願いします"
+    ],
+    "distractors": [
+      "よろしくお願いします",
+      "水",
+      "鶏肉"
+    ],
+    "order_index": 130,
+    "reading": "おねがいします",
+    "band": "A1"
+  },
+  {
+    "id": "4613b94a-802f-898f-b0d4-0e4d12b06ca3",
+    "card_id": "aabbccdd-6666-1002-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1002-0001-000000000000",
+    "prompt": "Which is the kanji for みず (Water)?",
+    "correct_answer": "水",
+    "options": [
+      "水",
+      "ご飯",
+      "牛乳",
+      "鶏肉"
+    ],
+    "distractors": [
+      "鶏肉",
+      "牛乳",
+      "ご飯"
+    ],
+    "order_index": 130,
+    "reading": "みず",
+    "band": "A1"
+  },
+  {
+    "id": "fb2b36b7-fb28-8712-9054-3b924f417407",
+    "card_id": "aabbccdd-6666-1002-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1002-0002-000000000000",
+    "prompt": "Which is the kanji for とりにく (Chicken)?",
+    "correct_answer": "鶏肉",
+    "options": [
+      "鶏肉",
+      "牛乳",
+      "水",
+      "ご飯"
+    ],
+    "distractors": [
+      "水",
+      "牛乳",
+      "ご飯"
+    ],
+    "order_index": 131,
+    "reading": "とりにく",
+    "band": "A1"
+  },
+  {
+    "id": "f7460446-720d-8dec-8e63-4f769c8ff891",
+    "card_id": "aabbccdd-6666-1002-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1002-0003-000000000000",
+    "prompt": "Which is the kanji for ぎゅうにゅう (Milk)?",
+    "correct_answer": "牛乳",
+    "options": [
+      "ご飯",
+      "水",
+      "牛乳",
+      "鶏肉"
+    ],
+    "distractors": [
+      "水",
+      "鶏肉",
+      "ご飯"
+    ],
+    "order_index": 132,
+    "reading": "ぎゅうにゅう",
+    "band": "A1"
+  },
+  {
+    "id": "ee442aa7-c19f-83b5-a7d4-b396dc558f51",
+    "card_id": "aabbccdd-6666-1002-c008-000000000000",
+    "lesson_id": "aabbccdd-6666-1002-0004-000000000000",
+    "prompt": "Which is the kanji for ごはん (Rice)?",
+    "correct_answer": "ご飯",
+    "options": [
+      "ご飯",
+      "水",
+      "朝ご飯",
+      "朝飯前"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "朝飯前",
+      "水"
+    ],
+    "order_index": 133,
+    "reading": "ごはん",
+    "band": "A1"
+  },
+  {
+    "id": "92736cf5-11e8-89ed-96ab-daab601e887c",
+    "card_id": "aabbccdd-6666-1002-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1002-0005-000000000000",
+    "prompt": "Which is the kanji for さかな (Fish)?",
+    "correct_answer": "魚",
+    "options": [
+      "鶏肉",
+      "魚",
+      "水",
+      "牛乳"
+    ],
+    "distractors": [
+      "水",
+      "鶏肉",
+      "牛乳"
+    ],
+    "order_index": 134,
+    "reading": "さかな",
+    "band": "A1"
+  },
+  {
+    "id": "17bd7569-1159-8b51-8b1d-47599ee51c97",
+    "card_id": "aabbccdd-6666-1003-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0001-000000000000",
+    "prompt": "Which is the kanji for ひだり (Left)?",
+    "correct_answer": "左",
+    "options": [
+      "右",
+      "切符",
+      "左",
+      "電車"
+    ],
+    "distractors": [
+      "右",
+      "電車",
+      "切符"
+    ],
+    "order_index": 130,
+    "reading": "ひだり",
+    "band": "A1"
+  },
+  {
+    "id": "e2b9824e-7d81-8cf2-b363-11109981ab4c",
+    "card_id": "aabbccdd-6666-1003-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+    "prompt": "Which is the kanji for みぎ (Right)?",
+    "correct_answer": "右",
+    "options": [
+      "切符",
+      "電車",
+      "右",
+      "左"
+    ],
+    "distractors": [
+      "左",
+      "電車",
+      "切符"
+    ],
+    "order_index": 131,
+    "reading": "みぎ",
+    "band": "A1"
+  },
+  {
+    "id": "849108d1-6e0d-84f7-b2e6-7416e8b05f91",
+    "card_id": "aabbccdd-6666-1003-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0003-000000000000",
+    "prompt": "Which is the kanji for でんしゃ (Train)?",
+    "correct_answer": "電車",
+    "options": [
+      "電車",
+      "切符",
+      "左",
+      "右"
+    ],
+    "distractors": [
+      "左",
+      "右",
+      "切符"
+    ],
+    "order_index": 132,
+    "reading": "でんしゃ",
+    "band": "A1"
+  },
+  {
+    "id": "2db8fa06-2a39-8db9-9e77-d7ee3da2923d",
+    "card_id": "aabbccdd-6666-1003-c006-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0004-000000000000",
+    "prompt": "Which is the kanji for きっぷ (Ticket)?",
+    "correct_answer": "切符",
+    "options": [
+      "左",
+      "切符",
+      "右",
+      "締め切り"
+    ],
+    "distractors": [
+      "締め切り",
+      "左",
+      "右"
+    ],
+    "order_index": 133,
+    "reading": "きっぷ",
+    "band": "A1"
+  },
+  {
+    "id": "e617c166-8ce1-88d6-ad9a-55fd49c23330",
+    "card_id": "aabbccdd-6666-1003-c007-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0005-000000000000",
+    "prompt": "Which is the kanji for えき (Station)?",
+    "correct_answer": "駅",
+    "options": [
+      "左",
+      "右",
+      "駅",
+      "電車"
+    ],
+    "distractors": [
+      "左",
+      "右",
+      "電車"
+    ],
+    "order_index": 134,
+    "reading": "えき",
+    "band": "A1"
+  },
+  {
+    "id": "0c80a311-b9e7-8711-95fc-cb41c43830b0",
+    "card_id": "aabbccdd-6666-1003-c008-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+    "prompt": "Which is the kanji for びょういん (Hospital)?",
+    "correct_answer": "病院",
+    "options": [
+      "病院",
+      "右",
+      "病気",
+      "左"
+    ],
+    "distractors": [
+      "病気",
+      "左",
+      "右"
+    ],
+    "order_index": 135,
+    "reading": "びょういん",
+    "band": "A1"
+  },
+  {
+    "id": "ad52bc97-29b6-893e-9be3-d3a75fc6ec19",
+    "card_id": "aabbccdd-6666-1003-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0001-000000000000",
+    "prompt": "Which is the kanji for ぎんこう (Bank)?",
+    "correct_answer": "銀行",
+    "options": [
+      "行きました",
+      "銀行",
+      "旅行しました",
+      "行きます"
+    ],
+    "distractors": [
+      "行きました",
+      "旅行しました",
+      "行きます"
+    ],
+    "order_index": 136,
+    "reading": "ぎんこう",
+    "band": "A1"
+  },
+  {
+    "id": "c4ac16c4-8d13-8f06-a627-3223ff4c9c89",
+    "card_id": "aabbccdd-6666-1003-c010-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+    "prompt": "Which is the kanji for やっきょく (Pharmacy)?",
+    "correct_answer": "薬局",
+    "options": [
+      "薬局",
+      "薬",
+      "左",
+      "右"
+    ],
+    "distractors": [
+      "薬",
+      "左",
+      "右"
+    ],
+    "order_index": 137,
+    "reading": "やっきょく",
+    "band": "A1"
+  },
+  {
+    "id": "c583873c-5128-8789-878c-3707ee3b8eef",
+    "card_id": "aabbccdd-6666-1003-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1003-0003-000000000000",
+    "prompt": "Which is the kanji for くうこう (Airport)?",
+    "correct_answer": "空港",
+    "options": [
+      "空港",
+      "右",
+      "電車",
+      "左"
+    ],
+    "distractors": [
+      "左",
+      "右",
+      "電車"
+    ],
+    "order_index": 138,
+    "reading": "くうこう",
+    "band": "A1"
+  },
+  {
+    "id": "db4e5b00-c3e4-87ca-b839-a621084d3384",
+    "card_id": "aabbccdd-6666-1004-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0001-000000000000",
+    "prompt": "Which is the kanji for あさごはん (Breakfast)?",
+    "correct_answer": "朝ご飯",
+    "options": [
+      "朝飯前",
+      "高い",
+      "ご飯",
+      "朝ご飯"
+    ],
+    "distractors": [
+      "ご飯",
+      "朝飯前",
+      "高い"
+    ],
+    "order_index": 130,
+    "reading": "あさごはん",
+    "band": "A1"
+  },
+  {
+    "id": "3bfa2c84-e05b-839f-a28a-75b836295581",
+    "card_id": "aabbccdd-6666-1004-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0002-000000000000",
+    "prompt": "Which is the kanji for たかい (Expensive)?",
+    "correct_answer": "高い",
+    "options": [
+      "朝ご飯",
+      "もっと高い",
+      "高い",
+      "もっと背が高い"
+    ],
+    "distractors": [
+      "もっと高い",
+      "もっと背が高い",
+      "朝ご飯"
+    ],
+    "order_index": 131,
+    "reading": "たかい",
+    "band": "A1"
+  },
+  {
+    "id": "010543f7-9563-8836-96ee-dc1447bfd35d",
+    "card_id": "aabbccdd-6666-1004-c003-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0003-000000000000",
+    "prompt": "Which is the kanji for やすい (Cheap)?",
+    "correct_answer": "安い",
+    "options": [
+      "安い",
+      "朝ご飯",
+      "もっと安い",
+      "高い"
+    ],
+    "distractors": [
+      "もっと安い",
+      "朝ご飯",
+      "高い"
+    ],
+    "order_index": 132,
+    "reading": "やすい",
+    "band": "A1"
+  },
+  {
+    "id": "f5e0d3a2-b7e0-833b-91d5-4b1ceb6cb1c7",
+    "card_id": "aabbccdd-6666-1004-c004-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0004-000000000000",
+    "prompt": "Which is the kanji for あかい (Red)?",
+    "correct_answer": "赤い",
+    "options": [
+      "朝ご飯",
+      "安い",
+      "高い",
+      "赤い"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "高い",
+      "安い"
+    ],
+    "order_index": 133,
+    "reading": "あかい",
+    "band": "A1"
+  },
+  {
+    "id": "be309fe4-99b4-8c04-a3f9-4e9d8ec8119f",
+    "card_id": "aabbccdd-6666-1004-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0005-000000000000",
+    "prompt": "Which is the kanji for あおい (Blue)?",
+    "correct_answer": "青い",
+    "options": [
+      "高い",
+      "朝ご飯",
+      "安い",
+      "青い"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "高い",
+      "安い"
+    ],
+    "order_index": 134,
+    "reading": "あおい",
+    "band": "A1"
+  },
+  {
+    "id": "cb3a93de-6262-877a-8b06-5d917a7d7474",
+    "card_id": "aabbccdd-6666-1004-c007-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0006-000000000000",
+    "prompt": "Which is the kanji for くつ (Shoes)?",
+    "correct_answer": "靴",
+    "options": [
+      "高い",
+      "靴",
+      "安い",
+      "朝ご飯"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "高い",
+      "安い"
+    ],
+    "order_index": 135,
+    "reading": "くつ",
+    "band": "A1"
+  },
+  {
+    "id": "95292737-93ab-854d-8988-7958e8345a6e",
+    "card_id": "aabbccdd-6666-1004-c008-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0001-000000000000",
+    "prompt": "Which is the kanji for はらう (To pay)?",
+    "correct_answer": "払う",
+    "options": [
+      "朝ご飯",
+      "払う",
+      "高い",
+      "安い"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "高い",
+      "安い"
+    ],
+    "order_index": 136,
+    "reading": "はらう",
+    "band": "A1"
+  },
+  {
+    "id": "8591bebb-5984-8774-9b21-7ea3c3df510b",
+    "card_id": "aabbccdd-6666-1004-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0002-000000000000",
+    "prompt": "Which is the kanji for じかん (Time)?",
+    "correct_answer": "時間",
+    "options": [
+      "その間に",
+      "時間",
+      "の間に",
+      "間接話法"
+    ],
+    "distractors": [
+      "の間に",
+      "その間に",
+      "間接話法"
+    ],
+    "order_index": 137,
+    "reading": "じかん",
+    "band": "A1"
+  },
+  {
+    "id": "75ac4c7d-fdca-8b7a-970d-95bd39782ee5",
+    "card_id": "aabbccdd-6666-1004-c010-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0003-000000000000",
+    "prompt": "Which is the kanji for あす (Tomorrow)?",
+    "correct_answer": "明日",
+    "options": [
+      "誕生日",
+      "明日",
+      "昨日",
+      "祝日"
+    ],
+    "distractors": [
+      "昨日",
+      "祝日",
+      "誕生日"
+    ],
+    "order_index": 138,
+    "reading": "あす",
+    "band": "A1"
+  },
+  {
+    "id": "cea3cc16-de85-8121-a784-717643f1ecf5",
+    "card_id": "aabbccdd-6666-1004-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1004-0004-000000000000",
+    "prompt": "Which is the kanji for おかね (Money)?",
+    "correct_answer": "お金",
+    "options": [
+      "高い",
+      "お金",
+      "安い",
+      "朝ご飯"
+    ],
+    "distractors": [
+      "朝ご飯",
+      "高い",
+      "安い"
+    ],
+    "order_index": 139,
+    "reading": "おかね",
+    "band": "A1"
+  },
+  {
+    "id": "1ecee97a-e2a1-8ac1-ba51-03cb52aaec72",
+    "card_id": "aabbccdd-6666-1005-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0001-000000000000",
+    "prompt": "Which is the kanji for せんせい (Teacher)?",
+    "correct_answer": "先生",
+    "options": [
+      "野生動物",
+      "誕生日",
+      "先生",
+      "先週"
+    ],
+    "distractors": [
+      "先週",
+      "誕生日",
+      "野生動物"
+    ],
+    "order_index": 130,
+    "reading": "せんせい",
+    "band": "A1"
+  },
+  {
+    "id": "c564bef9-81d1-897d-bfb1-3fc0ee36a334",
+    "card_id": "aabbccdd-6666-1005-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+    "prompt": "Which is the kanji for いしゃ (Doctor)?",
+    "correct_answer": "医者",
+    "options": [
+      "先生",
+      "歯医者",
+      "利害関係者",
+      "医者"
+    ],
+    "distractors": [
+      "歯医者",
+      "利害関係者",
+      "先生"
+    ],
+    "order_index": 131,
+    "reading": "いしゃ",
+    "band": "A1"
+  },
+  {
+    "id": "057289f7-d840-8a5f-8c58-cffbdcda067c",
+    "card_id": "aabbccdd-6666-1005-c003-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0003-000000000000",
+    "prompt": "Which is the kanji for じむしょ (Office)?",
+    "correct_answer": "事務所",
+    "options": [
+      "事務所",
+      "議事録",
+      "台所",
+      "先生"
+    ],
+    "distractors": [
+      "台所",
+      "議事録",
+      "先生"
+    ],
+    "order_index": 132,
+    "reading": "じむしょ",
+    "band": "A1"
+  },
+  {
+    "id": "c06db327-44a1-8c38-9d80-281e3021156e",
+    "card_id": "aabbccdd-6666-1005-c004-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0004-000000000000",
+    "prompt": "Which is the kanji for よむ (To read)?",
+    "correct_answer": "読む",
+    "options": [
+      "読む",
+      "医者",
+      "事務所",
+      "先生"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 133,
+    "reading": "よむ",
+    "band": "A1"
+  },
+  {
+    "id": "0f534c3c-9a1f-8892-bd68-f77a32762ac2",
+    "card_id": "aabbccdd-6666-1005-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0005-000000000000",
+    "prompt": "Which is the kanji for りょうりする (To cook)?",
+    "correct_answer": "料理する",
+    "options": [
+      "料理する",
+      "給料",
+      "倫理",
+      "理由"
+    ],
+    "distractors": [
+      "理由",
+      "給料",
+      "倫理"
+    ],
+    "order_index": 134,
+    "reading": "りょうりする",
+    "band": "A1"
+  },
+  {
+    "id": "ee8cf3d1-62c7-8336-82d4-7cf7407647e6",
+    "card_id": "aabbccdd-6666-1005-c007-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0006-000000000000",
+    "prompt": "Which is the kanji for あつい (Hot)?",
+    "correct_answer": "暑い",
+    "options": [
+      "先生",
+      "暑い",
+      "医者",
+      "事務所"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 135,
+    "reading": "あつい",
+    "band": "A1"
+  },
+  {
+    "id": "b0c2b267-01a8-8c25-a21c-c8050b54d42e",
+    "card_id": "aabbccdd-6666-1005-c008-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0001-000000000000",
+    "prompt": "Which is the kanji for さむい (Cold)?",
+    "correct_answer": "寒い",
+    "options": [
+      "事務所",
+      "医者",
+      "寒い",
+      "先生"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 136,
+    "reading": "さむい",
+    "band": "A1"
+  },
+  {
+    "id": "ce6f7630-f248-8c4e-ae31-5220cd52d9dc",
+    "card_id": "aabbccdd-6666-1005-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+    "prompt": "Which is the kanji for なつ (Summer)?",
+    "correct_answer": "夏",
+    "options": [
+      "事務所",
+      "医者",
+      "先生",
+      "夏"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 137,
+    "reading": "なつ",
+    "band": "A1"
+  },
+  {
+    "id": "44cc86f5-776b-8610-bee2-fd8c5511bc6a",
+    "card_id": "aabbccdd-6666-1005-c010-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0003-000000000000",
+    "prompt": "Which is the kanji for ふゆ (Winter)?",
+    "correct_answer": "冬",
+    "options": [
+      "医者",
+      "冬",
+      "先生",
+      "事務所"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 138,
+    "reading": "ふゆ",
+    "band": "A1"
+  },
+  {
+    "id": "931409fb-a09a-8ac4-b5b0-5f97c021bfdc",
+    "card_id": "aabbccdd-6666-1005-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1005-0004-000000000000",
+    "prompt": "Which is the kanji for ともだち (Friend)?",
+    "correct_answer": "友達",
+    "options": [
+      "医者",
+      "事務所",
+      "友達",
+      "先生"
+    ],
+    "distractors": [
+      "先生",
+      "医者",
+      "事務所"
+    ],
+    "order_index": 139,
+    "reading": "ともだち",
+    "band": "A1"
+  },
+  {
+    "id": "1aa60404-3617-871a-869e-88cba0fc86cc",
+    "card_id": "aabbccdd-6666-1006-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0001-000000000000",
+    "prompt": "Which is the kanji for はは (Mother)?",
+    "correct_answer": "母",
+    "options": [
+      "姉妹",
+      "母",
+      "兄弟",
+      "父"
+    ],
+    "distractors": [
+      "父",
+      "姉妹",
+      "兄弟"
+    ],
+    "order_index": 130,
+    "reading": "はは",
+    "band": "A1"
+  },
+  {
+    "id": "f6d35aea-5ded-87c3-85e7-2002b0a348e5",
+    "card_id": "aabbccdd-6666-1006-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
+    "prompt": "Which is the kanji for ちち (Father)?",
+    "correct_answer": "父",
+    "options": [
+      "母",
+      "兄弟",
+      "父",
+      "姉妹"
+    ],
+    "distractors": [
+      "母",
+      "姉妹",
+      "兄弟"
+    ],
+    "order_index": 131,
+    "reading": "ちち",
+    "band": "A1"
+  },
+  {
+    "id": "cd491e08-816c-8c11-a28b-ce9455fc40c8",
+    "card_id": "aabbccdd-6666-1006-c003-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0003-000000000000",
+    "prompt": "Which is the kanji for しまい (Sister)?",
+    "correct_answer": "姉妹",
+    "options": [
+      "母",
+      "父",
+      "姉妹",
+      "兄弟"
+    ],
+    "distractors": [
+      "母",
+      "父",
+      "兄弟"
+    ],
+    "order_index": 132,
+    "reading": "しまい",
+    "band": "A1"
+  },
+  {
+    "id": "2f0e8dde-ff99-8c3a-907d-8386d66a85e9",
+    "card_id": "aabbccdd-6666-1006-c004-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+    "prompt": "Which is the kanji for きょうだい (Brother)?",
+    "correct_answer": "兄弟",
+    "options": [
+      "母",
+      "父",
+      "姉妹",
+      "兄弟"
+    ],
+    "distractors": [
+      "母",
+      "父",
+      "姉妹"
+    ],
+    "order_index": 133,
+    "reading": "きょうだい",
+    "band": "A1"
+  },
+  {
+    "id": "c7c10c95-5350-8979-9f28-8f4e99fc9793",
+    "card_id": "aabbccdd-6666-1006-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+    "prompt": "Which is the kanji for むすめ (Daughter)?",
+    "correct_answer": "娘",
+    "options": [
+      "娘",
+      "姉妹",
+      "母",
+      "父"
+    ],
+    "distractors": [
+      "母",
+      "父",
+      "姉妹"
+    ],
+    "order_index": 134,
+    "reading": "むすめ",
+    "band": "A1"
+  },
+  {
+    "id": "b3ccfe8d-6285-89fd-8033-cc34d1178091",
+    "card_id": "aabbccdd-6666-1006-c006-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0006-000000000000",
+    "prompt": "Which is the kanji for むすこ (Son)?",
+    "correct_answer": "息子",
+    "options": [
+      "父",
+      "母",
+      "息子",
+      "椅子"
+    ],
+    "distractors": [
+      "椅子",
+      "母",
+      "父"
+    ],
+    "order_index": 135,
+    "reading": "むすこ",
+    "band": "A1"
+  },
+  {
+    "id": "d1d4ebe8-f872-890a-97c1-60da7b733815",
+    "card_id": "aabbccdd-6666-1006-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0001-000000000000",
+    "prompt": "Which is the kanji for かぞく (Family)?",
+    "correct_answer": "家族",
+    "options": [
+      "家族",
+      "家賃",
+      "家",
+      "母"
+    ],
+    "distractors": [
+      "家",
+      "家賃",
+      "母"
+    ],
+    "order_index": 136,
+    "reading": "かぞく",
+    "band": "A1"
+  },
+  {
+    "id": "0563e117-15e0-8a21-8dd6-d67d2da918b5",
+    "card_id": "aabbccdd-6666-1006-c010-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
+    "prompt": "Which is the kanji for いぬ (Dog)?",
+    "correct_answer": "犬",
+    "options": [
+      "犬",
+      "母",
+      "父",
+      "姉妹"
+    ],
+    "distractors": [
+      "母",
+      "父",
+      "姉妹"
+    ],
+    "order_index": 137,
+    "reading": "いぬ",
+    "band": "A1"
+  },
+  {
+    "id": "5a31e5cb-90cc-8faa-a329-ba80da1f04e3",
+    "card_id": "aabbccdd-6666-1006-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1006-0003-000000000000",
+    "prompt": "Which is the kanji for ねこ (Cat)?",
+    "correct_answer": "猫",
+    "options": [
+      "姉妹",
+      "父",
+      "猫",
+      "母"
+    ],
+    "distractors": [
+      "母",
+      "父",
+      "姉妹"
+    ],
+    "order_index": 138,
+    "reading": "ねこ",
+    "band": "A1"
+  },
+  {
+    "id": "b14be147-7dc2-8294-8347-3bcdb57e708d",
+    "card_id": "aabbccdd-6666-1007-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0001-000000000000",
+    "prompt": "Which is the kanji for いえ (House)?",
+    "correct_answer": "家",
+    "options": [
+      "家",
+      "部屋",
+      "家族",
+      "家賃"
+    ],
+    "distractors": [
+      "家族",
+      "家賃",
+      "部屋"
+    ],
+    "order_index": 130,
+    "reading": "いえ",
+    "band": "A1"
+  },
+  {
+    "id": "ff297842-6476-893b-961e-683878fb1764",
+    "card_id": "aabbccdd-6666-1007-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0002-000000000000",
+    "prompt": "Which is the kanji for へや (Room)?",
+    "correct_answer": "部屋",
+    "options": [
+      "台所",
+      "お風呂",
+      "家",
+      "部屋"
+    ],
+    "distractors": [
+      "家",
+      "台所",
+      "お風呂"
+    ],
+    "order_index": 131,
+    "reading": "へや",
+    "band": "A1"
+  },
+  {
+    "id": "e90f866a-62da-8029-adfd-43da8c7ff9c7",
+    "card_id": "aabbccdd-6666-1007-c003-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0003-000000000000",
+    "prompt": "Which is the kanji for だいどころ (Kitchen)?",
+    "correct_answer": "台所",
+    "options": [
+      "家",
+      "台所",
+      "事務所",
+      "部屋"
+    ],
+    "distractors": [
+      "事務所",
+      "家",
+      "部屋"
+    ],
+    "order_index": 132,
+    "reading": "だいどころ",
+    "band": "A1"
+  },
+  {
+    "id": "74030003-9cab-8cbe-bb97-51cc391b2961",
+    "card_id": "aabbccdd-6666-1007-c004-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0004-000000000000",
+    "prompt": "Which is the kanji for おふろ (Bath)?",
+    "correct_answer": "お風呂",
+    "options": [
+      "家",
+      "お風呂",
+      "部屋",
+      "台所"
+    ],
+    "distractors": [
+      "家",
+      "部屋",
+      "台所"
+    ],
+    "order_index": 133,
+    "reading": "おふろ",
+    "band": "A1"
+  },
+  {
+    "id": "73183457-2d78-8ca2-bf8a-c8c0d79d6568",
+    "card_id": "aabbccdd-6666-1007-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0005-000000000000",
+    "prompt": "Which is the kanji for しんしつ (Bedroom)?",
+    "correct_answer": "寝室",
+    "options": [
+      "部屋",
+      "台所",
+      "家",
+      "寝室"
+    ],
+    "distractors": [
+      "家",
+      "部屋",
+      "台所"
+    ],
+    "order_index": 134,
+    "reading": "しんしつ",
+    "band": "A1"
+  },
+  {
+    "id": "c9ea1d8b-2b0b-870a-8116-97e2e8d06d02",
+    "card_id": "aabbccdd-6666-1007-c007-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0006-000000000000",
+    "prompt": "Which is the kanji for まど (Window)?",
+    "correct_answer": "窓",
+    "options": [
+      "部屋",
+      "窓",
+      "家",
+      "台所"
+    ],
+    "distractors": [
+      "家",
+      "部屋",
+      "台所"
+    ],
+    "order_index": 135,
+    "reading": "まど",
+    "band": "A1"
+  },
+  {
+    "id": "351280da-b1e9-8e3c-831c-bb50fd71e0fa",
+    "card_id": "aabbccdd-6666-1007-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0001-000000000000",
+    "prompt": "Which is the kanji for いす (Chair)?",
+    "correct_answer": "椅子",
+    "options": [
+      "椅子",
+      "家",
+      "息子",
+      "部屋"
+    ],
+    "distractors": [
+      "息子",
+      "家",
+      "部屋"
+    ],
+    "order_index": 136,
+    "reading": "いす",
+    "band": "A1"
+  },
+  {
+    "id": "7d94eb38-b38c-84dd-81c1-8bee2f732139",
+    "card_id": "aabbccdd-6666-1007-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1007-0002-000000000000",
+    "prompt": "Which is the kanji for にわ (Garden)?",
+    "correct_answer": "庭",
+    "options": [
+      "台所",
+      "部屋",
+      "庭",
+      "家"
+    ],
+    "distractors": [
+      "家",
+      "部屋",
+      "台所"
+    ],
+    "order_index": 137,
+    "reading": "にわ",
+    "band": "A1"
+  },
+  {
+    "id": "34b50bae-a016-8813-bbf3-642c2e4d9879",
+    "card_id": "aabbccdd-6666-1008-c001-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0001-000000000000",
+    "prompt": "Which is the kanji for あたま (Head)?",
+    "correct_answer": "頭",
+    "options": [
+      "手",
+      "頭痛",
+      "目",
+      "頭"
+    ],
+    "distractors": [
+      "頭痛",
+      "手",
+      "目"
+    ],
+    "order_index": 130,
+    "reading": "あたま",
+    "band": "A1"
+  },
+  {
+    "id": "8e41cff9-56aa-8843-b459-4fe43ead18f9",
+    "card_id": "aabbccdd-6666-1008-c002-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0002-000000000000",
+    "prompt": "Which is the kanji for て (Hand)?",
+    "correct_answer": "手",
+    "options": [
+      "手",
+      "目",
+      "お腹",
+      "頭"
+    ],
+    "distractors": [
+      "頭",
+      "目",
+      "お腹"
+    ],
+    "order_index": 131,
+    "reading": "て",
+    "band": "A1"
+  },
+  {
+    "id": "7204b92e-a8e5-83a5-8e29-9b0e1bf84665",
+    "card_id": "aabbccdd-6666-1008-c003-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0003-000000000000",
+    "prompt": "Which is the kanji for め (Eye)?",
+    "correct_answer": "目",
+    "options": [
+      "目標",
+      "目",
+      "目的",
+      "目の玉が飛び出る"
+    ],
+    "distractors": [
+      "目標",
+      "目的",
+      "目の玉が飛び出る"
+    ],
+    "order_index": 132,
+    "reading": "め",
+    "band": "A1"
+  },
+  {
+    "id": "da8999d6-3691-8fc5-9b4f-e6354488ff83",
+    "card_id": "aabbccdd-6666-1008-c004-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0004-000000000000",
+    "prompt": "Which is the kanji for おなか (Stomach)?",
+    "correct_answer": "お腹",
+    "options": [
+      "お腹",
+      "頭",
+      "目",
+      "手"
+    ],
+    "distractors": [
+      "頭",
+      "手",
+      "目"
+    ],
+    "order_index": 133,
+    "reading": "おなか",
+    "band": "A1"
+  },
+  {
+    "id": "0b4fe960-0e7b-87bd-94e1-63a4748f4a30",
+    "card_id": "aabbccdd-6666-1008-c005-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+    "prompt": "Which is the kanji for びょうき (Sick)?",
+    "correct_answer": "病気",
+    "options": [
+      "病気",
+      "病院",
+      "気候",
+      "天にも昇る気持ち"
+    ],
+    "distractors": [
+      "病院",
+      "気候",
+      "天にも昇る気持ち"
+    ],
+    "order_index": 134,
+    "reading": "びょうき",
+    "band": "A1"
+  },
+  {
+    "id": "c08d4181-2439-8c61-9151-44d97b4f0af7",
+    "card_id": "aabbccdd-6666-1008-c006-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
+    "prompt": "Which is the kanji for けんこう (Healthy)?",
+    "correct_answer": "健康",
+    "options": [
+      "目",
+      "頭",
+      "健康",
+      "手"
+    ],
+    "distractors": [
+      "頭",
+      "手",
+      "目"
+    ],
+    "order_index": 135,
+    "reading": "けんこう",
+    "band": "A1"
+  },
+  {
+    "id": "88c71f22-45b6-8055-abf0-d92a5ea525c6",
+    "card_id": "aabbccdd-6666-1008-c007-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0001-000000000000",
+    "prompt": "Which is the kanji for くすり (Medicine)?",
+    "correct_answer": "薬",
+    "options": [
+      "手",
+      "薬局",
+      "頭",
+      "薬"
+    ],
+    "distractors": [
+      "薬局",
+      "頭",
+      "手"
+    ],
+    "order_index": 136,
+    "reading": "くすり",
+    "band": "A1"
+  },
+  {
+    "id": "c0694d86-bf0c-8d9a-a05e-dfade49a1525",
+    "card_id": "aabbccdd-6666-1008-c008-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0002-000000000000",
+    "prompt": "Which is the kanji for いたみ (Pain)?",
+    "correct_answer": "痛み",
+    "options": [
+      "頭",
+      "頭痛",
+      "痛み",
+      "手"
+    ],
+    "distractors": [
+      "頭痛",
+      "頭",
+      "手"
+    ],
+    "order_index": 137,
+    "reading": "いたみ",
+    "band": "A1"
+  },
+  {
+    "id": "07c8a333-fd52-8ea0-bdcc-aab8a56c3fc2",
+    "card_id": "aabbccdd-6666-1008-c009-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0003-000000000000",
+    "prompt": "Which is the kanji for ねつ (Fever)?",
+    "correct_answer": "熱",
+    "options": [
+      "頭",
+      "手",
+      "目",
+      "熱"
+    ],
+    "distractors": [
+      "頭",
+      "手",
+      "目"
+    ],
+    "order_index": 138,
+    "reading": "ねつ",
+    "band": "A1"
+  },
+  {
+    "id": "6fb66e16-a7c8-8465-91cb-507167416e41",
+    "card_id": "aabbccdd-6666-1008-c010-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0004-000000000000",
+    "prompt": "Which is the kanji for うで (Arm)?",
+    "correct_answer": "腕",
+    "options": [
+      "目",
+      "腕",
+      "頭",
+      "手"
+    ],
+    "distractors": [
+      "頭",
+      "手",
+      "目"
+    ],
+    "order_index": 139,
+    "reading": "うで",
+    "band": "A1"
+  },
+  {
+    "id": "8fe1e1a7-e1bf-83e6-9118-cde07d66f3d4",
+    "card_id": "aabbccdd-6666-1008-c011-000000000000",
+    "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+    "prompt": "Which is the kanji for あし (Leg)?",
+    "correct_answer": "足",
+    "options": [
+      "手",
+      "頭",
+      "目",
+      "足"
+    ],
+    "distractors": [
+      "頭",
+      "手",
+      "目"
+    ],
+    "order_index": 140,
+    "reading": "あし",
+    "band": "A1"
+  },
+  {
+    "id": "007a1043-6cf6-8e15-86dc-15fe8c090deb",
+    "card_id": "aabbccdd-6666-2001-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+    "prompt": "Which is the kanji for おい (Nephew)?",
+    "correct_answer": "甥",
+    "options": [
+      "甥",
+      "姪",
+      "夫",
+      "妻"
+    ],
+    "distractors": [
+      "姪",
+      "夫",
+      "妻"
+    ],
+    "order_index": 130,
+    "reading": "おい",
+    "band": "A2"
+  },
+  {
+    "id": "7dec2df1-cb7a-832a-9ef0-e3eee6a1cdc2",
+    "card_id": "aabbccdd-6666-2001-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0002-a20000000000",
+    "prompt": "Which is the kanji for めい (Niece)?",
+    "correct_answer": "姪",
+    "options": [
+      "姪",
+      "夫",
+      "妻",
+      "甥"
+    ],
+    "distractors": [
+      "甥",
+      "夫",
+      "妻"
+    ],
+    "order_index": 131,
+    "reading": "めい",
+    "band": "A2"
+  },
+  {
+    "id": "038d0d6c-5928-8bdc-9e4e-d9d1ec2ab4ac",
+    "card_id": "aabbccdd-6666-2001-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+    "prompt": "Which is the kanji for おっと (Husband)?",
+    "correct_answer": "夫",
+    "options": [
+      "姪",
+      "夫",
+      "大丈夫",
+      "甥"
+    ],
+    "distractors": [
+      "大丈夫",
+      "甥",
+      "姪"
+    ],
+    "order_index": 132,
+    "reading": "おっと",
+    "band": "A2"
+  },
+  {
+    "id": "1d792be7-2b83-818f-9be0-7cea5d6f0662",
+    "card_id": "aabbccdd-6666-2001-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0004-a20000000000",
+    "prompt": "Which is the kanji for つま (Wife)?",
+    "correct_answer": "妻",
+    "options": [
+      "夫",
+      "甥",
+      "妻",
+      "姪"
+    ],
+    "distractors": [
+      "甥",
+      "姪",
+      "夫"
+    ],
+    "order_index": 133,
+    "reading": "つま",
+    "band": "A2"
+  },
+  {
+    "id": "9514cad7-187f-860f-a2d2-38f0cbe24509",
+    "card_id": "aabbccdd-6666-2001-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0005-a20000000000",
+    "prompt": "Which is the kanji for かれし (Boyfriend)?",
+    "correct_answer": "彼氏",
+    "options": [
+      "甥",
+      "彼女",
+      "姪",
+      "彼氏"
+    ],
+    "distractors": [
+      "彼女",
+      "甥",
+      "姪"
+    ],
+    "order_index": 134,
+    "reading": "かれし",
+    "band": "A2"
+  },
+  {
+    "id": "e5e71eb3-3509-860d-9bfc-ea1c26706cd3",
+    "card_id": "aabbccdd-6666-2001-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0006-a20000000000",
+    "prompt": "Which is the kanji for かのじょ (Girlfriend)?",
+    "correct_answer": "彼女",
+    "options": [
+      "甥",
+      "彼女",
+      "姪",
+      "彼氏"
+    ],
+    "distractors": [
+      "彼氏",
+      "甥",
+      "姪"
+    ],
+    "order_index": 135,
+    "reading": "かのじょ",
+    "band": "A2"
+  },
+  {
+    "id": "4e92ab21-70dd-89ac-9019-11d7cd034b86",
+    "card_id": "aabbccdd-6666-2001-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+    "prompt": "Which is the kanji for りんじん (Neighbor)?",
+    "correct_answer": "隣人",
+    "options": [
+      "人工知能",
+      "隣人",
+      "登場人物",
+      "主人公"
+    ],
+    "distractors": [
+      "人工知能",
+      "登場人物",
+      "主人公"
+    ],
+    "order_index": 136,
+    "reading": "りんじん",
+    "band": "A2"
+  },
+  {
+    "id": "0969d5ae-3134-8599-b0c7-f472da3857e4",
+    "card_id": "aabbccdd-6666-2001-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0002-a20000000000",
+    "prompt": "Which is the kanji for けっこんしき (Wedding)?",
+    "correct_answer": "結婚式",
+    "options": [
+      "甥",
+      "結婚式",
+      "結婚している",
+      "結果"
+    ],
+    "distractors": [
+      "結婚している",
+      "結果",
+      "甥"
+    ],
+    "order_index": 137,
+    "reading": "けっこんしき",
+    "band": "A2"
+  },
+  {
+    "id": "755542b5-a82a-8c07-94f8-56854dadcb17",
+    "card_id": "aabbccdd-6666-2001-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+    "prompt": "Which is the kanji for けっこんしている (Married)?",
+    "correct_answer": "結婚している",
+    "options": [
+      "結婚式",
+      "結婚している",
+      "甥",
+      "結果"
+    ],
+    "distractors": [
+      "結婚式",
+      "結果",
+      "甥"
+    ],
+    "order_index": 138,
+    "reading": "けっこんしている",
+    "band": "A2"
+  },
+  {
+    "id": "200ed8ba-a569-8f28-849a-46b187e72b64",
+    "card_id": "aabbccdd-6666-2002-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0001-a20000000000",
+    "prompt": "Which is the kanji for せき (Cough)?",
+    "correct_answer": "咳",
+    "options": [
+      "咳",
+      "予約",
+      "頭痛",
+      "処方箋"
+    ],
+    "distractors": [
+      "頭痛",
+      "処方箋",
+      "予約"
+    ],
+    "order_index": 130,
+    "reading": "せき",
+    "band": "A2"
+  },
+  {
+    "id": "71d00957-82ed-8aa8-88f1-548ab37096f2",
+    "card_id": "aabbccdd-6666-2002-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0002-a20000000000",
+    "prompt": "Which is the kanji for ずつう (Headache)?",
+    "correct_answer": "頭痛",
+    "options": [
+      "頭",
+      "咳",
+      "頭痛",
+      "痛み"
+    ],
+    "distractors": [
+      "頭",
+      "痛み",
+      "咳"
+    ],
+    "order_index": 131,
+    "reading": "ずつう",
+    "band": "A2"
+  },
+  {
+    "id": "7271c370-f559-8b4d-bebf-96ec631aa4b3",
+    "card_id": "aabbccdd-6666-2002-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0003-a20000000000",
+    "prompt": "Which is the kanji for しょほうせん (Prescription)?",
+    "correct_answer": "処方箋",
+    "options": [
+      "処方箋",
+      "頭痛",
+      "咳",
+      "予約"
+    ],
+    "distractors": [
+      "咳",
+      "頭痛",
+      "予約"
+    ],
+    "order_index": 132,
+    "reading": "しょほうせん",
+    "band": "A2"
+  },
+  {
+    "id": "bbe61c93-74dd-8d34-b849-9f04ea3c9f7d",
+    "card_id": "aabbccdd-6666-2002-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0004-a20000000000",
+    "prompt": "Which is the kanji for よやく (Appointment)?",
+    "correct_answer": "予約",
+    "options": [
+      "予約",
+      "予約する",
+      "契約",
+      "予算"
+    ],
+    "distractors": [
+      "予約する",
+      "契約",
+      "予算"
+    ],
+    "order_index": 133,
+    "reading": "よやく",
+    "band": "A2"
+  },
+  {
+    "id": "883afafa-259e-8ec8-bab0-8003a22d849f",
+    "card_id": "aabbccdd-6666-2002-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0005-a20000000000",
+    "prompt": "Which is the kanji for かんごし (Nurse)?",
+    "correct_answer": "看護師",
+    "options": [
+      "咳",
+      "処方箋",
+      "頭痛",
+      "看護師"
+    ],
+    "distractors": [
+      "咳",
+      "頭痛",
+      "処方箋"
+    ],
+    "order_index": 134,
+    "reading": "かんごし",
+    "band": "A2"
+  },
+  {
+    "id": "a48927f1-ef02-87b5-a792-a682b334fd4f",
+    "card_id": "aabbccdd-6666-2002-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0006-a20000000000",
+    "prompt": "Which is the kanji for はいしゃ (Dentist)?",
+    "correct_answer": "歯医者",
+    "options": [
+      "歯医者",
+      "医者",
+      "咳",
+      "利害関係者"
+    ],
+    "distractors": [
+      "医者",
+      "利害関係者",
+      "咳"
+    ],
+    "order_index": 135,
+    "reading": "はいしゃ",
+    "band": "A2"
+  },
+  {
+    "id": "55c49c10-99a0-832a-82d4-c78ff8601557",
+    "card_id": "aabbccdd-6666-2002-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0001-a20000000000",
+    "prompt": "Which is the kanji for つかれた (Tired)?",
+    "correct_answer": "疲れた",
+    "options": [
+      "処方箋",
+      "疲れた",
+      "頭痛",
+      "咳"
+    ],
+    "distractors": [
+      "咳",
+      "頭痛",
+      "処方箋"
+    ],
+    "order_index": 136,
+    "reading": "つかれた",
+    "band": "A2"
+  },
+  {
+    "id": "e28a532c-4056-8d65-9822-01a721906942",
+    "card_id": "aabbccdd-6666-2002-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0002-a20000000000",
+    "prompt": "Which is the kanji for やすむ (To rest)?",
+    "correct_answer": "休む",
+    "options": [
+      "頭痛",
+      "休む",
+      "咳",
+      "休み"
+    ],
+    "distractors": [
+      "休み",
+      "咳",
+      "頭痛"
+    ],
+    "order_index": 137,
+    "reading": "やすむ",
+    "band": "A2"
+  },
+  {
+    "id": "f872f515-f63a-8a89-a3bd-407029ee995a",
+    "card_id": "aabbccdd-6666-2002-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2002-0003-a20000000000",
+    "prompt": "Which is the kanji for うんどう (Exercise)?",
+    "correct_answer": "運動",
+    "options": [
+      "動名詞",
+      "咳",
+      "運動",
+      "野生動物"
+    ],
+    "distractors": [
+      "野生動物",
+      "動名詞",
+      "咳"
+    ],
+    "order_index": 138,
+    "reading": "うんどう",
+    "band": "A2"
+  },
+  {
+    "id": "19f1220a-b3e1-8782-98a1-afd3a644ae38",
+    "card_id": "aabbccdd-6666-2003-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
+    "prompt": "Which is the kanji for たな (Shelf)?",
+    "correct_answer": "棚",
+    "options": [
+      "掃く",
+      "洗う",
+      "掃除する",
+      "棚"
+    ],
+    "distractors": [
+      "掃除する",
+      "洗う",
+      "掃く"
+    ],
+    "order_index": 130,
+    "reading": "たな",
+    "band": "A2"
+  },
+  {
+    "id": "531bb35b-4477-8e21-baad-0d82a622aa0c",
+    "card_id": "aabbccdd-6666-2003-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0002-a20000000000",
+    "prompt": "Which is the kanji for そうじする (To clean)?",
+    "correct_answer": "掃除する",
+    "options": [
+      "掃く",
+      "掃除する",
+      "棚",
+      "洗う"
+    ],
+    "distractors": [
+      "掃く",
+      "棚",
+      "洗う"
+    ],
+    "order_index": 131,
+    "reading": "そうじする",
+    "band": "A2"
+  },
+  {
+    "id": "3f921505-9422-8dd3-bb4b-a33fc4e27f66",
+    "card_id": "aabbccdd-6666-2003-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0003-a20000000000",
+    "prompt": "Which is the kanji for あらう (To wash)?",
+    "correct_answer": "洗う",
+    "options": [
+      "掃除する",
+      "掃く",
+      "洗う",
+      "棚"
+    ],
+    "distractors": [
+      "棚",
+      "掃除する",
+      "掃く"
+    ],
+    "order_index": 132,
+    "reading": "あらう",
+    "band": "A2"
+  },
+  {
+    "id": "d04ac29c-4c97-8a7c-891a-1a47e05904e6",
+    "card_id": "aabbccdd-6666-2003-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0004-a20000000000",
+    "prompt": "Which is the kanji for はく (To sweep)?",
+    "correct_answer": "掃く",
+    "options": [
+      "洗う",
+      "掃除する",
+      "棚",
+      "掃く"
+    ],
+    "distractors": [
+      "掃除する",
+      "棚",
+      "洗う"
+    ],
+    "order_index": 133,
+    "reading": "はく",
+    "band": "A2"
+  },
+  {
+    "id": "b0131f2d-2ac1-8762-adb1-d3780bb60a71",
+    "card_id": "aabbccdd-6666-2003-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0005-a20000000000",
+    "prompt": "Which is the kanji for りょうりする (To cook)?",
+    "correct_answer": "料理する",
+    "options": [
+      "料理する",
+      "給料",
+      "理由",
+      "倫理"
+    ],
+    "distractors": [
+      "理由",
+      "給料",
+      "倫理"
+    ],
+    "order_index": 134,
+    "reading": "りょうりする",
+    "band": "A2"
+  },
+  {
+    "id": "3fe5c154-362b-8992-8b0e-522244ab1042",
+    "card_id": "aabbccdd-6666-2003-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0006-a20000000000",
+    "prompt": "Which is the kanji for やちん (Rent)?",
+    "correct_answer": "家賃",
+    "options": [
+      "家",
+      "家族",
+      "家賃",
+      "棚"
+    ],
+    "distractors": [
+      "家族",
+      "家",
+      "棚"
+    ],
+    "order_index": 135,
+    "reading": "やちん",
+    "band": "A2"
+  },
+  {
+    "id": "ac0675e6-8d89-8dce-8ade-98c74a08691e",
+    "card_id": "aabbccdd-6666-2003-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
+    "prompt": "Which is the kanji for ひっこす (To move)?",
+    "correct_answer": "引っ越す",
+    "options": [
+      "棚",
+      "洗う",
+      "引っ越す",
+      "掃除する"
+    ],
+    "distractors": [
+      "棚",
+      "掃除する",
+      "洗う"
+    ],
+    "order_index": 136,
+    "reading": "ひっこす",
+    "band": "A2"
+  },
+  {
+    "id": "87190ce8-3b40-86e6-a89b-b061a1bd7be6",
+    "card_id": "aabbccdd-6666-2004-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+    "prompt": "Which is the kanji for うれしい (Happy)?",
+    "correct_answer": "嬉しい",
+    "options": [
+      "嬉しい",
+      "怒っている",
+      "心配",
+      "悲しい"
+    ],
+    "distractors": [
+      "悲しい",
+      "怒っている",
+      "心配"
+    ],
+    "order_index": 130,
+    "reading": "うれしい",
+    "band": "A2"
+  },
+  {
+    "id": "37424e86-8ce8-8613-8307-c16b676e1562",
+    "card_id": "aabbccdd-6666-2004-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0002-a20000000000",
+    "prompt": "Which is the kanji for かなしい (Sad)?",
+    "correct_answer": "悲しい",
+    "options": [
+      "悲しい",
+      "心配",
+      "嬉しい",
+      "怒っている"
+    ],
+    "distractors": [
+      "嬉しい",
+      "怒っている",
+      "心配"
+    ],
+    "order_index": 131,
+    "reading": "かなしい",
+    "band": "A2"
+  },
+  {
+    "id": "77d2036b-74a9-8890-ac78-11acb7aee19b",
+    "card_id": "aabbccdd-6666-2004-c003-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0003-a20000000000",
+    "prompt": "Which is the kanji for おこっている (Angry)?",
+    "correct_answer": "怒っている",
+    "options": [
+      "心配",
+      "怒っている",
+      "嬉しい",
+      "悲しい"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "心配"
+    ],
+    "order_index": 132,
+    "reading": "おこっている",
+    "band": "A2"
+  },
+  {
+    "id": "98cc2d81-84b9-815e-9e48-6658bc4f4d37",
+    "card_id": "aabbccdd-6666-2004-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0004-a20000000000",
+    "prompt": "Which is the kanji for しんぱい (Worried)?",
+    "correct_answer": "心配",
+    "options": [
+      "心配",
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "order_index": 133,
+    "reading": "しんぱい",
+    "band": "A2"
+  },
+  {
+    "id": "b59aa8c1-a062-8a2c-833c-fec1245a0ddf",
+    "card_id": "aabbccdd-6666-2004-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0005-a20000000000",
+    "prompt": "Which is the kanji for はずかしい (Embarrassed)?",
+    "correct_answer": "恥ずかしい",
+    "options": [
+      "怒っている",
+      "悲しい",
+      "恥ずかしい",
+      "嬉しい"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "order_index": 134,
+    "reading": "はずかしい",
+    "band": "A2"
+  },
+  {
+    "id": "8d7addf1-82f1-8ffa-b6f0-7caad8a265d1",
+    "card_id": "aabbccdd-6666-2004-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0006-a20000000000",
+    "prompt": "Which is the kanji for ゆうかん (Brave)?",
+    "correct_answer": "勇敢",
+    "options": [
+      "勇敢",
+      "悲しい",
+      "嬉しい",
+      "怒っている"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "order_index": 135,
+    "reading": "ゆうかん",
+    "band": "A2"
+  },
+  {
+    "id": "c4ac6f4b-073e-8625-8289-af11ab0af9cf",
+    "card_id": "aabbccdd-6666-2004-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+    "prompt": "Which is the kanji for やさしい (Kind)?",
+    "correct_answer": "優しい",
+    "options": [
+      "優しい",
+      "悲しい",
+      "怒っている",
+      "嬉しい"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "order_index": 136,
+    "reading": "やさしい",
+    "band": "A2"
+  },
+  {
+    "id": "87c67932-1a6d-847d-bf2c-83c0296228f0",
+    "card_id": "aabbccdd-6666-2004-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0002-a20000000000",
+    "prompt": "Which is the kanji for かんだい (Generous)?",
+    "correct_answer": "寛大",
+    "options": [
+      "大丈夫",
+      "寛大",
+      "もっと大きい",
+      "嬉しい"
+    ],
+    "distractors": [
+      "もっと大きい",
+      "大丈夫",
+      "嬉しい"
+    ],
+    "order_index": 137,
+    "reading": "かんだい",
+    "band": "A2"
+  },
+  {
+    "id": "955a86c1-3e9d-8b60-b622-d377591891f4",
+    "card_id": "aabbccdd-6666-2004-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0003-a20000000000",
+    "prompt": "Which is the kanji for なまける (Lazy)?",
+    "correct_answer": "怠ける",
+    "options": [
+      "怒っている",
+      "怠ける",
+      "悲しい",
+      "嬉しい"
+    ],
+    "distractors": [
+      "嬉しい",
+      "悲しい",
+      "怒っている"
+    ],
+    "order_index": 138,
+    "reading": "なまける",
+    "band": "A2"
+  },
+  {
+    "id": "90eee472-f73e-8998-897a-4ec3f824442b",
+    "card_id": "aabbccdd-6666-2004-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0004-a20000000000",
+    "prompt": "Which is the kanji for にんたいづよい (Patient)?",
+    "correct_answer": "忍耐強い",
+    "options": [
+      "忍耐強い",
+      "勉強しました",
+      "嬉しい",
+      "勉強します"
+    ],
+    "distractors": [
+      "勉強しました",
+      "勉強します",
+      "嬉しい"
+    ],
+    "order_index": 139,
+    "reading": "にんたいづよい",
+    "band": "A2"
+  },
+  {
+    "id": "098e859a-1c9c-8f4d-bcdd-8fcc4cf322ea",
+    "card_id": "aabbccdd-6666-2004-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2004-0005-a20000000000",
+    "prompt": "Which is the kanji for ほこりにおもう (Proud)?",
+    "correct_answer": "誇りに思う",
+    "options": [
+      "悲しい",
+      "誇りに思う",
+      "私はこう思います",
+      "嬉しい"
+    ],
+    "distractors": [
+      "私はこう思います",
+      "嬉しい",
+      "悲しい"
+    ],
+    "order_index": 140,
+    "reading": "ほこりにおもう",
+    "band": "A2"
+  },
+  {
+    "id": "c5376773-7d1c-8c5d-b703-48bdc625cb85",
+    "card_id": "aabbccdd-6666-2005-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
+    "prompt": "Which is the kanji for きのう (Yesterday)?",
+    "correct_answer": "昨日",
+    "options": [
+      "祝日",
+      "明日",
+      "昨日",
+      "誕生日"
+    ],
+    "distractors": [
+      "明日",
+      "祝日",
+      "誕生日"
+    ],
+    "order_index": 130,
+    "reading": "きのう",
+    "band": "A2"
+  },
+  {
+    "id": "c9ab6d0a-bfe8-871e-b6e4-76fcd3f3ab9d",
+    "card_id": "aabbccdd-6666-2005-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0002-a20000000000",
+    "prompt": "Which is the kanji for せんしゅう (Last week)?",
+    "correct_answer": "先週",
+    "options": [
+      "来週",
+      "先週",
+      "昨日",
+      "先生"
+    ],
+    "distractors": [
+      "先生",
+      "来週",
+      "昨日"
+    ],
+    "order_index": 131,
+    "reading": "せんしゅう",
+    "band": "A2"
+  },
+  {
+    "id": "ab15171f-fe47-8dba-97ca-8208c6d7ded6",
+    "card_id": "aabbccdd-6666-2005-c003-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0003-a20000000000",
+    "prompt": "Which is the kanji for いきました (I went)?",
+    "correct_answer": "行きました",
+    "options": [
+      "行きます",
+      "行きました",
+      "旅行しました",
+      "銀行"
+    ],
+    "distractors": [
+      "銀行",
+      "旅行しました",
+      "行きます"
+    ],
+    "order_index": 132,
+    "reading": "いきました",
+    "band": "A2"
+  },
+  {
+    "id": "05059732-4fc2-8937-8c1a-2ee1c38b4da8",
+    "card_id": "aabbccdd-6666-2005-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
+    "prompt": "Which is the kanji for たべました (I ate)?",
+    "correct_answer": "食べました",
+    "options": [
+      "食べます",
+      "先週",
+      "食べました",
+      "昨日"
+    ],
+    "distractors": [
+      "食べます",
+      "昨日",
+      "先週"
+    ],
+    "order_index": 133,
+    "reading": "たべました",
+    "band": "A2"
+  },
+  {
+    "id": "82f08898-0705-8cc9-b24b-98a86154d8db",
+    "card_id": "aabbccdd-6666-2005-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0005-a20000000000",
+    "prompt": "Which is the kanji for みました (I saw)?",
+    "correct_answer": "見ました",
+    "options": [
+      "昨日",
+      "意見",
+      "偏見",
+      "見ました"
+    ],
+    "distractors": [
+      "意見",
+      "偏見",
+      "昨日"
+    ],
+    "order_index": 134,
+    "reading": "みました",
+    "band": "A2"
+  },
+  {
+    "id": "18447f6a-1ea6-879b-acd1-d4011f68a25f",
+    "card_id": "aabbccdd-6666-2005-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0006-a20000000000",
+    "prompt": "Which is the kanji for かいました (I bought)?",
+    "correct_answer": "買いました",
+    "options": [
+      "行きました",
+      "先週",
+      "昨日",
+      "買いました"
+    ],
+    "distractors": [
+      "昨日",
+      "先週",
+      "行きました"
+    ],
+    "order_index": 135,
+    "reading": "かいました",
+    "band": "A2"
+  },
+  {
+    "id": "8a9c41fd-21d5-816d-b116-1932f262b64d",
+    "card_id": "aabbccdd-6666-2005-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
+    "prompt": "Which is the kanji for りょこうしました (I traveled)?",
+    "correct_answer": "旅行しました",
+    "options": [
+      "行きました",
+      "銀行",
+      "旅行しました",
+      "行きます"
+    ],
+    "distractors": [
+      "銀行",
+      "行きました",
+      "行きます"
+    ],
+    "order_index": 136,
+    "reading": "りょこうしました",
+    "band": "A2"
+  },
+  {
+    "id": "1c9c96b3-10b6-811c-b238-ae6947e68d47",
+    "card_id": "aabbccdd-6666-2005-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0002-a20000000000",
+    "prompt": "Which is the kanji for べんきょうしました (I studied)?",
+    "correct_answer": "勉強しました",
+    "options": [
+      "勉強します",
+      "昨日",
+      "勉強しました",
+      "忍耐強い"
+    ],
+    "distractors": [
+      "忍耐強い",
+      "勉強します",
+      "昨日"
+    ],
+    "order_index": 137,
+    "reading": "べんきょうしました",
+    "band": "A2"
+  },
+  {
+    "id": "3f00a88c-995a-8447-b261-95bea78db64a",
+    "card_id": "aabbccdd-6666-2005-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0003-a20000000000",
+    "prompt": "Which is the kanji for あそびました (I played)?",
+    "correct_answer": "遊びました",
+    "options": [
+      "行きました",
+      "遊びました",
+      "先週",
+      "昨日"
+    ],
+    "distractors": [
+      "昨日",
+      "先週",
+      "行きました"
+    ],
+    "order_index": 138,
+    "reading": "あそびました",
+    "band": "A2"
+  },
+  {
+    "id": "5f7df0fd-7460-8f75-8366-9236b01f2f9d",
+    "card_id": "aabbccdd-6666-2005-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
+    "prompt": "Which is the kanji for はたらきました (I worked)?",
+    "correct_answer": "働きました",
+    "options": [
+      "先週",
+      "働きます",
+      "昨日",
+      "働きました"
+    ],
+    "distractors": [
+      "働きます",
+      "昨日",
+      "先週"
+    ],
+    "order_index": 139,
+    "reading": "はたらきました",
+    "band": "A2"
+  },
+  {
+    "id": "d2bf970f-17e7-843d-84f4-490bf55a71ae",
+    "card_id": "aabbccdd-6666-2005-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0005-a20000000000",
+    "prompt": "Which is the kanji for はなしました (I spoke)?",
+    "correct_answer": "話しました",
+    "options": [
+      "昨日",
+      "先週",
+      "話しました",
+      "間接話法"
+    ],
+    "distractors": [
+      "間接話法",
+      "昨日",
+      "先週"
+    ],
+    "order_index": 140,
+    "reading": "はなしました",
+    "band": "A2"
+  },
+  {
+    "id": "502a7874-63fb-8647-ae3f-44c1b56902cb",
+    "card_id": "aabbccdd-6666-2005-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2005-0006-a20000000000",
+    "prompt": "Which is the kanji for かきました (I wrote)?",
+    "correct_answer": "書きました",
+    "options": [
+      "書きました",
+      "履歴書",
+      "先週",
+      "昨日"
+    ],
+    "distractors": [
+      "履歴書",
+      "昨日",
+      "先週"
+    ],
+    "order_index": 141,
+    "reading": "かきました",
+    "band": "A2"
+  },
+  {
+    "id": "80334443-b9f8-878e-966d-dbfa16010cb8",
+    "card_id": "aabbccdd-6666-2006-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0001-a20000000000",
+    "prompt": "Which is the kanji for あす (Tomorrow)?",
+    "correct_answer": "明日",
+    "options": [
+      "誕生日",
+      "祝日",
+      "明日",
+      "昨日"
+    ],
+    "distractors": [
+      "昨日",
+      "祝日",
+      "誕生日"
+    ],
+    "order_index": 130,
+    "reading": "あす",
+    "band": "A2"
+  },
+  {
+    "id": "103020dd-875e-80d3-98cd-e34b87e2f934",
+    "card_id": "aabbccdd-6666-2006-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0002-a20000000000",
+    "prompt": "Which is the kanji for らいしゅう (Next week)?",
+    "correct_answer": "来週",
+    "options": [
+      "明日",
+      "先週",
+      "行きます",
+      "来週"
+    ],
+    "distractors": [
+      "先週",
+      "明日",
+      "行きます"
+    ],
+    "order_index": 131,
+    "reading": "らいしゅう",
+    "band": "A2"
+  },
+  {
+    "id": "3d33aad2-6067-8406-90b4-a1e0b4330b17",
+    "card_id": "aabbccdd-6666-2006-c003-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
+    "prompt": "Which is the kanji for いきます (I will go)?",
+    "correct_answer": "行きます",
+    "options": [
+      "行きました",
+      "行きます",
+      "旅行しました",
+      "銀行"
+    ],
+    "distractors": [
+      "銀行",
+      "行きました",
+      "旅行しました"
+    ],
+    "order_index": 132,
+    "reading": "いきます",
+    "band": "A2"
+  },
+  {
+    "id": "4d11299f-e701-8cb2-919d-5a1e7f48bdba",
+    "card_id": "aabbccdd-6666-2006-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0004-a20000000000",
+    "prompt": "Which is the kanji for たべます (I will eat)?",
+    "correct_answer": "食べます",
+    "options": [
+      "食べます",
+      "来週",
+      "明日",
+      "食べました"
+    ],
+    "distractors": [
+      "食べました",
+      "明日",
+      "来週"
+    ],
+    "order_index": 133,
+    "reading": "たべます",
+    "band": "A2"
+  },
+  {
+    "id": "e02f3512-13df-80c2-a6e5-8435844dde57",
+    "card_id": "aabbccdd-6666-2006-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0005-a20000000000",
+    "prompt": "Which is the kanji for べんきょうします (I will study)?",
+    "correct_answer": "勉強します",
+    "options": [
+      "勉強します",
+      "勉強しました",
+      "忍耐強い",
+      "明日"
+    ],
+    "distractors": [
+      "忍耐強い",
+      "勉強しました",
+      "明日"
+    ],
+    "order_index": 134,
+    "reading": "べんきょうします",
+    "band": "A2"
+  },
+  {
+    "id": "1318b64c-9a74-86f3-837d-8ef09a7b391f",
+    "card_id": "aabbccdd-6666-2006-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+    "prompt": "Which is the kanji for りょこうします (I will travel)?",
+    "correct_answer": "旅行します",
+    "options": [
+      "旅行しました",
+      "銀行",
+      "行きました",
+      "旅行します"
+    ],
+    "distractors": [
+      "銀行",
+      "行きました",
+      "旅行しました"
+    ],
+    "order_index": 135,
+    "reading": "りょこうします",
+    "band": "A2"
+  },
+  {
+    "id": "2505d2e6-e88d-8279-b5d2-3d033149e9de",
+    "card_id": "aabbccdd-6666-2006-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0001-a20000000000",
+    "prompt": "Which is the kanji for はたらきます (I will work)?",
+    "correct_answer": "働きます",
+    "options": [
+      "働きました",
+      "来週",
+      "働きます",
+      "明日"
+    ],
+    "distractors": [
+      "働きました",
+      "明日",
+      "来週"
+    ],
+    "order_index": 136,
+    "reading": "はたらきます",
+    "band": "A2"
+  },
+  {
+    "id": "5c85cef9-0272-84f9-905d-98c8ba8a34d6",
+    "card_id": "aabbccdd-6666-2006-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0002-a20000000000",
+    "prompt": "Which is the kanji for やすみ (Vacation)?",
+    "correct_answer": "休み",
+    "options": [
+      "休む",
+      "明日",
+      "来週",
+      "休み"
+    ],
+    "distractors": [
+      "休む",
+      "明日",
+      "来週"
+    ],
+    "order_index": 137,
+    "reading": "やすみ",
+    "band": "A2"
+  },
+  {
+    "id": "c87c1d88-6ea1-8cca-9816-cc46a7f1fb5d",
+    "card_id": "aabbccdd-6666-2006-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
+    "prompt": "Which is the kanji for もくひょう (Goal)?",
+    "correct_answer": "目標",
+    "options": [
+      "目標",
+      "目の玉が飛び出る",
+      "目",
+      "目的"
+    ],
+    "distractors": [
+      "目",
+      "目的",
+      "目の玉が飛び出る"
+    ],
+    "order_index": 138,
+    "reading": "もくひょう",
+    "band": "A2"
+  },
+  {
+    "id": "bf12c900-043d-8a38-839d-a90fe20d6e41",
+    "card_id": "aabbccdd-6666-2006-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0004-a20000000000",
+    "prompt": "Which is the kanji for ゆめ (Dream)?",
+    "correct_answer": "夢",
+    "options": [
+      "来週",
+      "夢",
+      "明日",
+      "行きます"
+    ],
+    "distractors": [
+      "明日",
+      "来週",
+      "行きます"
+    ],
+    "order_index": 139,
+    "reading": "ゆめ",
+    "band": "A2"
+  },
+  {
+    "id": "ae2f7cc7-70e7-85f9-9673-215f2e063ba9",
+    "card_id": "aabbccdd-6666-2006-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0005-a20000000000",
+    "prompt": "Which is the kanji for けいかくする (To plan)?",
+    "correct_answer": "計画する",
+    "options": [
+      "画面",
+      "絵画",
+      "計画する",
+      "明日"
+    ],
+    "distractors": [
+      "画面",
+      "絵画",
+      "明日"
+    ],
+    "order_index": 140,
+    "reading": "けいかくする",
+    "band": "A2"
+  },
+  {
+    "id": "bccf169e-ef15-8b04-aaca-81a0ae2d8c13",
+    "card_id": "aabbccdd-6666-2006-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+    "prompt": "Which is the kanji for よやく (Appointment)?",
+    "correct_answer": "予約",
+    "options": [
+      "予算",
+      "契約",
+      "予約する",
+      "予約"
+    ],
+    "distractors": [
+      "予約する",
+      "契約",
+      "予算"
+    ],
+    "order_index": 141,
+    "reading": "よやく",
+    "band": "A2"
+  },
+  {
+    "id": "74086890-1830-8ae7-8de8-4daa51c04161",
+    "card_id": "aabbccdd-6666-2007-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+    "prompt": "Which is the kanji for もっとおおきい (Bigger)?",
+    "correct_answer": "もっと大きい",
+    "options": [
+      "寛大",
+      "もっと小さい",
+      "もっと大きい",
+      "大丈夫"
+    ],
+    "distractors": [
+      "寛大",
+      "大丈夫",
+      "もっと小さい"
+    ],
+    "order_index": 130,
+    "reading": "もっとおおきい",
+    "band": "A2"
+  },
+  {
+    "id": "3df057af-9146-819e-8765-f4af1b796a99",
+    "card_id": "aabbccdd-6666-2007-c002-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+    "prompt": "Which is the kanji for もっとちいさい (Smaller)?",
+    "correct_answer": "もっと小さい",
+    "options": [
+      "もっと大きい",
+      "もっと良い",
+      "もっと小さい",
+      "小説"
+    ],
+    "distractors": [
+      "小説",
+      "もっと大きい",
+      "もっと良い"
+    ],
+    "order_index": 131,
+    "reading": "もっとちいさい",
+    "band": "A2"
+  },
+  {
+    "id": "ff2a1379-171b-8d9d-8e61-5ee583dc3a3c",
+    "card_id": "aabbccdd-6666-2007-c003-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+    "prompt": "Which is the kanji for もっとよい (Better)?",
+    "correct_answer": "もっと良い",
+    "options": [
+      "もっと良い",
+      "もっと小さい",
+      "もっと大きい",
+      "一番良い"
+    ],
+    "distractors": [
+      "一番良い",
+      "もっと大きい",
+      "もっと小さい"
+    ],
+    "order_index": 132,
+    "reading": "もっとよい",
+    "band": "A2"
+  },
+  {
+    "id": "4d10fba6-f40e-8922-a897-0dcfd826c398",
+    "card_id": "aabbccdd-6666-2007-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+    "prompt": "Which is the kanji for もっとわるい (Worse)?",
+    "correct_answer": "もっと悪い",
+    "options": [
+      "もっと悪い",
+      "もっと大きい",
+      "一番悪い",
+      "もっと小さい"
+    ],
+    "distractors": [
+      "一番悪い",
+      "もっと大きい",
+      "もっと小さい"
+    ],
+    "order_index": 133,
+    "reading": "もっとわるい",
+    "band": "A2"
+  },
+  {
+    "id": "b7a92c0a-2242-8a1d-a90e-c386e2f920f8",
+    "card_id": "aabbccdd-6666-2007-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+    "prompt": "Which is the kanji for もっとやすい (Cheaper)?",
+    "correct_answer": "もっと安い",
+    "options": [
+      "安い",
+      "もっと大きい",
+      "もっと安い",
+      "もっと小さい"
+    ],
+    "distractors": [
+      "安い",
+      "もっと大きい",
+      "もっと小さい"
+    ],
+    "order_index": 134,
+    "reading": "もっとやすい",
+    "band": "A2"
+  },
+  {
+    "id": "905b84e9-aed3-83c2-baa6-77af0684bf54",
+    "card_id": "aabbccdd-6666-2007-c006-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+    "prompt": "Which is the kanji for もっとたかい (More expensive)?",
+    "correct_answer": "もっと高い",
+    "options": [
+      "もっと背が高い",
+      "もっと高い",
+      "高い",
+      "もっと大きい"
+    ],
+    "distractors": [
+      "高い",
+      "もっと背が高い",
+      "もっと大きい"
+    ],
+    "order_index": 135,
+    "reading": "もっとたかい",
+    "band": "A2"
+  },
+  {
+    "id": "5af7aa1c-dba4-8766-8cca-16108d8f0ba1",
+    "card_id": "aabbccdd-6666-2007-c007-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+    "prompt": "Which is the kanji for もっとせがたかい (Taller)?",
+    "correct_answer": "もっと背が高い",
+    "options": [
+      "もっと背が低い",
+      "高い",
+      "もっと高い",
+      "もっと背が高い"
+    ],
+    "distractors": [
+      "高い",
+      "もっと高い",
+      "もっと背が低い"
+    ],
+    "order_index": 136,
+    "reading": "もっとせがたかい",
+    "band": "A2"
+  },
+  {
+    "id": "38a70685-c648-8f52-8f5e-7d1bb0c89511",
+    "card_id": "aabbccdd-6666-2007-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+    "prompt": "Which is the kanji for もっとせがひくい (Shorter)?",
+    "correct_answer": "もっと背が低い",
+    "options": [
+      "もっと背が高い",
+      "もっと大きい",
+      "もっと小さい",
+      "もっと背が低い"
+    ],
+    "distractors": [
+      "もっと背が高い",
+      "もっと大きい",
+      "もっと小さい"
+    ],
+    "order_index": 137,
+    "reading": "もっとせがひくい",
+    "band": "A2"
+  },
+  {
+    "id": "17034c1b-e939-8d28-8e3f-7f20ba4a549b",
+    "card_id": "aabbccdd-6666-2007-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+    "prompt": "Which is the kanji for もっとはやい (Faster)?",
+    "correct_answer": "もっと速い",
+    "options": [
+      "もっと小さい",
+      "もっと良い",
+      "もっと大きい",
+      "もっと速い"
+    ],
+    "distractors": [
+      "もっと大きい",
+      "もっと小さい",
+      "もっと良い"
+    ],
+    "order_index": 138,
+    "reading": "もっとはやい",
+    "band": "A2"
+  },
+  {
+    "id": "9d7fa023-efda-803b-b9aa-8fe7b9dd0736",
+    "card_id": "aabbccdd-6666-2007-c010-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+    "prompt": "Which is the kanji for もっとおそい (Slower)?",
+    "correct_answer": "もっと遅い",
+    "options": [
+      "もっと大きい",
+      "もっと遅い",
+      "遅くてもしないよりまし",
+      "遅延"
+    ],
+    "distractors": [
+      "遅延",
+      "遅くてもしないよりまし",
+      "もっと大きい"
+    ],
+    "order_index": 139,
+    "reading": "もっとおそい",
+    "band": "A2"
+  },
+  {
+    "id": "a34e146d-4c43-84d6-a9be-a16f593c3bbd",
+    "card_id": "aabbccdd-6666-2007-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+    "prompt": "Which is the kanji for いちばんよい (The best)?",
+    "correct_answer": "一番良い",
+    "options": [
+      "一石二鳥",
+      "もっと良い",
+      "一番悪い",
+      "一番良い"
+    ],
+    "distractors": [
+      "もっと良い",
+      "一番悪い",
+      "一石二鳥"
+    ],
+    "order_index": 140,
+    "reading": "いちばんよい",
+    "band": "A2"
+  },
+  {
+    "id": "df49ba66-7f08-89da-a274-b25fe43759f8",
+    "card_id": "aabbccdd-6666-2007-c012-a20000000000",
+    "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+    "prompt": "Which is the kanji for いちばんわるい (The worst)?",
+    "correct_answer": "一番悪い",
+    "options": [
+      "もっと悪い",
+      "一番良い",
+      "一番悪い",
+      "一石二鳥"
+    ],
+    "distractors": [
+      "もっと悪い",
+      "一番良い",
+      "一石二鳥"
+    ],
+    "order_index": 141,
+    "reading": "いちばんわるい",
+    "band": "A2"
+  },
+  {
+    "id": "19185877-9841-8965-840a-1c2967b9e1a5",
+    "card_id": "aabbccdd-6666-2008-c001-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0001-a20000000000",
+    "prompt": "Which is the kanji for しゅくじつ (Holiday)?",
+    "correct_answer": "祝日",
+    "options": [
+      "誕生日",
+      "明日",
+      "祝日",
+      "昨日"
+    ],
+    "distractors": [
+      "明日",
+      "昨日",
+      "誕生日"
+    ],
+    "order_index": 130,
+    "reading": "しゅくじつ",
+    "band": "A2"
+  },
+  {
+    "id": "7f305744-eaa9-811c-8d22-6174fe8b66a3",
+    "card_id": "aabbccdd-6666-2008-c003-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0002-a20000000000",
+    "prompt": "Which is the kanji for おしょうがつ (New Year)?",
+    "correct_answer": "お正月",
+    "options": [
+      "正義",
+      "お正月",
+      "祝日",
+      "誕生日"
+    ],
+    "distractors": [
+      "正義",
+      "祝日",
+      "誕生日"
+    ],
+    "order_index": 131,
+    "reading": "おしょうがつ",
+    "band": "A2"
+  },
+  {
+    "id": "f2c26a60-6651-882f-8dd7-4927def49606",
+    "card_id": "aabbccdd-6666-2008-c004-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0003-a20000000000",
+    "prompt": "Which is the kanji for たんじょうび (Birthday)?",
+    "correct_answer": "誕生日",
+    "options": [
+      "先生",
+      "明日",
+      "昨日",
+      "誕生日"
+    ],
+    "distractors": [
+      "明日",
+      "先生",
+      "昨日"
+    ],
+    "order_index": 132,
+    "reading": "たんじょうび",
+    "band": "A2"
+  },
+  {
+    "id": "1faf27a0-8b26-8b74-93af-c7a4c6f46f62",
+    "card_id": "aabbccdd-6666-2008-c005-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0004-a20000000000",
+    "prompt": "Which is the kanji for でんとう (Tradition)?",
+    "correct_answer": "伝統",
+    "options": [
+      "お正月",
+      "祝日",
+      "伝統",
+      "誕生日"
+    ],
+    "distractors": [
+      "祝日",
+      "お正月",
+      "誕生日"
+    ],
+    "order_index": 133,
+    "reading": "でんとう",
+    "band": "A2"
+  },
+  {
+    "id": "91c93c60-c59d-8148-8585-c0be0301e4fd",
+    "card_id": "aabbccdd-6666-2008-c008-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0005-a20000000000",
+    "prompt": "Which is the kanji for おいわいする (To celebrate)?",
+    "correct_answer": "お祝いする",
+    "options": [
+      "お正月",
+      "誕生日",
+      "祝日",
+      "お祝いする"
+    ],
+    "distractors": [
+      "祝日",
+      "お正月",
+      "誕生日"
+    ],
+    "order_index": 134,
+    "reading": "おいわいする",
+    "band": "A2"
+  },
+  {
+    "id": "98452c4a-5dc2-8afc-8b87-0b6a25deec2c",
+    "card_id": "aabbccdd-6666-2008-c009-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0006-a20000000000",
+    "prompt": "Which is the kanji for おんがく (Music)?",
+    "correct_answer": "音楽",
+    "options": [
+      "お正月",
+      "音楽",
+      "誕生日",
+      "祝日"
+    ],
+    "distractors": [
+      "祝日",
+      "お正月",
+      "誕生日"
+    ],
+    "order_index": 135,
+    "reading": "おんがく",
+    "band": "A2"
+  },
+  {
+    "id": "6548eab6-dc2d-843c-975b-995d417b69e8",
+    "card_id": "aabbccdd-6666-2008-c011-a20000000000",
+    "lesson_id": "aabbccdd-6666-2008-0001-a20000000000",
+    "prompt": "Which is the kanji for おまつり (Festival)?",
+    "correct_answer": "お祭り",
+    "options": [
+      "誕生日",
+      "祝日",
+      "お祭り",
+      "お正月"
+    ],
+    "distractors": [
+      "祝日",
+      "お正月",
+      "誕生日"
+    ],
+    "order_index": 136,
+    "reading": "おまつり",
+    "band": "A2"
+  },
+  {
+    "id": "0c770b23-b57a-84f1-af1a-9ccd4a9064e1",
+    "card_id": "aabbccdd-6666-3001-c001-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0001-b10000000000",
+    "prompt": "Which is the kanji for いけん (Opinion)?",
+    "correct_answer": "意見",
+    "options": [
+      "意識",
+      "意見",
+      "見ました",
+      "偏見"
+    ],
+    "distractors": [
+      "見ました",
+      "意識",
+      "偏見"
+    ],
+    "order_index": 130,
+    "reading": "いけん",
+    "band": "B1"
+  },
+  {
+    "id": "02b6c8f7-3ca4-802b-90d3-588d12e9a065",
+    "card_id": "aabbccdd-6666-3001-c002-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0002-b10000000000",
+    "prompt": "Which is the kanji for さんせいです (I agree)?",
+    "correct_answer": "賛成です",
+    "options": [
+      "私はこう思います",
+      "意見",
+      "賛成です",
+      "反対です"
+    ],
+    "distractors": [
+      "意見",
+      "反対です",
+      "私はこう思います"
+    ],
+    "order_index": 131,
+    "reading": "さんせいです",
+    "band": "B1"
+  },
+  {
+    "id": "62789068-e9a4-872b-a329-ff166048f71a",
+    "card_id": "aabbccdd-6666-3001-c003-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
+    "prompt": "Which is the kanji for はんたいです (I disagree)?",
+    "correct_answer": "反対です",
+    "options": [
+      "反駁する",
+      "意見",
+      "反対です",
+      "反論"
+    ],
+    "distractors": [
+      "反論",
+      "反駁する",
+      "意見"
+    ],
+    "order_index": 132,
+    "reading": "はんたいです",
+    "band": "B1"
+  },
+  {
+    "id": "6c20b625-4dcd-8ede-aa47-46a64b4062c2",
+    "card_id": "aabbccdd-6666-3001-c004-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+    "prompt": "Which is the kanji for わたしはこうおもいます (I think that)?",
+    "correct_answer": "私はこう思います",
+    "options": [
+      "賛成です",
+      "意見",
+      "私はこう思います",
+      "誇りに思う"
+    ],
+    "distractors": [
+      "誇りに思う",
+      "意見",
+      "賛成です"
+    ],
+    "order_index": 133,
+    "reading": "わたしはこうおもいます",
+    "band": "B1"
+  },
+  {
+    "id": "f97a51c2-113a-80ab-91fb-1e6869d6c9ef",
+    "card_id": "aabbccdd-6666-3001-c006-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0005-b10000000000",
+    "prompt": "Which is the kanji for しゃかい (Society)?",
+    "correct_answer": "社会",
+    "options": [
+      "社会",
+      "賛成です",
+      "会議",
+      "意見"
+    ],
+    "distractors": [
+      "会議",
+      "意見",
+      "賛成です"
+    ],
+    "order_index": 134,
+    "reading": "しゃかい",
+    "band": "B1"
+  },
+  {
+    "id": "f608b997-d0e1-8571-9eab-70eb5812f618",
+    "card_id": "aabbccdd-6666-3001-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0006-b10000000000",
+    "prompt": "Which is the kanji for せいじ (Politics)?",
+    "correct_answer": "政治",
+    "options": [
+      "反対です",
+      "政治",
+      "意見",
+      "賛成です"
+    ],
+    "distractors": [
+      "意見",
+      "賛成です",
+      "反対です"
+    ],
+    "order_index": 135,
+    "reading": "せいじ",
+    "band": "B1"
+  },
+  {
+    "id": "c15325fd-b272-85d0-b835-3c351c2db334",
+    "card_id": "aabbccdd-6666-3001-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0001-b10000000000",
+    "prompt": "Which is the kanji for けいざい (Economy)?",
+    "correct_answer": "経済",
+    "options": [
+      "賛成です",
+      "経済",
+      "意見",
+      "反対です"
+    ],
+    "distractors": [
+      "意見",
+      "賛成です",
+      "反対です"
+    ],
+    "order_index": 136,
+    "reading": "けいざい",
+    "band": "B1"
+  },
+  {
+    "id": "0db745ba-840f-8817-ac2c-dd8f6629bb0a",
+    "card_id": "aabbccdd-6666-3001-c009-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0002-b10000000000",
+    "prompt": "Which is the kanji for ぎろんする (To argue)?",
+    "correct_answer": "議論する",
+    "options": [
+      "議論する",
+      "討論",
+      "会議",
+      "議論"
+    ],
+    "distractors": [
+      "討論",
+      "会議",
+      "議論"
+    ],
+    "order_index": 137,
+    "reading": "ぎろんする",
+    "band": "B1"
+  },
+  {
+    "id": "62c293ae-6c7b-8726-ad32-d38a179f5ced",
+    "card_id": "aabbccdd-6666-3001-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
+    "prompt": "Which is the kanji for とうろん (Debate)?",
+    "correct_answer": "討論",
+    "options": [
+      "反論",
+      "議論する",
+      "議論",
+      "討論"
+    ],
+    "distractors": [
+      "議論する",
+      "議論",
+      "反論"
+    ],
+    "order_index": 138,
+    "reading": "とうろん",
+    "band": "B1"
+  },
+  {
+    "id": "654479f7-bdc9-8f67-bbe7-dfa2d19ca356",
+    "card_id": "aabbccdd-6666-3001-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+    "prompt": "Which is the kanji for りゆう (Reason)?",
+    "correct_answer": "理由",
+    "options": [
+      "自由",
+      "料理する",
+      "倫理",
+      "理由"
+    ],
+    "distractors": [
+      "料理する",
+      "自由",
+      "倫理"
+    ],
+    "order_index": 139,
+    "reading": "りゆう",
+    "band": "B1"
+  },
+  {
+    "id": "8ce22a87-0e3a-876d-9061-b8c274712531",
+    "card_id": "aabbccdd-6666-3002-c001-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0001-b10000000000",
+    "prompt": "Which is the kanji for めんせつ (Interview)?",
+    "correct_answer": "面接",
+    "options": [
+      "接続詞",
+      "間接話法",
+      "画面",
+      "面接"
+    ],
+    "distractors": [
+      "画面",
+      "間接話法",
+      "接続詞"
+    ],
+    "order_index": 130,
+    "reading": "めんせつ",
+    "band": "B1"
+  },
+  {
+    "id": "9766fd89-05bb-86e8-bdf5-b2e0bd9471fb",
+    "card_id": "aabbccdd-6666-3002-c002-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0002-b10000000000",
+    "prompt": "Which is the kanji for りれきしょ (Resume)?",
+    "correct_answer": "履歴書",
+    "options": [
+      "面接",
+      "会議",
+      "履歴書",
+      "書きました"
+    ],
+    "distractors": [
+      "書きました",
+      "面接",
+      "会議"
+    ],
+    "order_index": 131,
+    "reading": "りれきしょ",
+    "band": "B1"
+  },
+  {
+    "id": "95122572-5338-8a6b-9c2c-92e561b8e060",
+    "card_id": "aabbccdd-6666-3002-c003-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0003-b10000000000",
+    "prompt": "Which is the kanji for かいぎ (Meeting)?",
+    "correct_answer": "会議",
+    "options": [
+      "社会",
+      "議論",
+      "議論する",
+      "会議"
+    ],
+    "distractors": [
+      "社会",
+      "議論する",
+      "議論"
+    ],
+    "order_index": 132,
+    "reading": "かいぎ",
+    "band": "B1"
+  },
+  {
+    "id": "a78e8808-04f6-8d63-9650-387ca032a4c5",
+    "card_id": "aabbccdd-6666-3002-c005-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0004-b10000000000",
+    "prompt": "Which is the kanji for きゅうりょう (Salary)?",
+    "correct_answer": "給料",
+    "options": [
+      "履歴書",
+      "給料",
+      "面接",
+      "料理する"
+    ],
+    "distractors": [
+      "料理する",
+      "面接",
+      "履歴書"
+    ],
+    "order_index": 133,
+    "reading": "きゅうりょう",
+    "band": "B1"
+  },
+  {
+    "id": "02a85512-2466-8872-9686-374bb79a1035",
+    "card_id": "aabbccdd-6666-3002-c006-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0005-b10000000000",
+    "prompt": "Which is the kanji for やとう (To hire)?",
+    "correct_answer": "雇う",
+    "options": [
+      "面接",
+      "履歴書",
+      "雇う",
+      "解雇する"
+    ],
+    "distractors": [
+      "解雇する",
+      "面接",
+      "履歴書"
+    ],
+    "order_index": 134,
+    "reading": "やとう",
+    "band": "B1"
+  },
+  {
+    "id": "4f5fae53-b1ff-8499-8577-330715d8e6c4",
+    "card_id": "aabbccdd-6666-3002-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0006-b10000000000",
+    "prompt": "Which is the kanji for かいこする (To fire)?",
+    "correct_answer": "解雇する",
+    "options": [
+      "履歴書",
+      "面接",
+      "雇う",
+      "解雇する"
+    ],
+    "distractors": [
+      "雇う",
+      "面接",
+      "履歴書"
+    ],
+    "order_index": 135,
+    "reading": "かいこする",
+    "band": "B1"
+  },
+  {
+    "id": "580c05d8-540c-8403-af1f-8820c3bdc7ce",
+    "card_id": "aabbccdd-6666-3002-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0001-b10000000000",
+    "prompt": "Which is the kanji for どうりょう (Colleague)?",
+    "correct_answer": "同僚",
+    "options": [
+      "同僚",
+      "面接",
+      "会議",
+      "履歴書"
+    ],
+    "distractors": [
+      "面接",
+      "履歴書",
+      "会議"
+    ],
+    "order_index": 136,
+    "reading": "どうりょう",
+    "band": "B1"
+  },
+  {
+    "id": "af7901f2-0016-8fa6-a7ba-05baa1144700",
+    "card_id": "aabbccdd-6666-3002-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3002-0002-b10000000000",
+    "prompt": "Which is the kanji for しめきり (Deadline)?",
+    "correct_answer": "締め切り",
+    "options": [
+      "履歴書",
+      "切符",
+      "面接",
+      "締め切り"
+    ],
+    "distractors": [
+      "切符",
+      "面接",
+      "履歴書"
+    ],
+    "order_index": 137,
+    "reading": "しめきり",
+    "band": "B1"
+  },
+  {
+    "id": "17a3fefe-d04a-8e46-96f0-4c5046bfd4ee",
+    "card_id": "aabbccdd-6666-3003-c001-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0001-b10000000000",
+    "prompt": "Which is the kanji for よやくする (To book)?",
+    "correct_answer": "予約する",
+    "options": [
+      "予算",
+      "予約する",
+      "契約",
+      "予約"
+    ],
+    "distractors": [
+      "予約",
+      "契約",
+      "予算"
+    ],
+    "order_index": 130,
+    "reading": "よやくする",
+    "band": "B1"
+  },
+  {
+    "id": "f507c53e-d214-8098-9fdf-5009f8a52628",
+    "card_id": "aabbccdd-6666-3003-c004-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0002-b10000000000",
+    "prompt": "Which is the kanji for よやく (Reservation)?",
+    "correct_answer": "予約",
+    "options": [
+      "予約",
+      "契約",
+      "予約する",
+      "予算"
+    ],
+    "distractors": [
+      "予約する",
+      "契約",
+      "予算"
+    ],
+    "order_index": 131,
+    "reading": "よやく",
+    "band": "B1"
+  },
+  {
+    "id": "6bb90e7f-f7e0-821d-8907-6355a3279619",
+    "card_id": "aabbccdd-6666-3003-c006-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0003-b10000000000",
+    "prompt": "Which is the kanji for にもつ (Luggage)?",
+    "correct_answer": "荷物",
+    "options": [
+      "荷物",
+      "予約する",
+      "野生動物",
+      "登場人物"
+    ],
+    "distractors": [
+      "野生動物",
+      "登場人物",
+      "予約する"
+    ],
+    "order_index": 132,
+    "reading": "にもつ",
+    "band": "B1"
+  },
+  {
+    "id": "a94f9d97-a94d-860b-b1ea-c9fccb9cd16d",
+    "card_id": "aabbccdd-6666-3003-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0004-b10000000000",
+    "prompt": "Which is the kanji for とうじょうけん (Boarding pass)?",
+    "correct_answer": "搭乗券",
+    "options": [
+      "搭乗券",
+      "荷物",
+      "予約する",
+      "予約"
+    ],
+    "distractors": [
+      "予約する",
+      "予約",
+      "荷物"
+    ],
+    "order_index": 133,
+    "reading": "とうじょうけん",
+    "band": "B1"
+  },
+  {
+    "id": "5f1389dd-431c-83ad-989e-db9fa063aa82",
+    "card_id": "aabbccdd-6666-3003-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0005-b10000000000",
+    "prompt": "Which is the kanji for ちえん (Delay)?",
+    "correct_answer": "遅延",
+    "options": [
+      "遅延",
+      "予約する",
+      "もっと遅い",
+      "遅くてもしないよりまし"
+    ],
+    "distractors": [
+      "もっと遅い",
+      "遅くてもしないよりまし",
+      "予約する"
+    ],
+    "order_index": 134,
+    "reading": "ちえん",
+    "band": "B1"
+  },
+  {
+    "id": "bec8c984-b7fc-8790-924b-04bac121ea1f",
+    "card_id": "aabbccdd-6666-3003-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0006-b10000000000",
+    "prompt": "Which is the kanji for ぼうけん (Adventure)?",
+    "correct_answer": "冒険",
+    "options": [
+      "荷物",
+      "予約",
+      "予約する",
+      "冒険"
+    ],
+    "distractors": [
+      "予約する",
+      "予約",
+      "荷物"
+    ],
+    "order_index": 135,
+    "reading": "ぼうけん",
+    "band": "B1"
+  },
+  {
+    "id": "7764fe32-b51a-88aa-9c0e-fb98aa1ed559",
+    "card_id": "aabbccdd-6666-3003-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3003-0001-b10000000000",
+    "prompt": "Which is the kanji for かんこうきゃく (Tourist)?",
+    "correct_answer": "観光客",
+    "options": [
+      "観光客",
+      "荷物",
+      "予約",
+      "予約する"
+    ],
+    "distractors": [
+      "予約する",
+      "予約",
+      "荷物"
+    ],
+    "order_index": 136,
+    "reading": "かんこうきゃく",
+    "band": "B1"
+  },
+  {
+    "id": "237b51dd-34d0-8049-9a91-1764b47d6790",
+    "card_id": "aabbccdd-6666-3004-c001-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0001-b10000000000",
+    "prompt": "Which is the kanji for きこう (Climate)?",
+    "correct_answer": "気候",
+    "options": [
+      "天にも昇る気持ち",
+      "気候",
+      "病気",
+      "汚染"
+    ],
+    "distractors": [
+      "病気",
+      "天にも昇る気持ち",
+      "汚染"
+    ],
+    "order_index": 130,
+    "reading": "きこう",
+    "band": "B1"
+  },
+  {
+    "id": "11360b7c-1240-8049-8cb2-b5c724bdc1fb",
+    "card_id": "aabbccdd-6666-3004-c002-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0002-b10000000000",
+    "prompt": "Which is the kanji for おせん (Pollution)?",
+    "correct_answer": "汚染",
+    "options": [
+      "気候",
+      "海",
+      "森",
+      "汚染"
+    ],
+    "distractors": [
+      "気候",
+      "森",
+      "海"
+    ],
+    "order_index": 131,
+    "reading": "おせん",
+    "band": "B1"
+  },
+  {
+    "id": "93b5775b-222a-8468-8bf3-dc5472ffc84a",
+    "card_id": "aabbccdd-6666-3004-c004-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0003-b10000000000",
+    "prompt": "Which is the kanji for もり (Forest)?",
+    "correct_answer": "森",
+    "options": [
+      "汚染",
+      "気候",
+      "海",
+      "森"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "海"
+    ],
+    "order_index": 132,
+    "reading": "もり",
+    "band": "B1"
+  },
+  {
+    "id": "9930cdc5-c656-8c7c-867a-7a88f484d609",
+    "card_id": "aabbccdd-6666-3004-c005-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0004-b10000000000",
+    "prompt": "Which is the kanji for うみ (Ocean)?",
+    "correct_answer": "海",
+    "options": [
+      "気候",
+      "森",
+      "汚染",
+      "海"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "森"
+    ],
+    "order_index": 133,
+    "reading": "うみ",
+    "band": "B1"
+  },
+  {
+    "id": "2fe38cf9-f114-842a-9973-670d8e25f93e",
+    "card_id": "aabbccdd-6666-3004-c006-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0005-b10000000000",
+    "prompt": "Which is the kanji for ぜつめつきぐ (Endangered)?",
+    "correct_answer": "絶滅危惧",
+    "options": [
+      "汚染",
+      "森",
+      "気候",
+      "絶滅危惧"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "森"
+    ],
+    "order_index": 134,
+    "reading": "ぜつめつきぐ",
+    "band": "B1"
+  },
+  {
+    "id": "a919e314-76d8-8ebd-b625-9ffd77dbf965",
+    "card_id": "aabbccdd-6666-3004-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0006-b10000000000",
+    "prompt": "Which is the kanji for ほぜん (Conservation)?",
+    "correct_answer": "保全",
+    "options": [
+      "汚染",
+      "保全",
+      "気候",
+      "森"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "森"
+    ],
+    "order_index": 135,
+    "reading": "ほぜん",
+    "band": "B1"
+  },
+  {
+    "id": "28dc8805-9e13-81f5-b120-8c04b0f469f5",
+    "card_id": "aabbccdd-6666-3004-c009-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0001-b10000000000",
+    "prompt": "Which is the kanji for たいようの (Solar)?",
+    "correct_answer": "太陽の",
+    "options": [
+      "気候",
+      "太陽の",
+      "森",
+      "汚染"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "森"
+    ],
+    "order_index": 136,
+    "reading": "たいようの",
+    "band": "B1"
+  },
+  {
+    "id": "b90b83d5-4f21-85af-bbdd-8839df87f7b0",
+    "card_id": "aabbccdd-6666-3004-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0002-b10000000000",
+    "prompt": "Which is the kanji for たんそ (Carbon)?",
+    "correct_answer": "炭素",
+    "options": [
+      "汚染",
+      "森",
+      "気候",
+      "炭素"
+    ],
+    "distractors": [
+      "気候",
+      "汚染",
+      "森"
+    ],
+    "order_index": 137,
+    "reading": "たんそ",
+    "band": "B1"
+  },
+  {
+    "id": "44b50bb0-27b2-888b-9608-f1317243c71c",
+    "card_id": "aabbccdd-6666-3004-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0003-b10000000000",
+    "prompt": "Which is the kanji for やせいどうぶつ (Wildlife)?",
+    "correct_answer": "野生動物",
+    "options": [
+      "運動",
+      "先生",
+      "誕生日",
+      "野生動物"
+    ],
+    "distractors": [
+      "先生",
+      "運動",
+      "誕生日"
+    ],
+    "order_index": 138,
+    "reading": "やせいどうぶつ",
+    "band": "B1"
+  },
+  {
+    "id": "a7a1cbef-28f4-8062-8470-ffa897d2b6e4",
+    "card_id": "aabbccdd-6666-3004-c012-b10000000000",
+    "lesson_id": "aabbccdd-6666-3004-0004-b10000000000",
+    "prompt": "Which is the kanji for じぞくかのうな (Sustainable)?",
+    "correct_answer": "持続可能な",
+    "options": [
+      "人工知能",
+      "能力以上のことをする",
+      "持続可能な",
+      "天にも昇る気持ち"
+    ],
+    "distractors": [
+      "人工知能",
+      "天にも昇る気持ち",
+      "能力以上のことをする"
+    ],
+    "order_index": 139,
+    "reading": "じぞくかのうな",
+    "band": "B1"
+  },
+  {
+    "id": "2aba040b-85d5-8713-88f5-4b0260242464",
+    "card_id": "aabbccdd-6666-3005-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3005-0001-b10000000000",
+    "prompt": "Which is the kanji for がめん (Screen)?",
+    "correct_answer": "画面",
+    "options": [
+      "計画する",
+      "面接",
+      "画面",
+      "絵画"
+    ],
+    "distractors": [
+      "計画する",
+      "面接",
+      "絵画"
+    ],
+    "order_index": 130,
+    "reading": "がめん",
+    "band": "B1"
+  },
+  {
+    "id": "aedb131d-a74e-80b1-9276-9f66d1215f80",
+    "card_id": "aabbccdd-6666-3005-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3005-0002-b10000000000",
+    "prompt": "Which is the kanji for じんこうちのう (Artificial intelligence)?",
+    "correct_answer": "人工知能",
+    "options": [
+      "登場人物",
+      "隣人",
+      "持続可能な",
+      "人工知能"
+    ],
+    "distractors": [
+      "隣人",
+      "持続可能な",
+      "登場人物"
+    ],
+    "order_index": 131,
+    "reading": "じんこうちのう",
+    "band": "B1"
+  },
+  {
+    "id": "622e2927-f132-8c48-b95d-dac261af21dc",
+    "card_id": "aabbccdd-6666-3006-c001-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0001-b10000000000",
+    "prompt": "Which is the kanji for むかしむかし (Once upon a time)?",
+    "correct_answer": "昔々",
+    "options": [
+      "突然",
+      "の間に",
+      "昔々",
+      "次に"
+    ],
+    "distractors": [
+      "突然",
+      "の間に",
+      "次に"
+    ],
+    "order_index": 130,
+    "reading": "むかしむかし",
+    "band": "B1"
+  },
+  {
+    "id": "cf1811ee-5e83-8c33-9aab-0d53271963b7",
+    "card_id": "aabbccdd-6666-3006-c003-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0002-b10000000000",
+    "prompt": "Which is the kanji for とつぜん (Suddenly)?",
+    "correct_answer": "突然",
+    "options": [
+      "昔々",
+      "の間に",
+      "次に",
+      "突然"
+    ],
+    "distractors": [
+      "昔々",
+      "の間に",
+      "次に"
+    ],
+    "order_index": 131,
+    "reading": "とつぜん",
+    "band": "B1"
+  },
+  {
+    "id": "2518603c-8207-8630-a40c-8dafd4029801",
+    "card_id": "aabbccdd-6666-3006-c004-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0003-b10000000000",
+    "prompt": "Which is the kanji for のあいだに (While)?",
+    "correct_answer": "の間に",
+    "options": [
+      "時間",
+      "の間に",
+      "間接話法",
+      "その間に"
+    ],
+    "distractors": [
+      "時間",
+      "その間に",
+      "間接話法"
+    ],
+    "order_index": 132,
+    "reading": "のあいだに",
+    "band": "B1"
+  },
+  {
+    "id": "c8679a3f-9580-8d70-8bfa-d7c67e062fa3",
+    "card_id": "aabbccdd-6666-3006-c006-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0004-b10000000000",
+    "prompt": "Which is the kanji for つぎに (Next)?",
+    "correct_answer": "次に",
+    "options": [
+      "次に",
+      "昔々",
+      "あなた次第",
+      "突然"
+    ],
+    "distractors": [
+      "あなた次第",
+      "昔々",
+      "突然"
+    ],
+    "order_index": 133,
+    "reading": "つぎに",
+    "band": "B1"
+  },
+  {
+    "id": "6335c1c0-de39-82da-bdfb-b7cdcd021633",
+    "card_id": "aabbccdd-6666-3006-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0005-b10000000000",
+    "prompt": "Which is the kanji for さいごに (Finally)?",
+    "correct_answer": "最後に",
+    "options": [
+      "後悔",
+      "昔々",
+      "突然",
+      "最後に"
+    ],
+    "distractors": [
+      "後悔",
+      "昔々",
+      "突然"
+    ],
+    "order_index": 134,
+    "reading": "さいごに",
+    "band": "B1"
+  },
+  {
+    "id": "1a550e2e-a706-82d6-a0e4-3331e20e467d",
+    "card_id": "aabbccdd-6666-3006-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0006-b10000000000",
+    "prompt": "Which is the kanji for そのあいだに (Meanwhile)?",
+    "correct_answer": "その間に",
+    "options": [
+      "間接話法",
+      "時間",
+      "の間に",
+      "その間に"
+    ],
+    "distractors": [
+      "時間",
+      "の間に",
+      "間接話法"
+    ],
+    "order_index": 135,
+    "reading": "そのあいだに",
+    "band": "B1"
+  },
+  {
+    "id": "e2edd0b3-bed3-8c68-aaf9-7deeb3f15fee",
+    "card_id": "aabbccdd-6666-3006-c009-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0001-b10000000000",
+    "prompt": "Which is the kanji for とうじょうじんぶつ (Character)?",
+    "correct_answer": "登場人物",
+    "options": [
+      "登場人物",
+      "荷物",
+      "隣人",
+      "野生動物"
+    ],
+    "distractors": [
+      "隣人",
+      "荷物",
+      "野生動物"
+    ],
+    "order_index": 136,
+    "reading": "とうじょうじんぶつ",
+    "band": "B1"
+  },
+  {
+    "id": "752c4c33-4f54-818d-a6b9-3bd934d269ab",
+    "card_id": "aabbccdd-6666-3006-c010-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0002-b10000000000",
+    "prompt": "Which is the kanji for すじ (Plot)?",
+    "correct_answer": "筋",
+    "options": [
+      "筋",
+      "昔々",
+      "の間に",
+      "突然"
+    ],
+    "distractors": [
+      "昔々",
+      "突然",
+      "の間に"
+    ],
+    "order_index": 137,
+    "reading": "すじ",
+    "band": "B1"
+  },
+  {
+    "id": "d945cc83-11b1-8754-a1b5-bd51b8003969",
+    "card_id": "aabbccdd-6666-3006-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0003-b10000000000",
+    "prompt": "Which is the kanji for はじまり (Beginning)?",
+    "correct_answer": "始まり",
+    "options": [
+      "の間に",
+      "始まり",
+      "突然",
+      "昔々"
+    ],
+    "distractors": [
+      "昔々",
+      "突然",
+      "の間に"
+    ],
+    "order_index": 138,
+    "reading": "はじまり",
+    "band": "B1"
+  },
+  {
+    "id": "f7074751-93e4-8b64-8df0-1d2f53a7c961",
+    "card_id": "aabbccdd-6666-3006-c012-b10000000000",
+    "lesson_id": "aabbccdd-6666-3006-0004-b10000000000",
+    "prompt": "Which is the kanji for おわり (Ending)?",
+    "correct_answer": "終わり",
+    "options": [
+      "終わり",
+      "の間に",
+      "突然",
+      "昔々"
+    ],
+    "distractors": [
+      "昔々",
+      "突然",
+      "の間に"
+    ],
+    "order_index": 139,
+    "reading": "おわり",
+    "band": "B1"
+  },
+  {
+    "id": "c46b7239-1aae-8f96-8d03-e7984fc56981",
+    "card_id": "aabbccdd-6666-3007-c007-b10000000000",
+    "lesson_id": "aabbccdd-6666-3007-0001-b10000000000",
+    "prompt": "Which is the kanji for そうぞうして (Imagine)?",
+    "correct_answer": "想像して",
+    "options": [
+      "その代わりに",
+      "仮に",
+      "想像して",
+      "後悔"
+    ],
+    "distractors": [
+      "仮に",
+      "その代わりに",
+      "後悔"
+    ],
+    "order_index": 130,
+    "reading": "そうぞうして",
+    "band": "B1"
+  },
+  {
+    "id": "5786d128-baae-8a72-9d02-9f9f8fa078db",
+    "card_id": "aabbccdd-6666-3007-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3007-0002-b10000000000",
+    "prompt": "Which is the kanji for かりに (Suppose)?",
+    "correct_answer": "仮に",
+    "options": [
+      "仮定法",
+      "仮に",
+      "その代わりに",
+      "想像して"
+    ],
+    "distractors": [
+      "仮定法",
+      "想像して",
+      "その代わりに"
+    ],
+    "order_index": 131,
+    "reading": "かりに",
+    "band": "B1"
+  },
+  {
+    "id": "37ddc5c5-f3f5-8cc4-87bd-f733316fdc3e",
+    "card_id": "aabbccdd-6666-3007-c009-b10000000000",
+    "lesson_id": "aabbccdd-6666-3007-0003-b10000000000",
+    "prompt": "Which is the kanji for そのかわりに (Instead)?",
+    "correct_answer": "その代わりに",
+    "options": [
+      "想像して",
+      "その代わりに",
+      "仮に",
+      "代名詞"
+    ],
+    "distractors": [
+      "代名詞",
+      "想像して",
+      "仮に"
+    ],
+    "order_index": 132,
+    "reading": "そのかわりに",
+    "band": "B1"
+  },
+  {
+    "id": "d99a1b41-3f06-83cf-a9ed-d974b64b5f48",
+    "card_id": "aabbccdd-6666-3007-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3007-0004-b10000000000",
+    "prompt": "Which is the kanji for こうかい (Regret)?",
+    "correct_answer": "後悔",
+    "options": [
+      "後悔",
+      "想像して",
+      "仮に",
+      "最後に"
+    ],
+    "distractors": [
+      "最後に",
+      "想像して",
+      "仮に"
+    ],
+    "order_index": 133,
+    "reading": "こうかい",
+    "band": "B1"
+  },
+  {
+    "id": "959fc3dc-5325-8afa-9dc5-9cd5a6276311",
+    "card_id": "aabbccdd-6666-3007-c012-b10000000000",
+    "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
+    "prompt": "Which is the kanji for けっか (Consequence)?",
+    "correct_answer": "結果",
+    "options": [
+      "想像して",
+      "結婚式",
+      "結果",
+      "結婚している"
+    ],
+    "distractors": [
+      "結婚式",
+      "結婚している",
+      "想像して"
+    ],
+    "order_index": 134,
+    "reading": "けっか",
+    "band": "B1"
+  },
+  {
+    "id": "5df25be0-a5bf-885b-b501-f82bc85a125e",
+    "card_id": "aabbccdd-6666-3008-c002-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
+    "prompt": "Which is the kanji for はいけい (Dear Sir)?",
+    "correct_answer": "拝啓",
+    "options": [
+      "拝啓",
+      "よろしくお願いします",
+      "敬具",
+      "何でも"
+    ],
+    "distractors": [
+      "敬具",
+      "よろしくお願いします",
+      "何でも"
+    ],
+    "order_index": 130,
+    "reading": "はいけい",
+    "band": "B1"
+  },
+  {
+    "id": "33a49a72-c60f-8162-aa16-eb90e9545fd1",
+    "card_id": "aabbccdd-6666-3008-c003-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0002-b10000000000",
+    "prompt": "Which is the kanji for けいぐ (Sincerely)?",
+    "correct_answer": "敬具",
+    "options": [
+      "拝啓",
+      "よろしくお願いします",
+      "何でも",
+      "敬具"
+    ],
+    "distractors": [
+      "拝啓",
+      "よろしくお願いします",
+      "何でも"
+    ],
+    "order_index": 131,
+    "reading": "けいぐ",
+    "band": "B1"
+  },
+  {
+    "id": "0954dc91-f151-8adb-bee4-fa0e41f92885",
+    "card_id": "aabbccdd-6666-3008-c004-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0003-b10000000000",
+    "prompt": "Which is the kanji for よろしくおねがいします (Regards)?",
+    "correct_answer": "よろしくお願いします",
+    "options": [
+      "お願いします",
+      "敬具",
+      "よろしくお願いします",
+      "拝啓"
+    ],
+    "distractors": [
+      "お願いします",
+      "拝啓",
+      "敬具"
+    ],
+    "order_index": 132,
+    "reading": "よろしくおねがいします",
+    "band": "B1"
+  },
+  {
+    "id": "fe767937-0222-8b3d-91f6-46dd3b8cbd33",
+    "card_id": "aabbccdd-6666-3008-c008-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0004-b10000000000",
+    "prompt": "Which is the kanji for なんでも (Whatever)?",
+    "correct_answer": "何でも",
+    "options": [
+      "敬具",
+      "拝啓",
+      "よろしくお願いします",
+      "何でも"
+    ],
+    "distractors": [
+      "拝啓",
+      "敬具",
+      "よろしくお願いします"
+    ],
+    "order_index": 133,
+    "reading": "なんでも",
+    "band": "B1"
+  },
+  {
+    "id": "4d1438ef-aa72-82fe-86de-633aa60d263b",
+    "card_id": "aabbccdd-6666-3008-c009-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0005-b10000000000",
+    "prompt": "Which is the kanji for だいじょうぶ (No worries)?",
+    "correct_answer": "大丈夫",
+    "options": [
+      "大丈夫",
+      "もっと大きい",
+      "夫",
+      "寛大"
+    ],
+    "distractors": [
+      "夫",
+      "寛大",
+      "もっと大きい"
+    ],
+    "order_index": 134,
+    "reading": "だいじょうぶ",
+    "band": "B1"
+  },
+  {
+    "id": "1f95f942-50fb-83d8-80b7-fbce4a7b3e3a",
+    "card_id": "aabbccdd-6666-3008-c011-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0006-b10000000000",
+    "prompt": "Which is the kanji for ていねいご (Formal)?",
+    "correct_answer": "丁寧語",
+    "options": [
+      "拝啓",
+      "丁寧語",
+      "よろしくお願いします",
+      "敬具"
+    ],
+    "distractors": [
+      "拝啓",
+      "敬具",
+      "よろしくお願いします"
+    ],
+    "order_index": 135,
+    "reading": "ていねいご",
+    "band": "B1"
+  },
+  {
+    "id": "4228c270-68be-8eb7-b443-1354add6df13",
+    "card_id": "aabbccdd-6666-3008-c012-b10000000000",
+    "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
+    "prompt": "Which is the kanji for ためぐち (Informal)?",
+    "correct_answer": "タメ口",
+    "options": [
+      "タメ口",
+      "拝啓",
+      "敬具",
+      "口を滑らす"
+    ],
+    "distractors": [
+      "口を滑らす",
+      "拝啓",
+      "敬具"
+    ],
+    "order_index": 136,
+    "reading": "ためぐち",
+    "band": "B1"
+  },
+  {
+    "id": "e9965103-dbd0-81fc-8dfa-be361204d18e",
+    "card_id": "aabbccdd-6666-4001-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0001-b20000000000",
+    "prompt": "Which is the kanji for じゆう (Freedom)?",
+    "correct_answer": "自由",
+    "options": [
+      "目的",
+      "正義",
+      "理由",
+      "自由"
+    ],
+    "distractors": [
+      "理由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 130,
+    "reading": "じゆう",
+    "band": "B2"
+  },
+  {
+    "id": "40e4d935-0dc3-85d4-a681-fc2dc20e9bae",
+    "card_id": "aabbccdd-6666-4001-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0002-b20000000000",
+    "prompt": "Which is the kanji for せいぎ (Justice)?",
+    "correct_answer": "正義",
+    "options": [
+      "象徴主義",
+      "正義",
+      "自由",
+      "お正月"
+    ],
+    "distractors": [
+      "お正月",
+      "象徴主義",
+      "自由"
+    ],
+    "order_index": 131,
+    "reading": "せいぎ",
+    "band": "B2"
+  },
+  {
+    "id": "889f0303-8883-8064-9463-2fe2f2af033a",
+    "card_id": "aabbccdd-6666-4001-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0003-b20000000000",
+    "prompt": "Which is the kanji for もくてき (Purpose)?",
+    "correct_answer": "目的",
+    "options": [
+      "目標",
+      "目",
+      "的を射る",
+      "目的"
+    ],
+    "distractors": [
+      "目",
+      "目標",
+      "的を射る"
+    ],
+    "order_index": 132,
+    "reading": "もくてき",
+    "band": "B2"
+  },
+  {
+    "id": "fe576fcb-a4e3-8712-a7ae-74a5c1798b25",
+    "card_id": "aabbccdd-6666-4001-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0004-b20000000000",
+    "prompt": "Which is the kanji for いしき (Consciousness)?",
+    "correct_answer": "意識",
+    "options": [
+      "自由",
+      "意見",
+      "意識",
+      "正義"
+    ],
+    "distractors": [
+      "意見",
+      "自由",
+      "正義"
+    ],
+    "order_index": 133,
+    "reading": "いしき",
+    "band": "B2"
+  },
+  {
+    "id": "f62b1d80-8a56-8b43-bb83-a07f18b5a192",
+    "card_id": "aabbccdd-6666-4001-c005-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0005-b20000000000",
+    "prompt": "Which is the kanji for りんり (Ethics)?",
+    "correct_answer": "倫理",
+    "options": [
+      "料理する",
+      "理由",
+      "倫理",
+      "自由"
+    ],
+    "distractors": [
+      "料理する",
+      "理由",
+      "自由"
+    ],
+    "order_index": 134,
+    "reading": "りんり",
+    "band": "B2"
+  },
+  {
+    "id": "514975ef-5387-8e8b-a9fb-952fb1912853",
+    "card_id": "aabbccdd-6666-4001-c006-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+    "prompt": "Which is the kanji for どうとく (Morality)?",
+    "correct_answer": "道徳",
+    "options": [
+      "目的",
+      "道徳",
+      "自由",
+      "正義"
+    ],
+    "distractors": [
+      "自由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 135,
+    "reading": "どうとく",
+    "band": "B2"
+  },
+  {
+    "id": "879078e0-cd77-8f7f-b706-7abe053cc785",
+    "card_id": "aabbccdd-6666-4001-c007-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0001-b20000000000",
+    "prompt": "Which is the kanji for そんざい (Existence)?",
+    "correct_answer": "存在",
+    "options": [
+      "自由",
+      "存在",
+      "正義",
+      "目的"
+    ],
+    "distractors": [
+      "自由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 136,
+    "reading": "そんざい",
+    "band": "B2"
+  },
+  {
+    "id": "ea80fc86-3941-8d0d-b098-25f91f2b1fc4",
+    "card_id": "aabbccdd-6666-4001-c008-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0002-b20000000000",
+    "prompt": "Which is the kanji for びょうどう (Equality)?",
+    "correct_answer": "平等",
+    "options": [
+      "平等",
+      "自由",
+      "目的",
+      "正義"
+    ],
+    "distractors": [
+      "自由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 137,
+    "reading": "びょうどう",
+    "band": "B2"
+  },
+  {
+    "id": "623e29c7-8e32-892c-bf1a-cc1f22a209bc",
+    "card_id": "aabbccdd-6666-4001-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0003-b20000000000",
+    "prompt": "Which is the kanji for しんじつ (Truth)?",
+    "correct_answer": "真実",
+    "options": [
+      "正義",
+      "自由",
+      "実施する",
+      "真実"
+    ],
+    "distractors": [
+      "実施する",
+      "自由",
+      "正義"
+    ],
+    "order_index": 138,
+    "reading": "しんじつ",
+    "band": "B2"
+  },
+  {
+    "id": "e93ba303-5839-8f91-a09e-fd77ab544e7b",
+    "card_id": "aabbccdd-6666-4001-c010-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0004-b20000000000",
+    "prompt": "Which is the kanji for ちえ (Wisdom)?",
+    "correct_answer": "知恵",
+    "options": [
+      "正義",
+      "知恵",
+      "人工知能",
+      "自由"
+    ],
+    "distractors": [
+      "人工知能",
+      "自由",
+      "正義"
+    ],
+    "order_index": 139,
+    "reading": "ちえ",
+    "band": "B2"
+  },
+  {
+    "id": "8d55917c-5570-852f-b4ec-9b700356747f",
+    "card_id": "aabbccdd-6666-4001-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0005-b20000000000",
+    "prompt": "Which is the kanji for しんねん (Belief)?",
+    "correct_answer": "信念",
+    "options": [
+      "目的",
+      "信念",
+      "正義",
+      "自由"
+    ],
+    "distractors": [
+      "自由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 140,
+    "reading": "しんねん",
+    "band": "B2"
+  },
+  {
+    "id": "a07e5f3c-e601-8bc4-81a5-f563f2df6f27",
+    "card_id": "aabbccdd-6666-4001-c012-b20000000000",
+    "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+    "prompt": "Which is the kanji for うたがい (Doubt)?",
+    "correct_answer": "疑い",
+    "options": [
+      "正義",
+      "目的",
+      "自由",
+      "疑い"
+    ],
+    "distractors": [
+      "自由",
+      "正義",
+      "目的"
+    ],
+    "order_index": 141,
+    "reading": "うたがい",
+    "band": "B2"
+  },
+  {
+    "id": "dd360f91-7b96-81cb-9a88-c28c884e1baf",
+    "card_id": "aabbccdd-6666-4002-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0001-b20000000000",
+    "prompt": "Which is the kanji for ぎろん (Argument)?",
+    "correct_answer": "議論",
+    "options": [
+      "議論",
+      "議論する",
+      "会議",
+      "討論"
+    ],
+    "distractors": [
+      "議論する",
+      "討論",
+      "会議"
+    ],
+    "order_index": 130,
+    "reading": "ぎろん",
+    "band": "B2"
+  },
+  {
+    "id": "b4e42c62-adf5-8b9a-9a9f-c1c00632a856",
+    "card_id": "aabbccdd-6666-4002-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0002-b20000000000",
+    "prompt": "Which is the kanji for せっとくする (To persuade)?",
+    "correct_answer": "説得する",
+    "options": [
+      "説得する",
+      "議論",
+      "証拠",
+      "小説"
+    ],
+    "distractors": [
+      "小説",
+      "議論",
+      "証拠"
+    ],
+    "order_index": 131,
+    "reading": "せっとくする",
+    "band": "B2"
+  },
+  {
+    "id": "48eabd1e-1a69-8202-86b6-a934d7bbb230",
+    "card_id": "aabbccdd-6666-4002-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0003-b20000000000",
+    "prompt": "Which is the kanji for しょうこ (Evidence)?",
+    "correct_answer": "証拠",
+    "options": [
+      "議論",
+      "反論",
+      "証拠",
+      "説得する"
+    ],
+    "distractors": [
+      "議論",
+      "説得する",
+      "反論"
+    ],
+    "order_index": 132,
+    "reading": "しょうこ",
+    "band": "B2"
+  },
+  {
+    "id": "9b53d184-eeab-8597-817e-80bc896f3679",
+    "card_id": "aabbccdd-6666-4002-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0004-b20000000000",
+    "prompt": "Which is the kanji for はんろん (Counterargument)?",
+    "correct_answer": "反論",
+    "options": [
+      "議論する",
+      "反論",
+      "反対です",
+      "討論"
+    ],
+    "distractors": [
+      "反対です",
+      "議論する",
+      "討論"
+    ],
+    "order_index": 133,
+    "reading": "はんろん",
+    "band": "B2"
+  },
+  {
+    "id": "603c6422-9e8e-8ab2-9ac6-6bc81e1c43f8",
+    "card_id": "aabbccdd-6666-4002-c008-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0005-b20000000000",
+    "prompt": "Which is the kanji for はんばくする (To refute)?",
+    "correct_answer": "反駁する",
+    "options": [
+      "反論",
+      "反駁する",
+      "議論",
+      "反対です"
+    ],
+    "distractors": [
+      "反対です",
+      "反論",
+      "議論"
+    ],
+    "order_index": 134,
+    "reading": "はんばくする",
+    "band": "B2"
+  },
+  {
+    "id": "82559202-58da-814b-9f10-cdce4c985229",
+    "card_id": "aabbccdd-6666-4002-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0006-b20000000000",
+    "prompt": "Which is the kanji for しゅちょう (Claim)?",
+    "correct_answer": "主張",
+    "options": [
+      "主人公",
+      "議論",
+      "象徴主義",
+      "主張"
+    ],
+    "distractors": [
+      "象徴主義",
+      "主人公",
+      "議論"
+    ],
+    "order_index": 135,
+    "reading": "しゅちょう",
+    "band": "B2"
+  },
+  {
+    "id": "96721561-c42a-8eb7-a29e-dbea391b7372",
+    "card_id": "aabbccdd-6666-4002-c010-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0001-b20000000000",
+    "prompt": "Which is the kanji for きべん (Fallacy)?",
+    "correct_answer": "詭弁",
+    "options": [
+      "証拠",
+      "議論",
+      "説得する",
+      "詭弁"
+    ],
+    "distractors": [
+      "議論",
+      "説得する",
+      "証拠"
+    ],
+    "order_index": 136,
+    "reading": "きべん",
+    "band": "B2"
+  },
+  {
+    "id": "4138d072-e9cc-8e1f-97c1-6fc9c9f56ff8",
+    "card_id": "aabbccdd-6666-4002-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0002-b20000000000",
+    "prompt": "Which is the kanji for しゅうじがく (Rhetoric)?",
+    "correct_answer": "修辞学",
+    "options": [
+      "修辞学",
+      "証拠",
+      "議論",
+      "説得する"
+    ],
+    "distractors": [
+      "議論",
+      "説得する",
+      "証拠"
+    ],
+    "order_index": 137,
+    "reading": "しゅうじがく",
+    "band": "B2"
+  },
+  {
+    "id": "7733602c-fb1c-829a-99b8-1d7555203346",
+    "card_id": "aabbccdd-6666-4002-c012-b20000000000",
+    "lesson_id": "aabbccdd-6666-4002-0003-b20000000000",
+    "prompt": "Which is the kanji for へんけん (Bias)?",
+    "correct_answer": "偏見",
+    "options": [
+      "議論",
+      "見ました",
+      "偏見",
+      "意見"
+    ],
+    "distractors": [
+      "見ました",
+      "意見",
+      "議論"
+    ],
+    "order_index": 138,
+    "reading": "へんけん",
+    "band": "B2"
+  },
+  {
+    "id": "3076a741-31f1-87eb-a376-16eab8b1d9c4",
+    "card_id": "aabbccdd-6666-4003-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0001-b20000000000",
+    "prompt": "Which is the kanji for こうしょう (Negotiation)?",
+    "correct_answer": "交渉",
+    "options": [
+      "交渉",
+      "実施する",
+      "提案",
+      "契約"
+    ],
+    "distractors": [
+      "提案",
+      "契約",
+      "実施する"
+    ],
+    "order_index": 130,
+    "reading": "こうしょう",
+    "band": "B2"
+  },
+  {
+    "id": "4f8bdb45-b6aa-8388-ada4-9a61d249e20f",
+    "card_id": "aabbccdd-6666-4003-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0002-b20000000000",
+    "prompt": "Which is the kanji for ていあん (Proposal)?",
+    "correct_answer": "提案",
+    "options": [
+      "契約",
+      "交渉",
+      "提案",
+      "実施する"
+    ],
+    "distractors": [
+      "交渉",
+      "契約",
+      "実施する"
+    ],
+    "order_index": 131,
+    "reading": "ていあん",
+    "band": "B2"
+  },
+  {
+    "id": "8d049ac9-17c1-8738-bb3f-7e22ebd6b2ee",
+    "card_id": "aabbccdd-6666-4003-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0003-b20000000000",
+    "prompt": "Which is the kanji for けいやく (Contract)?",
+    "correct_answer": "契約",
+    "options": [
+      "予約する",
+      "予約",
+      "契約",
+      "交渉"
+    ],
+    "distractors": [
+      "予約",
+      "予約する",
+      "交渉"
+    ],
+    "order_index": 132,
+    "reading": "けいやく",
+    "band": "B2"
+  },
+  {
+    "id": "d6ea5c07-bf69-831d-a0d5-77e94b5ba2a0",
+    "card_id": "aabbccdd-6666-4003-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0004-b20000000000",
+    "prompt": "Which is the kanji for じっしする (To implement)?",
+    "correct_answer": "実施する",
+    "options": [
+      "実施する",
+      "提案",
+      "交渉",
+      "真実"
+    ],
+    "distractors": [
+      "真実",
+      "交渉",
+      "提案"
+    ],
+    "order_index": 133,
+    "reading": "じっしする",
+    "band": "B2"
+  },
+  {
+    "id": "a4e04e4c-cf8b-8cd7-9890-b594594711fa",
+    "card_id": "aabbccdd-6666-4003-c005-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+    "prompt": "Which is the kanji for せんりゃく (Strategy)?",
+    "correct_answer": "戦略",
+    "options": [
+      "契約",
+      "交渉",
+      "戦略",
+      "提案"
+    ],
+    "distractors": [
+      "交渉",
+      "提案",
+      "契約"
+    ],
+    "order_index": 134,
+    "reading": "せんりゃく",
+    "band": "B2"
+  },
+  {
+    "id": "04d58001-3ab0-87de-a72d-0a99847e207f",
+    "card_id": "aabbccdd-6666-4003-c006-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0006-b20000000000",
+    "prompt": "Which is the kanji for よさん (Budget)?",
+    "correct_answer": "予算",
+    "options": [
+      "交渉",
+      "予約",
+      "予算",
+      "予約する"
+    ],
+    "distractors": [
+      "予約",
+      "予約する",
+      "交渉"
+    ],
+    "order_index": 135,
+    "reading": "よさん",
+    "band": "B2"
+  },
+  {
+    "id": "f2459514-95f0-8c7c-b0e0-8a19fd89e20b",
+    "card_id": "aabbccdd-6666-4003-c007-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0001-b20000000000",
+    "prompt": "Which is the kanji for りがいかんけいしゃ (Stakeholder)?",
+    "correct_answer": "利害関係者",
+    "options": [
+      "交渉",
+      "利害関係者",
+      "医者",
+      "歯医者"
+    ],
+    "distractors": [
+      "医者",
+      "歯医者",
+      "交渉"
+    ],
+    "order_index": 136,
+    "reading": "りがいかんけいしゃ",
+    "band": "B2"
+  },
+  {
+    "id": "4a48916f-1e62-84de-983d-151d89a68074",
+    "card_id": "aabbccdd-6666-4003-c008-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0002-b20000000000",
+    "prompt": "Which is the kanji for ぎだい (Agenda)?",
+    "correct_answer": "議題",
+    "options": [
+      "議題",
+      "議論する",
+      "会議",
+      "議論"
+    ],
+    "distractors": [
+      "議論する",
+      "会議",
+      "議論"
+    ],
+    "order_index": 137,
+    "reading": "ぎだい",
+    "band": "B2"
+  },
+  {
+    "id": "082f0da3-d92f-806e-9b34-493bc13812ac",
+    "card_id": "aabbccdd-6666-4003-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0003-b20000000000",
+    "prompt": "Which is the kanji for ぎじろく (Minutes)?",
+    "correct_answer": "議事録",
+    "options": [
+      "議論する",
+      "議事録",
+      "会議",
+      "事務所"
+    ],
+    "distractors": [
+      "事務所",
+      "議論する",
+      "会議"
+    ],
+    "order_index": 138,
+    "reading": "ぎじろく",
+    "band": "B2"
+  },
+  {
+    "id": "e6073b38-2fa9-8243-951d-f9893e02b33d",
+    "card_id": "aabbccdd-6666-4003-c010-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0004-b20000000000",
+    "prompt": "Which is the kanji for いにんする (To delegate)?",
+    "correct_answer": "委任する",
+    "options": [
+      "契約",
+      "交渉",
+      "委任する",
+      "提案"
+    ],
+    "distractors": [
+      "交渉",
+      "提案",
+      "契約"
+    ],
+    "order_index": 139,
+    "reading": "いにんする",
+    "band": "B2"
+  },
+  {
+    "id": "158b0c32-2e30-8374-8b15-5ad47036999c",
+    "card_id": "aabbccdd-6666-4003-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+    "prompt": "Which is the kanji for こうりつ (Efficiency)?",
+    "correct_answer": "効率",
+    "options": [
+      "契約",
+      "交渉",
+      "効率",
+      "提案"
+    ],
+    "distractors": [
+      "交渉",
+      "提案",
+      "契約"
+    ],
+    "order_index": 140,
+    "reading": "こうりつ",
+    "band": "B2"
+  },
+  {
+    "id": "6dd19fba-2a3a-89d4-8ffb-931562b292d0",
+    "card_id": "aabbccdd-6666-4003-c012-b20000000000",
+    "lesson_id": "aabbccdd-6666-4003-0006-b20000000000",
+    "prompt": "Which is the kanji for しめきり (Deadline)?",
+    "correct_answer": "締め切り",
+    "options": [
+      "交渉",
+      "提案",
+      "締め切り",
+      "切符"
+    ],
+    "distractors": [
+      "切符",
+      "交渉",
+      "提案"
+    ],
+    "order_index": 141,
+    "reading": "しめきり",
+    "band": "B2"
+  },
+  {
+    "id": "38e06292-3529-8cc2-87d3-61c54a9cdcba",
+    "card_id": "aabbccdd-6666-4004-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0001-b20000000000",
+    "prompt": "Which is the kanji for しょうせつ (Novel)?",
+    "correct_answer": "小説",
+    "options": [
+      "小説",
+      "説得する",
+      "詩",
+      "もっと小さい"
+    ],
+    "distractors": [
+      "もっと小さい",
+      "説得する",
+      "詩"
+    ],
+    "order_index": 130,
+    "reading": "しょうせつ",
+    "band": "B2"
+  },
+  {
+    "id": "8e3abb09-0aa1-8fbd-8792-fb1c27540528",
+    "card_id": "aabbccdd-6666-4004-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0002-b20000000000",
+    "prompt": "Which is the kanji for し (Poem)?",
+    "correct_answer": "詩",
+    "options": [
+      "彫刻",
+      "絵画",
+      "小説",
+      "詩"
+    ],
+    "distractors": [
+      "小説",
+      "絵画",
+      "彫刻"
+    ],
+    "order_index": 131,
+    "reading": "し",
+    "band": "B2"
+  },
+  {
+    "id": "7bcd010a-6401-85a6-a1f7-c17be909ed53",
+    "card_id": "aabbccdd-6666-4004-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0003-b20000000000",
+    "prompt": "Which is the kanji for かいが (Painting)?",
+    "correct_answer": "絵画",
+    "options": [
+      "計画する",
+      "小説",
+      "絵画",
+      "画面"
+    ],
+    "distractors": [
+      "計画する",
+      "画面",
+      "小説"
+    ],
+    "order_index": 132,
+    "reading": "かいが",
+    "band": "B2"
+  },
+  {
+    "id": "01bb8835-b58d-8023-911e-e12c037508e3",
+    "card_id": "aabbccdd-6666-4004-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0004-b20000000000",
+    "prompt": "Which is the kanji for ちょうこく (Sculpture)?",
+    "correct_answer": "彫刻",
+    "options": [
+      "彫刻",
+      "絵画",
+      "小説",
+      "詩"
+    ],
+    "distractors": [
+      "小説",
+      "詩",
+      "絵画"
+    ],
+    "order_index": 133,
+    "reading": "ちょうこく",
+    "band": "B2"
+  },
+  {
+    "id": "62bbe105-9541-81c9-8e5d-394b76009049",
+    "card_id": "aabbccdd-6666-4004-c005-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0005-b20000000000",
+    "prompt": "Which is the kanji for ひゆ (Metaphor)?",
+    "correct_answer": "比喩",
+    "options": [
+      "比喩",
+      "小説",
+      "詩",
+      "絵画"
+    ],
+    "distractors": [
+      "小説",
+      "詩",
+      "絵画"
+    ],
+    "order_index": 134,
+    "reading": "ひゆ",
+    "band": "B2"
+  },
+  {
+    "id": "eda9fb96-259d-8ee7-9444-795d7b1fd5a8",
+    "card_id": "aabbccdd-6666-4004-c006-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0006-b20000000000",
+    "prompt": "Which is the kanji for しょうちょうしゅぎ (Symbolism)?",
+    "correct_answer": "象徴主義",
+    "options": [
+      "象徴主義",
+      "主人公",
+      "主張",
+      "正義"
+    ],
+    "distractors": [
+      "正義",
+      "主張",
+      "主人公"
+    ],
+    "order_index": 135,
+    "reading": "しょうちょうしゅぎ",
+    "band": "B2"
+  },
+  {
+    "id": "f39b4d65-50ec-8833-8937-ac882636323f",
+    "card_id": "aabbccdd-6666-4004-c008-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0001-b20000000000",
+    "prompt": "Which is the kanji for しゅじんこう (Protagonist)?",
+    "correct_answer": "主人公",
+    "options": [
+      "隣人",
+      "人工知能",
+      "主人公",
+      "登場人物"
+    ],
+    "distractors": [
+      "隣人",
+      "人工知能",
+      "登場人物"
+    ],
+    "order_index": 136,
+    "reading": "しゅじんこう",
+    "band": "B2"
+  },
+  {
+    "id": "49f2f10b-bfe9-83a2-b35e-01930208f011",
+    "card_id": "aabbccdd-6666-4004-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0002-b20000000000",
+    "prompt": "Which is the kanji for どんでんがえし (Plot twist)?",
+    "correct_answer": "どんでん返し",
+    "options": [
+      "絵画",
+      "小説",
+      "どんでん返し",
+      "詩"
+    ],
+    "distractors": [
+      "小説",
+      "詩",
+      "絵画"
+    ],
+    "order_index": 137,
+    "reading": "どんでんがえし",
+    "band": "B2"
+  },
+  {
+    "id": "3d0ea315-39f4-8bd3-a677-db8cf9f23f9a",
+    "card_id": "aabbccdd-6666-4004-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4004-0003-b20000000000",
+    "prompt": "Which is the kanji for けっさく (Masterpiece)?",
+    "correct_answer": "傑作",
+    "options": [
+      "絵画",
+      "小説",
+      "傑作",
+      "詩"
+    ],
+    "distractors": [
+      "小説",
+      "詩",
+      "絵画"
+    ],
+    "order_index": 138,
+    "reading": "けっさく",
+    "band": "B2"
+  },
+  {
+    "id": "85582e26-d9df-89a9-9b2b-f5745be6eaec",
+    "card_id": "aabbccdd-6666-4005-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0001-b20000000000",
+    "prompt": "Which is the kanji for ばをなごませる (To break the ice)?",
+    "correct_answer": "場を和ませる",
+    "options": [
+      "場を和ませる",
+      "登場人物",
+      "的を射る",
+      "朝飯前"
+    ],
+    "distractors": [
+      "登場人物",
+      "的を射る",
+      "朝飯前"
+    ],
+    "order_index": 130,
+    "reading": "ばをなごませる",
+    "band": "B2"
+  },
+  {
+    "id": "bd21fa5f-feb2-8a23-9a42-817f16233247",
+    "card_id": "aabbccdd-6666-4005-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0002-b20000000000",
+    "prompt": "Which is the kanji for まとをいる (To hit the nail on the head)?",
+    "correct_answer": "的を射る",
+    "options": [
+      "的を射る",
+      "場を和ませる",
+      "目的",
+      "朝飯前"
+    ],
+    "distractors": [
+      "目的",
+      "場を和ませる",
+      "朝飯前"
+    ],
+    "order_index": 131,
+    "reading": "まとをいる",
+    "band": "B2"
+  },
+  {
+    "id": "0cc94dff-5447-834a-bdc5-b9e39eb4969e",
+    "card_id": "aabbccdd-6666-4005-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0003-b20000000000",
+    "prompt": "Which is the kanji for あさめしまえ (A piece of cake)?",
+    "correct_answer": "朝飯前",
+    "options": [
+      "前置詞",
+      "ご飯",
+      "朝飯前",
+      "朝ご飯"
+    ],
+    "distractors": [
+      "ご飯",
+      "朝ご飯",
+      "前置詞"
+    ],
+    "order_index": 132,
+    "reading": "あさめしまえ",
+    "band": "B2"
+  },
+  {
+    "id": "e0ef3511-009c-82c7-965a-5a32504f9a99",
+    "card_id": "aabbccdd-6666-4005-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0004-b20000000000",
+    "prompt": "Which is the kanji for めのたまがとびでる (To cost an arm and a leg)?",
+    "correct_answer": "目の玉が飛び出る",
+    "options": [
+      "目の玉が飛び出る",
+      "目",
+      "目標",
+      "目的"
+    ],
+    "distractors": [
+      "目",
+      "目標",
+      "目的"
+    ],
+    "order_index": 133,
+    "reading": "めのたまがとびでる",
+    "band": "B2"
+  },
+  {
+    "id": "28138049-ec6a-830c-af36-aed03d49f337",
+    "card_id": "aabbccdd-6666-4005-c005-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0005-b20000000000",
+    "prompt": "Which is the kanji for おそくてもしないよりまし (Better late than never)?",
+    "correct_answer": "遅くてもしないよりまし",
+    "options": [
+      "遅くてもしないよりまし",
+      "もっと遅い",
+      "場を和ませる",
+      "遅延"
+    ],
+    "distractors": [
+      "もっと遅い",
+      "遅延",
+      "場を和ませる"
+    ],
+    "order_index": 134,
+    "reading": "おそくてもしないよりまし",
+    "band": "B2"
+  },
+  {
+    "id": "12a70e2e-ca30-8c3c-9632-ba691a66ff81",
+    "card_id": "aabbccdd-6666-4005-c006-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0006-b20000000000",
+    "prompt": "Which is the kanji for てんにものぼるきもち (To be on cloud nine)?",
+    "correct_answer": "天にも昇る気持ち",
+    "options": [
+      "気候",
+      "持続可能な",
+      "天にも昇る気持ち",
+      "病気"
+    ],
+    "distractors": [
+      "病気",
+      "気候",
+      "持続可能な"
+    ],
+    "order_index": 135,
+    "reading": "てんにものぼるきもち",
+    "band": "B2"
+  },
+  {
+    "id": "6f84a702-ce52-8273-b6a8-e88234369a18",
+    "card_id": "aabbccdd-6666-4005-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0001-b20000000000",
+    "prompt": "Which is the kanji for くちをすべらす (To let the cat out of the bag)?",
+    "correct_answer": "口を滑らす",
+    "options": [
+      "場を和ませる",
+      "口を滑らす",
+      "タメ口",
+      "的を射る"
+    ],
+    "distractors": [
+      "タメ口",
+      "場を和ませる",
+      "的を射る"
+    ],
+    "order_index": 136,
+    "reading": "くちをすべらす",
+    "band": "B2"
+  },
+  {
+    "id": "3a26b630-3111-8411-a089-934e8dfbb9d1",
+    "card_id": "aabbccdd-6666-4005-c010-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0002-b20000000000",
+    "prompt": "Which is the kanji for いっせきにちょう (To kill two birds with one stone)?",
+    "correct_answer": "一石二鳥",
+    "options": [
+      "一致",
+      "一番悪い",
+      "一石二鳥",
+      "一番良い"
+    ],
+    "distractors": [
+      "一番良い",
+      "一番悪い",
+      "一致"
+    ],
+    "order_index": 137,
+    "reading": "いっせきにちょう",
+    "band": "B2"
+  },
+  {
+    "id": "737bcd9f-c32b-8d1f-b96a-045be8629dcf",
+    "card_id": "aabbccdd-6666-4005-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0003-b20000000000",
+    "prompt": "Which is the kanji for あなたしだい (The ball is in your court)?",
+    "correct_answer": "あなた次第",
+    "options": [
+      "次に",
+      "的を射る",
+      "場を和ませる",
+      "あなた次第"
+    ],
+    "distractors": [
+      "次に",
+      "場を和ませる",
+      "的を射る"
+    ],
+    "order_index": 138,
+    "reading": "あなたしだい",
+    "band": "B2"
+  },
+  {
+    "id": "fd9d2a2e-b20c-84d0-bd7e-86d362b70669",
+    "card_id": "aabbccdd-6666-4005-c012-b20000000000",
+    "lesson_id": "aabbccdd-6666-4005-0004-b20000000000",
+    "prompt": "Which is the kanji for のうりょくいじょうのことをする (Bite off more than you can chew)?",
+    "correct_answer": "能力以上のことをする",
+    "options": [
+      "持続可能な",
+      "能力以上のことをする",
+      "人工知能",
+      "場を和ませる"
+    ],
+    "distractors": [
+      "持続可能な",
+      "人工知能",
+      "場を和ませる"
+    ],
+    "order_index": 139,
+    "reading": "のうりょくいじょうのことをする",
+    "band": "B2"
+  },
+  {
+    "id": "f17a2b72-16ad-8d24-8bc0-36cc9e5901b2",
+    "card_id": "aabbccdd-6666-4006-c001-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0001-b20000000000",
+    "prompt": "Which is the kanji for かていほう (Subjunctive)?",
+    "correct_answer": "仮定法",
+    "options": [
+      "仮に",
+      "仮定法",
+      "不定詞",
+      "間接話法"
+    ],
+    "distractors": [
+      "仮に",
+      "間接話法",
+      "不定詞"
+    ],
+    "order_index": 130,
+    "reading": "かていほう",
+    "band": "B2"
+  },
+  {
+    "id": "fa72f2dd-205c-8088-ab7f-cf6494a528a6",
+    "card_id": "aabbccdd-6666-4006-c002-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0002-b20000000000",
+    "prompt": "Which is the kanji for かんせつわほう (Reported speech)?",
+    "correct_answer": "間接話法",
+    "options": [
+      "時間",
+      "面接",
+      "話しました",
+      "間接話法"
+    ],
+    "distractors": [
+      "時間",
+      "話しました",
+      "面接"
+    ],
+    "order_index": 131,
+    "reading": "かんせつわほう",
+    "band": "B2"
+  },
+  {
+    "id": "d41f9340-ae71-8e63-9716-881d208d79c2",
+    "card_id": "aabbccdd-6666-4006-c003-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0003-b20000000000",
+    "prompt": "Which is the kanji for うけみ (Passive voice)?",
+    "correct_answer": "受身",
+    "options": [
+      "間接話法",
+      "条件形",
+      "受身",
+      "仮定法"
+    ],
+    "distractors": [
+      "仮定法",
+      "間接話法",
+      "条件形"
+    ],
+    "order_index": 132,
+    "reading": "うけみ",
+    "band": "B2"
+  },
+  {
+    "id": "06143611-f020-8f51-bbb7-4fece544d663",
+    "card_id": "aabbccdd-6666-4006-c004-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0004-b20000000000",
+    "prompt": "Which is the kanji for じょうけんけい (Conditional)?",
+    "correct_answer": "条件形",
+    "options": [
+      "受身",
+      "条件形",
+      "間接話法",
+      "仮定法"
+    ],
+    "distractors": [
+      "仮定法",
+      "間接話法",
+      "受身"
+    ],
+    "order_index": 133,
+    "reading": "じょうけんけい",
+    "band": "B2"
+  },
+  {
+    "id": "dbf5e7b1-fb89-87ab-8637-ad5b3167c922",
+    "card_id": "aabbccdd-6666-4006-c005-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0005-b20000000000",
+    "prompt": "Which is the kanji for どうめいし (Gerund)?",
+    "correct_answer": "動名詞",
+    "options": [
+      "動名詞",
+      "運動",
+      "野生動物",
+      "不定詞"
+    ],
+    "distractors": [
+      "運動",
+      "野生動物",
+      "不定詞"
+    ],
+    "order_index": 134,
+    "reading": "どうめいし",
+    "band": "B2"
+  },
+  {
+    "id": "fd630d30-f827-8c62-94d5-ee8599641235",
+    "card_id": "aabbccdd-6666-4006-c006-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0006-b20000000000",
+    "prompt": "Which is the kanji for ふていし (Infinitive)?",
+    "correct_answer": "不定詞",
+    "options": [
+      "仮定法",
+      "動名詞",
+      "接続詞",
+      "不定詞"
+    ],
+    "distractors": [
+      "仮定法",
+      "動名詞",
+      "接続詞"
+    ],
+    "order_index": 135,
+    "reading": "ふていし",
+    "band": "B2"
+  },
+  {
+    "id": "5df18d48-d176-8a79-b25a-db29bd148ef9",
+    "card_id": "aabbccdd-6666-4006-c007-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0001-b20000000000",
+    "prompt": "Which is the kanji for せつ (Clause)?",
+    "correct_answer": "節",
+    "options": [
+      "仮定法",
+      "節",
+      "受身",
+      "間接話法"
+    ],
+    "distractors": [
+      "仮定法",
+      "間接話法",
+      "受身"
+    ],
+    "order_index": 136,
+    "reading": "せつ",
+    "band": "B2"
+  },
+  {
+    "id": "16f23891-b998-80bb-9a47-48922e8d4c3c",
+    "card_id": "aabbccdd-6666-4006-c008-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0002-b20000000000",
+    "prompt": "Which is the kanji for せつぞくし (Conjunction)?",
+    "correct_answer": "接続詞",
+    "options": [
+      "間接話法",
+      "接続詞",
+      "持続可能な",
+      "面接"
+    ],
+    "distractors": [
+      "面接",
+      "持続可能な",
+      "間接話法"
+    ],
+    "order_index": 137,
+    "reading": "せつぞくし",
+    "band": "B2"
+  },
+  {
+    "id": "2adf5aa5-b65c-846b-afe8-1f1094f33b09",
+    "card_id": "aabbccdd-6666-4006-c009-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0003-b20000000000",
+    "prompt": "Which is the kanji for だいめいし (Pronoun)?",
+    "correct_answer": "代名詞",
+    "options": [
+      "その代わりに",
+      "不定詞",
+      "代名詞",
+      "動名詞"
+    ],
+    "distractors": [
+      "その代わりに",
+      "動名詞",
+      "不定詞"
+    ],
+    "order_index": 138,
+    "reading": "だいめいし",
+    "band": "B2"
+  },
+  {
+    "id": "70c7f33c-6599-8c69-b6ba-a98146842741",
+    "card_id": "aabbccdd-6666-4006-c010-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0004-b20000000000",
+    "prompt": "Which is the kanji for ぜんちし (Preposition)?",
+    "correct_answer": "前置詞",
+    "options": [
+      "朝飯前",
+      "動名詞",
+      "不定詞",
+      "前置詞"
+    ],
+    "distractors": [
+      "朝飯前",
+      "動名詞",
+      "不定詞"
+    ],
+    "order_index": 139,
+    "reading": "ぜんちし",
+    "band": "B2"
+  },
+  {
+    "id": "2b805739-cc68-8b49-9852-65fe13f6929d",
+    "card_id": "aabbccdd-6666-4006-c011-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0005-b20000000000",
+    "prompt": "Which is the kanji for じせい (Tense)?",
+    "correct_answer": "時制",
+    "options": [
+      "間接話法",
+      "時制",
+      "仮定法",
+      "時間"
+    ],
+    "distractors": [
+      "時間",
+      "仮定法",
+      "間接話法"
+    ],
+    "order_index": 140,
+    "reading": "じせい",
+    "band": "B2"
+  },
+  {
+    "id": "ac4d83b6-05f6-87e2-8788-71385405b44e",
+    "card_id": "aabbccdd-6666-4006-c012-b20000000000",
+    "lesson_id": "aabbccdd-6666-4006-0006-b20000000000",
+    "prompt": "Which is the kanji for いっち (Agreement)?",
+    "correct_answer": "一致",
+    "options": [
+      "一番悪い",
+      "一石二鳥",
+      "一番良い",
+      "一致"
+    ],
+    "distractors": [
+      "一番良い",
+      "一番悪い",
+      "一石二鳥"
+    ],
+    "order_index": 141,
+    "reading": "いっち",
+    "band": "B2"
+  }
+]

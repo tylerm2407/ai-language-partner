@@ -338,6 +338,17 @@ export interface WritingEvidenceItem {
   wordCount: number;
 }
 
+/**
+ * One answered orthography item — currently `script_choice`, "which is the
+ * kanji for さかな (Fish)?". Correctness only, like listening: there is nothing
+ * to score on a four-way choice beyond whether it was right.
+ */
+export interface OrthographyEvidenceItem {
+  cefrLevel: string | null;
+  /** First-attempt correctness. A recovered second try is `false`. */
+  correct: boolean;
+}
+
 export interface SpeakingEvidenceItem {
   /**
    * CEFR level tag of the attempt. For a scored card this is the card's tag;
@@ -423,6 +434,8 @@ export interface ProficiencyEvidence {
   vocabulary: VocabEvidenceItem[];
   reading: ReadingEvidenceItem[];
   writing: WritingEvidenceItem[];
+  /** Answered orthography items; they strengthen writing, never carry it. */
+  orthography: OrthographyEvidenceItem[];
   /** Scored spoken attempts (migration 089). */
   speaking: SpeakingEvidenceItem[];
   /** Graded listening exercises (migration 128). */
@@ -938,8 +951,29 @@ export function readingStrand(items: ReadingEvidenceItem[]): StrandBreakdown {
   return finishStrand('reading', m, false);
 }
 
-/** Graded submissions only; the band gates on the mean, not on a pass count. */
-export function writingStrand(items: WritingEvidenceItem[]): StrandBreakdown {
+/**
+ * Graded submissions, plus orthography items at a strict cap. The band gates on
+ * the mean, not on a pass count.
+ *
+ * ORTHOGRAPHY CAN STRENGTHEN A WRITING BAND; IT CANNOT CONJURE ONE. Knowing
+ * which characters write a word is part of writing a language that has more
+ * than one script, so answering `script_choice` items belongs in this strand
+ * rather than nowhere. But a four-way choice is not a piece of prose, and
+ * without a bound twenty correct taps would hold a band no one had ever
+ * written a sentence in. So orthography items count only up to HALF the band's
+ * graded submissions, most recent first: a band with no prose counts none of
+ * them, and a band with six counts at most three.
+ *
+ * The consequence to keep in mind when reading a report: writing's mean is no
+ * longer purely prose. It is prose plus a bounded orthography contribution,
+ * and `ORTHOGRAPHY_TO_PROSE_RATIO` is the whole of the bound.
+ */
+export const ORTHOGRAPHY_TO_PROSE_RATIO = 0.5;
+
+export function writingStrand(
+  items: WritingEvidenceItem[],
+  orthography: OrthographyEvidenceItem[] = [],
+): StrandBreakdown {
   const m = emptyStrandBands();
   for (const item of items) {
     if (item.overallScore === null) continue;
@@ -948,6 +982,22 @@ export function writingStrand(items: WritingEvidenceItem[]): StrandBreakdown {
     const b = m.get(band)!;
     b.total += 1;
     b.sum += item.overallScore;
+  }
+  // Bucket first so the cap is applied per band, against that band's prose.
+  const byBand = new Map<CefrBand, OrthographyEvidenceItem[]>();
+  for (const item of orthography) {
+    const band = normalizeBand(item.cefrLevel);
+    if (!band) continue;
+    if (!byBand.has(band)) byBand.set(band, []);
+    byBand.get(band)!.push(item);
+  }
+  for (const [band, answered] of byBand) {
+    const b = m.get(band)!;
+    const allowed = Math.floor(b.total * ORTHOGRAPHY_TO_PROSE_RATIO);
+    for (const item of answered.slice(0, allowed)) {
+      b.total += 1;
+      if (item.correct) b.sum += 1;
+    }
   }
   return finishStrand('writing', m, true);
 }
@@ -1769,7 +1819,7 @@ export function buildProficiencyReport(
   const strands: StrandBreakdown[] = [
     interactionStrand(evidence.interaction),
     readingStrand(evidence.reading),
-    writingStrand(evidence.writing),
+    writingStrand(evidence.writing, evidence.orthography),
     listeningStrand(evidence.listening),
     speakingStrand(evidence.speaking),
   ];

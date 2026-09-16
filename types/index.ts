@@ -226,7 +226,14 @@ export type ExerciseType =
   | 'collocation_match'
   | 'word_form'
   | 'sentence_transformation'
-  | 'mini_dialogue';
+  | 'mini_dialogue'
+  /**
+   * "Which is the kanji for さかな (Fish)?" — reading and gloss given, four
+   * written forms offered. Renders as a multiple choice; it is its own type so
+   * that the proficiency report can tell an orthography answer from a
+   * vocabulary one, the way LISTENING_EXERCISE_TYPES does for listening.
+   */
+  | 'script_choice';
 
 export type SkillType = 'vocabulary' | 'grammar' | 'mixed' | 'chunk';
 export type ResponseMode = 'tap' | 'type' | 'speak';

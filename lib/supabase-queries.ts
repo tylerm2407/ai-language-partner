@@ -18,6 +18,7 @@ import type {
   VocabEvidenceItem,
   ReadingEvidenceItem,
   WritingEvidenceItem,
+  OrthographyEvidenceItem,
   SpeakingEvidenceItem,
   ListeningEvidenceItem,
   InteractionTurnItem,
@@ -1113,6 +1114,14 @@ const PROFICIENCY_LISTENING_CHECK_LIMIT = 400;
  * 128's `record_exercise_result`; the report reads only these for listening.
  */
 export const LISTENING_EXERCISE_TYPES = ['listening_choice', 'listening_type', 'dictation'] as const;
+/**
+ * Exercise types that evidence ORTHOGRAPHY — knowing which characters write a
+ * word. Read by the writing strand, where they are capped against prose; see
+ * `ORTHOGRAPHY_TO_PROSE_RATIO`.
+ */
+export const ORTHOGRAPHY_EXERCISE_TYPES = ['script_choice'] as const;
+/** Answered orthography items considered; the same cap as listening. */
+const PROFICIENCY_ORTHOGRAPHY_LIMIT = 500;
 /** ~2 years of daily rows; also the active-day count for confidence scoring. */
 /** Conversation turns considered. Larger than the other evidence caps
  *  because a turn is a much smaller unit than a passage or a submission — a
@@ -1171,6 +1180,7 @@ export async function fetchProficiencyEvidence(
     writingRes,
     speakingRes,
     listeningRes,
+    orthographyRes,
     listeningCheckRes,
     statsRes,
     reviewCountRes,
@@ -1233,6 +1243,18 @@ export async function fetchProficiencyEvidence(
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_LISTENING_LIMIT),
 
+      // Answered orthography items (migration 138's script_choice). Recorded
+      // by the same record_exercise_result path as every other graded lesson
+      // exercise, so the band and language are already server-derived.
+      supabase
+        .from('exercise_results')
+        .select('cefr_level, correct')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
+        .in('exercise_type', ORTHOGRAPHY_EXERCISE_TYPES)
+        .order('created_at', { ascending: false })
+        .limit(PROFICIENCY_ORTHOGRAPHY_LIMIT),
+
       // Answered post-session listening checks (migration 132). This is the
       // only way a conversation can evidence listening: lesson exercises are
       // the other source, and a learner who only ever talks does none.
@@ -1281,6 +1303,7 @@ export async function fetchProficiencyEvidence(
   if (writingRes.error) throw writingRes.error;
   if (speakingRes.error) throw speakingRes.error;
   if (listeningRes.error) throw listeningRes.error;
+  if (orthographyRes.error) throw orthographyRes.error;
   if (listeningCheckRes.error) throw listeningCheckRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
@@ -1328,6 +1351,13 @@ export async function fetchProficiencyEvidence(
   );
 
   const listening: ListeningEvidenceItem[] = (listeningRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: (row.cefr_level as string | null) ?? null,
+      correct: row.correct === true,
+    })
+  );
+
+  const orthography: OrthographyEvidenceItem[] = (orthographyRes.data ?? []).map(
     (row: Record<string, unknown>) => ({
       cefrLevel: (row.cefr_level as string | null) ?? null,
       correct: row.correct === true,
@@ -1399,6 +1429,7 @@ export async function fetchProficiencyEvidence(
     vocabulary,
     reading,
     writing,
+    orthography,
     speaking,
     listening,
     listeningMinutes,

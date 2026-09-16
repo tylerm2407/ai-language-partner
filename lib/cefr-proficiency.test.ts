@@ -50,6 +50,8 @@ import {
   type SpeakingEvidenceItem,
   type VocabEvidenceItem,
   type WritingEvidenceItem,
+  writingStrand,
+  ORTHOGRAPHY_TO_PROSE_RATIO,
 } from './cefr-proficiency';
 
 const NOW = new Date('2026-08-05T12:00:00.000Z');
@@ -162,6 +164,7 @@ function emptyEvidence(): ProficiencyEvidence {
     vocabulary: [],
     reading: [],
     writing: [],
+  orthography: [],
     speaking: [],
     listening: [],
     listeningMinutes: 0,
@@ -1418,5 +1421,58 @@ describe('placement', () => {
       expect(studying.overallLevel).toBe('B1');
       expect(studying.nextLevelRequirement).toBe(settled.nextLevelRequirement);
     });
+  });
+});
+
+
+describe('writing strand: orthography strengthens but never carries', () => {
+  const prose = (n: number, score: number) =>
+    Array.from({ length: n }, () => ({ cefrLevel: 'A2', overallScore: score, wordCount: 60 }));
+  const taps = (n: number, correct: boolean) =>
+    Array.from({ length: n }, () => ({ cefrLevel: 'A2', correct }));
+  const a2 = (s: ReturnType<typeof writingStrand>) => s.bands.find((b) => b.band === 'A2')!;
+
+  it('counts nothing in a band with no graded prose', () => {
+    // Twenty correct taps and not one sentence written. The whole point of the
+    // cap: floor(0 * ratio) is 0, so the band stays unevidenced.
+    const strand = writingStrand([], taps(20, true));
+    expect(a2(strand).total).toBe(0);
+  });
+
+  it('counts at most half the band\'s submissions', () => {
+    const strand = writingStrand(prose(6, 0.8), taps(20, true));
+    // 6 submissions admit 3 taps, so 9 items, not 26.
+    expect(a2(strand).total).toBe(6 + Math.floor(6 * ORTHOGRAPHY_TO_PROSE_RATIO));
+  });
+
+  it('raises the mean when the taps are right', () => {
+    const without = a2(writingStrand(prose(6, 0.8))).mean;
+    const with_ = a2(writingStrand(prose(6, 0.8), taps(3, true))).mean;
+    expect(with_).toBeGreaterThan(without);
+  });
+
+  it('lowers it when they are wrong', () => {
+    const without = a2(writingStrand(prose(6, 0.8))).mean;
+    const with_ = a2(writingStrand(prose(6, 0.8), taps(3, false))).mean;
+    expect(with_).toBeLessThan(without);
+  });
+
+  it('is unchanged when no orthography is passed at all', () => {
+    expect(writingStrand(prose(4, 0.75))).toEqual(writingStrand(prose(4, 0.75), []));
+  });
+
+  it('ignores an item with no band, as every other strand does', () => {
+    const strand = writingStrand(prose(4, 0.8), [{ cefrLevel: null, correct: true }]);
+    expect(a2(strand).total).toBe(4);
+  });
+
+  it('caps each band against its own prose, not against the total', () => {
+    const strand = writingStrand(
+      [...prose(4, 0.8), { cefrLevel: 'B1', overallScore: 0.8, wordCount: 60 }],
+      [...taps(10, true), { cefrLevel: 'B1', correct: true }],
+    );
+    // A2 has 4 submissions so admits 2; B1 has 1, so floor(0.5) is 0.
+    expect(a2(strand).total).toBe(6);
+    expect(strand.bands.find((b) => b.band === 'B1')!.total).toBe(1);
   });
 });
