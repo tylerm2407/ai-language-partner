@@ -1,0 +1,1184 @@
+[
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1002-0002-e00000000008",
+    "ref": "ja-E0090",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Fish",
+    "gloss": null,
+    "correct_answer": "魚",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "さかな"
+    ],
+    "additions": [
+      "さかな"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1002-0004-e00000000006",
+    "ref": "ja-E0112",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Fish",
+    "gloss": null,
+    "correct_answer": "魚",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "さかな"
+    ],
+    "additions": [
+      "さかな"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1002-0005-e00000000008",
+    "ref": "ja-E0126",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Water",
+    "gloss": null,
+    "correct_answer": "水",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "みず"
+    ],
+    "additions": [
+      "みず"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1002-0006-e00000000004",
+    "ref": "ja-E0134",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Fish",
+    "gloss": null,
+    "correct_answer": "魚",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "さかな"
+    ],
+    "additions": [
+      "さかな"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0001-e00000000002",
+    "ref": "ja-E0142",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Right",
+    "gloss": null,
+    "correct_answer": "右",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "みぎ"
+    ],
+    "additions": [
+      "みぎ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0002-e00000000002",
+    "ref": "ja-E0154",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Straight",
+    "gloss": null,
+    "correct_answer": "まっすぐ",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "真っ直ぐ",
+      "真直ぐ"
+    ],
+    "additions": [
+      "真っ直ぐ",
+      "真直ぐ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0002-e00000000006",
+    "ref": "ja-E0158",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Station",
+    "gloss": null,
+    "correct_answer": "駅",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "えき"
+    ],
+    "additions": [
+      "えき"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0003-e00000000006",
+    "ref": "ja-E0170",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Hospital",
+    "gloss": null,
+    "correct_answer": "病院",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "びょういん"
+    ],
+    "additions": [
+      "びょういん"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0004-e00000000004",
+    "ref": "ja-E0180",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Station",
+    "gloss": null,
+    "correct_answer": "駅",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "えき"
+    ],
+    "additions": [
+      "えき"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0004-e00000000006",
+    "ref": "ja-E0182",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Bank",
+    "gloss": null,
+    "correct_answer": "銀行",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "ぎんこう"
+    ],
+    "additions": [
+      "ぎんこう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0005-e00000000008",
+    "ref": "ja-E0196",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Left",
+    "gloss": null,
+    "correct_answer": "左",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "ひだり"
+    ],
+    "additions": [
+      "ひだり"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0006-e00000000002",
+    "ref": "ja-E0202",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Station",
+    "gloss": null,
+    "correct_answer": "駅",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "えき"
+    ],
+    "additions": [
+      "えき"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0006-e00000000006",
+    "ref": "ja-E0206",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Airport",
+    "gloss": null,
+    "correct_answer": "空港",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "くうこう"
+    ],
+    "additions": [
+      "くうこう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1003-0006-e00000000008",
+    "ref": "ja-E0208",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Right",
+    "gloss": null,
+    "correct_answer": "右",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "みぎ"
+    ],
+    "additions": [
+      "みぎ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1004-0002-e00000000006",
+    "ref": "ja-E0228",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Shoes",
+    "gloss": null,
+    "correct_answer": "靴",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "くつ"
+    ],
+    "additions": [
+      "くつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1004-0004-e00000000004",
+    "ref": "ja-E0250",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Shoes",
+    "gloss": null,
+    "correct_answer": "靴",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "くつ"
+    ],
+    "additions": [
+      "くつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1004-0005-e00000000006",
+    "ref": "ja-E0264",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Tomorrow",
+    "gloss": null,
+    "correct_answer": "明日",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "あした",
+      "あす"
+    ],
+    "additions": [
+      "あした",
+      "あす"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1004-0006-e00000000002",
+    "ref": "ja-E0272",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Shoes",
+    "gloss": null,
+    "correct_answer": "靴",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "くつ"
+    ],
+    "additions": [
+      "くつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1005-0002-e00000000008",
+    "ref": "ja-E0300",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Summer",
+    "gloss": null,
+    "correct_answer": "夏",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "なつ"
+    ],
+    "additions": [
+      "なつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1005-0004-e00000000006",
+    "ref": "ja-E0322",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Summer",
+    "gloss": null,
+    "correct_answer": "夏",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "なつ"
+    ],
+    "additions": [
+      "なつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1005-0005-e00000000006",
+    "ref": "ja-E0334",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Winter",
+    "gloss": null,
+    "correct_answer": "冬",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "ふゆ"
+    ],
+    "additions": [
+      "ふゆ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1005-0006-e00000000004",
+    "ref": "ja-E0344",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Summer",
+    "gloss": null,
+    "correct_answer": "夏",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "なつ"
+    ],
+    "additions": [
+      "なつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1006-0004-e00000000006",
+    "ref": "ja-E0392",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Family",
+    "gloss": null,
+    "correct_answer": "家族",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "かぞく"
+    ],
+    "additions": [
+      "かぞく"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1007-0002-e00000000006",
+    "ref": "ja-E0438",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Window",
+    "gloss": null,
+    "correct_answer": "窓",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "まど"
+    ],
+    "additions": [
+      "まど"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1007-0004-e00000000004",
+    "ref": "ja-E0460",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Window",
+    "gloss": null,
+    "correct_answer": "窓",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "まど"
+    ],
+    "additions": [
+      "まど"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1007-0004-e00000000006",
+    "ref": "ja-E0462",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Chair",
+    "gloss": null,
+    "correct_answer": "椅子",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "いす",
+      "イス"
+    ],
+    "additions": [
+      "いす",
+      "イス"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1007-0006-e00000000002",
+    "ref": "ja-E0482",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Window",
+    "gloss": null,
+    "correct_answer": "窓",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "まど"
+    ],
+    "additions": [
+      "まど"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0001-e00000000002",
+    "ref": "ja-E0492",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Hand",
+    "gloss": null,
+    "correct_answer": "手",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "て"
+    ],
+    "additions": [
+      "て"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0002-e00000000002",
+    "ref": "ja-E0504",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Eye",
+    "gloss": null,
+    "correct_answer": "目",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "め"
+    ],
+    "additions": [
+      "め"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0003-e00000000008",
+    "ref": "ja-E0522",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Arm",
+    "gloss": null,
+    "correct_answer": "腕",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "うで"
+    ],
+    "additions": [
+      "うで"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0005-e00000000006",
+    "ref": "ja-E0544",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Arm",
+    "gloss": null,
+    "correct_answer": "腕",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "うで"
+    ],
+    "additions": [
+      "うで"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0005-e00000000008",
+    "ref": "ja-E0546",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Head",
+    "gloss": null,
+    "correct_answer": "頭",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "あたま"
+    ],
+    "additions": [
+      "あたま"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-1008-0006-e00000000008",
+    "ref": "ja-E0558",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Hand",
+    "gloss": null,
+    "correct_answer": "手",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "て"
+    ],
+    "additions": [
+      "て"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2001-0001-e00000000004",
+    "ref": "ja-E0564",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Nephew",
+    "gloss": null,
+    "correct_answer": "甥",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "おい"
+    ],
+    "additions": [
+      "おい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2001-0001-e00000000005",
+    "ref": "ja-E0565",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Niece",
+    "gloss": null,
+    "correct_answer": "姪",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "めい"
+    ],
+    "additions": [
+      "めい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2001-0002-e00000000004",
+    "ref": "ja-E0576",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Niece",
+    "gloss": null,
+    "correct_answer": "姪",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "めい"
+    ],
+    "additions": [
+      "めい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2001-0003-e00000000002",
+    "ref": "ja-E0586",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Nephew",
+    "gloss": null,
+    "correct_answer": "甥",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "おい"
+    ],
+    "additions": [
+      "おい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2001-0004-e00000000002",
+    "ref": "ja-E0598",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Niece",
+    "gloss": null,
+    "correct_answer": "姪",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "めい"
+    ],
+    "additions": [
+      "めい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2003-0001-e00000000008",
+    "ref": "ja-E0712",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: To cook",
+    "gloss": null,
+    "correct_answer": "料理する",
+    "field": "accepted_answers",
+    "current": [
+      "料理します",
+      "料理をする",
+      "調理する"
+    ],
+    "proposed": [
+      "料理します",
+      "料理をする",
+      "調理する",
+      "りょうりする"
+    ],
+    "additions": [
+      "りょうりする"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2005-0001-e00000000002",
+    "ref": "ja-E0850",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Last week",
+    "gloss": null,
+    "correct_answer": "先週",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "せんしゅう"
+    ],
+    "additions": [
+      "せんしゅう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2005-0004-e00000000005",
+    "ref": "ja-E0889",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means I studied",
+    "gloss": null,
+    "correct_answer": "勉強しました",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "べんきょうしました"
+    ],
+    "additions": [
+      "べんきょうしました"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2005-0004-e00000000008",
+    "ref": "ja-E0892",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: I spoke",
+    "gloss": null,
+    "correct_answer": "話しました",
+    "field": "accepted_answers",
+    "current": [
+      "私は話しました"
+    ],
+    "proposed": [
+      "私は話しました",
+      "はなしました"
+    ],
+    "additions": [
+      "はなしました"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2005-0006-e00000000008",
+    "ref": "ja-E0916",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Yesterday",
+    "gloss": null,
+    "correct_answer": "昨日",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "きのう",
+      "さくじつ"
+    ],
+    "additions": [
+      "きのう",
+      "さくじつ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2006-0001-e00000000002",
+    "ref": "ja-E0922",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Next week",
+    "gloss": null,
+    "correct_answer": "来週",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "らいしゅう"
+    ],
+    "additions": [
+      "らいしゅう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2006-0003-e00000000008",
+    "ref": "ja-E0952",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Dream",
+    "gloss": null,
+    "correct_answer": "夢",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "ゆめ"
+    ],
+    "additions": [
+      "ゆめ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2006-0005-e00000000002",
+    "ref": "ja-E0970",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: I will travel",
+    "gloss": null,
+    "correct_answer": "旅行します",
+    "field": "accepted_answers",
+    "current": [
+      "私は旅行します"
+    ],
+    "proposed": [
+      "私は旅行します",
+      "りょこうします"
+    ],
+    "additions": [
+      "りょこうします"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2006-0006-e00000000005",
+    "ref": "ja-E0985",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Dream",
+    "gloss": null,
+    "correct_answer": "夢",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "ゆめ"
+    ],
+    "additions": [
+      "ゆめ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-2006-0006-e00000000008",
+    "ref": "ja-E0988",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Tomorrow",
+    "gloss": null,
+    "correct_answer": "明日",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "あした",
+      "あす"
+    ],
+    "additions": [
+      "あした",
+      "あす"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3001-0002-e00000000005",
+    "ref": "ja-E1155",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Society",
+    "gloss": null,
+    "correct_answer": "社会",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "しゃかい"
+    ],
+    "additions": [
+      "しゃかい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3001-0003-e00000000005",
+    "ref": "ja-E1169",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Politics",
+    "gloss": null,
+    "correct_answer": "政治",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "せいじ"
+    ],
+    "additions": [
+      "せいじ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3001-0004-e00000000005",
+    "ref": "ja-E1183",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Economy",
+    "gloss": null,
+    "correct_answer": "経済",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "けいざい"
+    ],
+    "additions": [
+      "けいざい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3001-0005-e00000000002",
+    "ref": "ja-E1194",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Society",
+    "gloss": null,
+    "correct_answer": "社会",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "しゃかい"
+    ],
+    "additions": [
+      "しゃかい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3001-0006-e00000000002",
+    "ref": "ja-E1208",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Politics",
+    "gloss": null,
+    "correct_answer": "政治",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "せいじ"
+    ],
+    "additions": [
+      "せいじ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3004-0006-e00000000005",
+    "ref": "ja-E1463",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Carbon",
+    "gloss": null,
+    "correct_answer": "炭素",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "たんそ"
+    ],
+    "additions": [
+      "たんそ"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3007-0003-e00000000005",
+    "ref": "ja-E1673",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Imagine",
+    "gloss": null,
+    "correct_answer": "想像して",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "そうぞうして"
+    ],
+    "additions": [
+      "そうぞうして"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-3008-0001-e00000000002",
+    "ref": "ja-E1726",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Dear Sir",
+    "gloss": null,
+    "correct_answer": "拝啓",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "はいけい"
+    ],
+    "additions": [
+      "はいけい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-4001-0001-e00000000008",
+    "ref": "ja-E1816",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Equality",
+    "gloss": null,
+    "correct_answer": "平等",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "びょうどう"
+    ],
+    "additions": [
+      "びょうどう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-4001-0003-e00000000002",
+    "ref": "ja-E1838",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Consciousness",
+    "gloss": null,
+    "correct_answer": "意識",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "いしき"
+    ],
+    "additions": [
+      "いしき"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-4001-0006-e00000000002",
+    "ref": "ja-E1880",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Existence",
+    "gloss": null,
+    "correct_answer": "存在",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "そんざい"
+    ],
+    "additions": [
+      "そんざい"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-4001-0006-e00000000008",
+    "ref": "ja-E1886",
+    "exercise_type": "cloze_deletion",
+    "prompt": "Fill in the missing word: _____ means Freedom",
+    "gloss": null,
+    "correct_answer": "自由",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "じゆう"
+    ],
+    "additions": [
+      "じゆう"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  },
+  {
+    "language": "ja",
+    "exercise_id": "aabbccdd-6666-4003-0005-e00000000002",
+    "ref": "ja-E2034",
+    "exercise_type": "translate_to_target",
+    "prompt": "Translate to Japanese: Budget",
+    "gloss": null,
+    "correct_answer": "予算",
+    "field": "accepted_answers",
+    "current": [],
+    "proposed": [
+      "よさん"
+    ],
+    "additions": [
+      "よさん"
+    ],
+    "reason": "Decision 1 of round2-triage/needs-human.md, ruled 2026-09-16: on a written-production row whose cue is an English gloss, a correct Japanese word in the other script is a correct answer. The corpus keys the same class of word in kanji, kana and mixed script, so no orthography rule is inferable from it.",
+    "source": "docs/audits/question-verification/round2-triage/needs-human.md, Decision 1"
+  }
+]

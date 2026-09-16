@@ -1,4 +1,14 @@
-# Needs a human — 2 decisions, 67 rows
+# Needs a human — 1 decision left, 12 rows
+
+> **Decision 1 is RULED (2026-09-16): accept the reading.** See
+> [`../round3/README.md`](../round3/README.md). All 66 readings were already
+> live — round two carried the whole class and the 2026-09-16 deploy wrote them
+> — and the ruling has since been gated by `widening-check` against the
+> post-round-two corpus: 294,732 grades, nothing newly accepted. Everything
+> below about Decision 1 is kept as the reasoning that was weighed, not as open
+> work. **Decision 2 is still open.**
+
+# Original: 2 decisions, 67 rows
 
 Two decisions are left, both product/pedagogy calls rather than facts. They
 touch 71 of the 400 rows and 85 of the 479 candidate claims; on 67 of those rows
