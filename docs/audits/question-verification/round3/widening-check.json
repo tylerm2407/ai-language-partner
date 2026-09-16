@@ -1,0 +1,49 @@
+{
+ "snapshot": ".question-audit/snapshot-b982b1e00c0f.json",
+ "mode": "proposal",
+ "sibling_scope": "language",
+ "additions": "docs/audits/question-verification/round3/proposal.json",
+ "languages": [
+  {
+   "language": "ja",
+   "taught_strings": 2418
+  },
+  {
+   "language": "it",
+   "taught_strings": 1853
+  },
+  {
+   "language": "zh",
+   "taught_strings": 2261
+  },
+  {
+   "language": "fr",
+   "taught_strings": 1287
+  },
+  {
+   "language": "ru",
+   "taught_strings": 1531
+  },
+  {
+   "language": "es",
+   "taught_strings": 1840
+  },
+  {
+   "language": "pt",
+   "taught_strings": 1484
+  },
+  {
+   "language": "ko",
+   "taught_strings": 2049
+  },
+  {
+   "language": "de",
+   "taught_strings": 1696
+  }
+ ],
+ "rows_checked": 61,
+ "grades_run": 294732,
+ "rows_where_a_taught_string_is_newly_accepted": 0,
+ "additions_the_grader_still_refuses": [],
+ "findings": []
+}

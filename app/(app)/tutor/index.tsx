@@ -159,7 +159,7 @@ export default function TutorLobbyScreen() {
     let cancelled = false;
     void (async () => {
       try {
-        const last = await fetchLastTutorSession(user.id);
+        const last = await fetchLastTutorSession(user.id, profile?.targetLanguage ?? null);
         if (!cancelled) setLastSession(last);
       } catch {
         // A missing "last time you said…" line is not worth an error state on
@@ -174,7 +174,7 @@ export default function TutorLobbyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, profile?.targetLanguage]);
 
   const handleCorrectionMode = useCallback(
     (mode: CorrectionMode) => {

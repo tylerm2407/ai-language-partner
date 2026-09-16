@@ -1,4 +1,6 @@
--- 132 — Curriculum-term lookup, so vocabulary audio can be unmetered.
+-- 135 — Curriculum-term lookup, so vocabulary audio can be unmetered.
+--
+-- Renumbered from 132 on 2026-09-16, same collision as 134.
 --
 -- WHY
 -- ---

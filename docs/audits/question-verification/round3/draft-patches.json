@@ -1,0 +1,1004 @@
+{
+  "snapshot_sha256": "b982b1e00c0f",
+  "status": "built",
+  "round": 3,
+  "applies_on_top_of": "round two, deployed 2026-09-16",
+  "ruled_on": "2026-09-16",
+  "apply_precondition": "None beyond the grader already shipped for round two. These are exact-match accepted_answers additions; widening-check must report zero newly accepted taught strings before they are applied.",
+  "patches": [
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0002-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Fish",
+        "correct_answer": "魚",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Fish",
+        "correct_answer": "魚",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0005-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Water",
+        "correct_answer": "水",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みず"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0006-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Fish",
+        "correct_answer": "魚",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0001-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Right",
+        "correct_answer": "右",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みぎ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Straight",
+        "correct_answer": "まっすぐ",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "真っ直ぐ",
+          "真直ぐ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Station",
+        "correct_answer": "駅",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0003-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0003-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Hospital",
+        "correct_answer": "病院",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "びょういん"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0004-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Station",
+        "correct_answer": "駅",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Bank",
+        "correct_answer": "銀行",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ぎんこう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0005-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Left",
+        "correct_answer": "左",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ひだり"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Station",
+        "correct_answer": "駅",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Airport",
+        "correct_answer": "空港",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くうこう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Right",
+        "correct_answer": "右",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みぎ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Shoes",
+        "correct_answer": "靴",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0004-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Shoes",
+        "correct_answer": "靴",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0005-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Tomorrow",
+        "correct_answer": "明日",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あした",
+          "あす"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0006-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Shoes",
+        "correct_answer": "靴",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Summer",
+        "correct_answer": "夏",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Summer",
+        "correct_answer": "夏",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0005-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Winter",
+        "correct_answer": "冬",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ふゆ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0006-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Summer",
+        "correct_answer": "夏",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Family",
+        "correct_answer": "家族",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "かぞく"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Window",
+        "correct_answer": "窓",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0004-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Window",
+        "correct_answer": "窓",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0004-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Chair",
+        "correct_answer": "椅子",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "いす",
+          "イス"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0006-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Window",
+        "correct_answer": "窓",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0001-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Hand",
+        "correct_answer": "手",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "て"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0002-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Eye",
+        "correct_answer": "目",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "め"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0003-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Arm",
+        "correct_answer": "腕",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "うで"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Arm",
+        "correct_answer": "腕",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "うで"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Head",
+        "correct_answer": "頭",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あたま"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Hand",
+        "correct_answer": "手",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "て"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0001-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Nephew",
+        "correct_answer": "甥",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "おい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Niece",
+        "correct_answer": "姪",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0002-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0002-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Niece",
+        "correct_answer": "姪",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Nephew",
+        "correct_answer": "甥",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "おい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0004-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Niece",
+        "correct_answer": "姪",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2003-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: To cook",
+        "correct_answer": "料理する",
+        "accepted_answers": [
+          "料理します",
+          "料理をする",
+          "調理する"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "料理します",
+          "料理をする",
+          "調理する",
+          "りょうりする"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2005-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Last week",
+        "correct_answer": "先週",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せんしゅう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2005-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means I studied",
+        "correct_answer": "勉強しました",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "べんきょうしました"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2005-0004-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: I spoke",
+        "correct_answer": "話しました",
+        "accepted_answers": [
+          "私は話しました"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "私は話しました",
+          "はなしました"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2005-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Yesterday",
+        "correct_answer": "昨日",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "きのう",
+          "さくじつ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0001-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Next week",
+        "correct_answer": "来週",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "らいしゅう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Dream",
+        "correct_answer": "夢",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ゆめ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: I will travel",
+        "correct_answer": "旅行します",
+        "accepted_answers": [
+          "私は旅行します"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "私は旅行します",
+          "りょこうします"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Dream",
+        "correct_answer": "夢",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ゆめ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Tomorrow",
+        "correct_answer": "明日",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あした",
+          "あす"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0002-b10000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Society",
+        "correct_answer": "社会",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "しゃかい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Politics",
+        "correct_answer": "政治",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せいじ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Economy",
+        "correct_answer": "経済",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "けいざい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0005-b10000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Society",
+        "correct_answer": "社会",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "しゃかい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0006-b10000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Politics",
+        "correct_answer": "政治",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せいじ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3004-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3004-0006-b10000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Carbon",
+        "correct_answer": "炭素",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "たんそ"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3007-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0003-b10000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Imagine",
+        "correct_answer": "想像して",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そうぞうして"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Dear Sir",
+        "correct_answer": "拝啓",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "はいけい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0001-b20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Equality",
+        "correct_answer": "平等",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "びょうどう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0003-b20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Consciousness",
+        "correct_answer": "意識",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "いしき"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Existence",
+        "correct_answer": "存在",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そんざい"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+        "type": "cloze_deletion",
+        "prompt": "Fill in the missing word: _____ means Freedom",
+        "correct_answer": "自由",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "じゆう"
+        ]
+      }
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4003-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+        "type": "translate_to_target",
+        "prompt": "Translate to Japanese: Budget",
+        "correct_answer": "予算",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "よさん"
+        ]
+      }
+    }
+  ]
+}

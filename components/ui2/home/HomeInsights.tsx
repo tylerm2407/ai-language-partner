@@ -45,7 +45,7 @@ export function PatternsCard({ mistakes, words, loading, error, onRetry, onOpen,
     return (
       <Animated.View entering={enter(5)} style={styles.section}>
         <SectionTitle title="Your patterns" />
-        <SlabCard glass style={{ gap: 8 }}>
+        <SlabCard clay style={{ gap: 8 }}>
           <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>{error.title}</Text>
           <Text style={{ fontFamily: type.ui, fontSize: 13, color: c.muted }}>{error.message}</Text>
           <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Try loading your patterns again" style={styles.retry}>
@@ -76,7 +76,7 @@ export function PatternsCard({ mistakes, words, loading, error, onRetry, onOpen,
         accessibilityRole="button"
         accessibilityLabel={`${headline}. Opens your patterns`}
       >
-        <SlabCard glass style={{ gap: 14 }}>
+        <SlabCard clay style={{ gap: 14 }}>
           <Text style={{ fontFamily: type.heading, fontSize: 17, lineHeight: 22, color: c.ink }}>{headline}</Text>
 
           {shownMistakes.map((m) => (

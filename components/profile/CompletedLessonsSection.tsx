@@ -25,6 +25,7 @@ import {
   fetchCompletedLessonsWithTitles,
   type CompletedLessonsPage,
 } from '../../lib/supabase-queries';
+import type { LanguageCode } from '../../types';
 
 export interface CompletedLessonsSummary {
   total: number;
@@ -34,6 +35,13 @@ export interface CompletedLessonsSummary {
 
 interface Props {
   userId: string | null | undefined;
+  /**
+   * The language whose completions to show (migration 133). A learner who
+   * also studies Russian should not see Russian lessons in their Spanish
+   * history — nor a Lessons tile counting both. Null reads across every
+   * language, which is only right before the profile has loaded.
+   */
+  language: LanguageCode | null;
   /**
    * Called whenever the count changes; `null` while loading or unreadable.
    * The profile's Lessons tile shows the same number without a second
@@ -62,7 +70,7 @@ function scoreBadge(score: number, c: Ui2Palette): { label: string; color: strin
   return { label: `${pct}%`, color: c.error };
 }
 
-export function CompletedLessonsSection({ userId, onSummary }: Props) {
+export function CompletedLessonsSection({ userId, language, onSummary }: Props) {
   const { c } = useUi2Theme();
   const router = useRouter();
   const [page, setPage] = useState<CompletedLessonsPage | null>(null);
@@ -81,7 +89,7 @@ export function CompletedLessonsSection({ userId, onSummary }: Props) {
     }
     let cancelled = false;
     if (!hasLoadedOnce.current) setLoading(true);
-    fetchCompletedLessonsWithTitles(userId, RECENT_LIMIT)
+    fetchCompletedLessonsWithTitles(userId, RECENT_LIMIT, language)
       .then((result) => {
         if (cancelled) return;
         hasLoadedOnce.current = true;
@@ -101,7 +109,7 @@ export function CompletedLessonsSection({ userId, onSummary }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, language]);
 
   useFocusEffect(load);
 

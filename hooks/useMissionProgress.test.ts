@@ -109,7 +109,9 @@ describe('useMissionProgress', () => {
 
     expect(queries.fetchMissionProgress).toHaveBeenCalledWith('u1', 'es');
     expect(queries.fetchOpenMissionAttempts).toHaveBeenCalledWith('u1', 'es');
-    expect(queries.listChatSessions).toHaveBeenCalledWith('u1', 50);
+    // Language-scoped: a bounded scan of another language's sessions could
+    // otherwise hide the resumable one.
+    expect(queries.listChatSessions).toHaveBeenCalledWith('u1', 50, 'es');
     expect(queries.fetchGoalTrack).toHaveBeenCalledWith('u1', 'es');
 
     const s = latest.current!;

@@ -231,14 +231,15 @@ Deno.test('gradeWithValidation: parse failure then valid retry returns the real 
 
 Deno.test('incomplete fresh feedback retries and then uses honest no-grade fallback', async () => {
   let calls = 0;
-  const result = await gradeWithValidation(() => {
+  const { feedback: result, fallbackReason } = await gradeWithValidation(() => {
     calls++;
     return Promise.resolve(JSON.stringify({ grammarScore: 80, vocabularyScore: 80, coherenceScore: 80 }));
   }, noopLog);
   assertEquals(calls, 2);
   assertEquals(result.graded, false);
   assertEquals(result.corrections, []);
-  assertEquals(shouldRefundQuota(result), true);
+  assertEquals(fallbackReason, 'parse');
+  assertEquals(shouldRefundQuota(result, fallbackReason), true);
 });
 
 Deno.test('gradeWithValidation: unsafe output exhausts safety retries, then fallback', async () => {

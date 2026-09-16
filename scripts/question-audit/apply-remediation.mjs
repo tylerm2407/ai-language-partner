@@ -16,6 +16,11 @@
  *
  *   node scripts/question-audit/apply-remediation.mjs --confirm
  *   node scripts/question-audit/apply-remediation.mjs --confirm --reverse
+ *   node scripts/question-audit/apply-remediation.mjs --confirm --file supabase/migrations/136_question_audit_round_two.sql
+ *
+ * `--file` names any later round's SQL. It is the whole reason this script is
+ * not hard-wired to round one any more: round two is a second self-guarding
+ * block of the same shape, and streaming it needs the same treatment.
  */
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -34,9 +39,16 @@ if (!process.argv.includes('--confirm')) {
 const token = process.env.SUPABASE_ACCESS_TOKEN;
 if (!token) throw new Error('SUPABASE_ACCESS_TOKEN is required; do not paste it into a report.');
 
-const path = reverse
-  ? resolve(root, 'docs/audits/question-verification/remediation/reverse.sql')
-  : resolve(root, 'supabase/migrations/131_question_audit_content_patch.sql');
+const fileArg = process.argv.indexOf('--file');
+if (fileArg !== -1 && reverse) {
+  console.error('--file and --reverse name different files; pass only one.');
+  process.exit(2);
+}
+const path = fileArg !== -1 && process.argv[fileArg + 1]
+  ? resolve(process.cwd(), process.argv[fileArg + 1])
+  : reverse
+    ? resolve(root, 'docs/audits/question-verification/remediation/reverse.sql')
+    : resolve(root, 'supabase/migrations/134_question_audit_content_patch.sql');
 const body = await readFile(path, 'utf8');
 
 // The block walks 5,556 rows with a lock and an update each, which is well past

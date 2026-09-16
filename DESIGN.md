@@ -970,15 +970,9 @@ Three screens were restyled from the canvas "Fluenci Home, Talk and Profile"
 (Tyler picked one of three / three / five boards). Layout, copy and every
 feature stayed; only the treatment moved. Tokens added to all three palettes:
 
-- **Glass** — `glass`, `glassPrimary`, `glassGreen`, `glassYellow`,
-  `glassPink` are the card tints made translucent (0.62–0.80 alpha), with
-  `glassBorder` as a hairline that reads as a lit edge. `SlabCard glass` uses
-  them plus `useLiftShadow()` — `shadow` (violet in light, black in dark),
-  y 12, radius 18, 0.16 / 0.45 opacity, `elevation: 3`. **Home only**: the
-  glass is meaningful over `components/ui2/home/Atmosphere.tsx`, four radial
-  colour glows (`primary` / `yellow` / `green` at 0.16–0.30) drawn as SVG
-  behind the scroll content. No BlurView — the gradients already fade, and a
-  blur pass on Android buys nothing visible.
+- **Glass** — *replaced on Home by Clay (2026-09-16, below)*. The glass
+  tokens and `Atmosphere.tsx` are gone; `useLiftShadow()` — `shadow`, y 12,
+  radius 18, 0.16 / 0.45 opacity, `elevation: 3` — stays for the Tutor tab.
 - **Hero mesh** — `heroHighlight` (top-right) and `heroShade` (bottom-left)
   are radial stops over the hero's `primary`, plus a soft white disc and an
   amber glow (`HeroMesh` in HomeSections). The Start pill takes the lift.
@@ -999,6 +993,43 @@ feature stayed; only the treatment moved. Tokens added to all three palettes:
   so a tile can never disagree with the card below it. Only Level navigates.
 - Night reading (`ui2Warm`) never shows these screens, so its glass keys are
   the opaque tints — every warm value must stay a blue-free hex.
+
+### Home · Clay (2026-09-16)
+
+Picked from the canvas "Fluenci Home · Depth" (board 4 of five). Sections,
+order and copy are unchanged; the treatment is soft clay volumes.
+
+- **Ground and cards** — Home alone sits on `clayGround` (`#EDE9F8` light,
+  `#110F20` dark). `SlabCard clay` is `clayCard` (`#F8F6FE` / `#1C192F`),
+  radius 30, and three `boxShadow` layers: an inner light edge top-left
+  (`clayRim`), an inner shade bottom-right (`clayShade`), a soft drop
+  (`clayDrop`). It ignores `tint`. All from `useClay()` in SlabCard.tsx.
+- **Pills and tiles** — `useClay().raised(fill)`: solid fill, white inner
+  light, dark inner shade, and a drop in the fill's own hue. Review, the read
+  tile, practice icons, ticked daily dots. Tiles are 40pt at radius 16.
+- **Grooves** — `useClay().well` (`clayWell`, one inset from the top) on every
+  progress track and unticked dot; `useClay().bowl` is the level ring's
+  socket and the unit % tiles.
+- **Masthead** — a shelf, 8pt wider than the page column a side, radius 36,
+  `clayShelfFrom → clayShelfTo` gradient with `ClayOverlay` carrying its light
+  and shade (a gradient child would paint over the view's own inset shadows).
+  Date in `onTint`, language chip as a small clay pill, 36pt greeting held
+  to 64% width so it clears Sol, who stands (132pt, animated idle) in the
+  bottom-right corner and hangs 30pt over the level row.
+- **Level + due** — two equal clay cards. Level: ring in a `primaryTint`
+  bowl, eyebrow beside it, can-do and basis below. Due: 34pt count, raised
+  green Review pill, 44pt tall.
+- **Hero** — radius 34, the same mesh, `ClayOverlay` with fixed white 0.28 /
+  deep-violet 0.35, drop on an unclipped wrapper. Start takes a white clay
+  stack through `SlabButton fillStyle`.
+- **Not a slab.** No hard bottom edge anywhere: depth is soft inner light
+  and shade, which is what keeps this off the Duolingo silhouette the slab
+  pass removed.
+- **Tab bar** — Tyler took the board's bar too (same day), so `FloatingTabBar`
+  is clay on every tab screen, not only Home: `useClay().card` at pill radius,
+  no border, no `overflow: hidden` (it would clip the drop), active disc
+  `useClay().raised(primary)` in place of the `primary → slab` gradient.
+- Night reading never shows Home; its clay keys are opaque blue-free hex.
 
 ### Night reading — the warm palette (2026-09-09)
 

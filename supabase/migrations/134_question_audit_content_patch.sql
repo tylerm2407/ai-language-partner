@@ -1,4 +1,9 @@
--- 131_question_audit_content_patch.sql
+-- 134_question_audit_content_patch.sql
+--
+-- Renumbered from 131 on 2026-09-16: the audit branch and the trunk each wrote
+-- a 131 and a 132 while they were apart. This file was applied to production
+-- on 2026-09-14 under its old name; prod migration history uses generated
+-- timestamps, so the number here is a record of intent only.
 --
 -- The curriculum audit's content corrections. Data only: no schema, no RLS, no
 -- function or trigger change.

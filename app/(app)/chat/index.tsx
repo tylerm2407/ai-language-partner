@@ -148,7 +148,12 @@ export default function ChatScreen() {
     );
   }
 
-  return <ChatSession targetLanguage={targetLanguage} />;
+  // Keyed on the language so a switch (migration 133) starts a clean session
+  // rather than leaving the previous language's conversation, corrections and
+  // mission state on screen: every one of those is per language, and
+  // `ChatSession` holds them in component state that a prop change alone
+  // would not clear.
+  return <ChatSession key={targetLanguage} targetLanguage={targetLanguage} />;
 }
 
 function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {

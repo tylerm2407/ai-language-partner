@@ -1,0 +1,144 @@
+{
+ "method": "Each proposed accepted_answers value was applied to the live snapshot row and re-graded with lib/grading.ts gradeAnswer using the runtime exerciseHints. Two checks: (1) every taught string in the language (2,281 ja / 2,152 ko keys, accepted answers, options and distractors) re-graded before and after; (2) single-character mutations of each addition re-graded before and after.",
+ "rows_checked": 298,
+ "additions_all_accepted": true,
+ "rows_where_typo_neighbourhood_grows": 88,
+ "taught_strings_newly_accepted": [
+  {
+   "ref": "ja-E0361",
+   "key": "おばあさん",
+   "added": [
+    "お祖母さん",
+    "お婆さん"
+   ],
+   "newly": "お父さん",
+   "fb": "Correct! (Minor typo: \"おばあさん\")",
+   "hint": "Grandmother"
+  },
+  {
+   "ref": "ja-E0361",
+   "key": "おばあさん",
+   "added": [
+    "お祖母さん",
+    "お婆さん"
+   ],
+   "newly": "お姉さん",
+   "fb": "Correct! (Minor typo: \"おばあさん\")",
+   "hint": "Grandmother"
+  },
+  {
+   "ref": "ja-E0361",
+   "key": "おばあさん",
+   "added": [
+    "お祖母さん",
+    "お婆さん"
+   ],
+   "newly": "お嬢さん",
+   "fb": "Correct! (Minor typo: \"おばあさん\")",
+   "hint": "Grandmother"
+  },
+  {
+   "ref": "ja-E0361",
+   "key": "おばあさん",
+   "added": [
+    "お祖母さん",
+    "お婆さん"
+   ],
+   "newly": "お母さん",
+   "fb": "Correct! (Minor typo: \"おばあさん\")",
+   "hint": "Grandmother"
+  },
+  {
+   "ref": "ja-E0361",
+   "key": "おばあさん",
+   "added": [
+    "お祖母さん",
+    "お婆さん"
+   ],
+   "newly": "お隣さん",
+   "fb": "Correct! (Minor typo: \"おばあさん\")",
+   "hint": "Grandmother"
+  },
+  {
+   "ref": "ja-E0373",
+   "key": "おじいさん",
+   "added": [
+    "お祖父さん",
+    "お爺さん"
+   ],
+   "newly": "お父さん",
+   "fb": "Correct! (Minor typo: \"おじいさん\")",
+   "hint": "Grandfather"
+  },
+  {
+   "ref": "ja-E0373",
+   "key": "おじいさん",
+   "added": [
+    "お祖父さん",
+    "お爺さん"
+   ],
+   "newly": "お姉さん",
+   "fb": "Correct! (Minor typo: \"おじいさん\")",
+   "hint": "Grandfather"
+  },
+  {
+   "ref": "ja-E0373",
+   "key": "おじいさん",
+   "added": [
+    "お祖父さん",
+    "お爺さん"
+   ],
+   "newly": "お嬢さん",
+   "fb": "Correct! (Minor typo: \"おじいさん\")",
+   "hint": "Grandfather"
+  },
+  {
+   "ref": "ja-E0373",
+   "key": "おじいさん",
+   "added": [
+    "お祖父さん",
+    "お爺さん"
+   ],
+   "newly": "お母さん",
+   "fb": "Correct! (Minor typo: \"おじいさん\")",
+   "hint": "Grandfather"
+  },
+  {
+   "ref": "ja-E0373",
+   "key": "おじいさん",
+   "added": [
+    "お祖父さん",
+    "お爺さん"
+   ],
+   "newly": "お隣さん",
+   "fb": "Correct! (Minor typo: \"おじいさん\")",
+   "hint": "Grandfather"
+  },
+  {
+   "ref": "ja-E0569",
+   "key": "おじさん",
+   "added": [
+    "叔父さん",
+    "伯父さん"
+   ],
+   "newly": "お父さん",
+   "fb": "Correct! (Minor typo: \"おじさん\")",
+   "hint": "Uncle"
+  },
+  {
+   "ref": "ja-E0581",
+   "key": "おばさん",
+   "added": [
+    "叔母さん",
+    "伯母さん"
+   ],
+   "newly": "お母さん",
+   "fb": "Correct! (Minor typo: \"おばさん\")",
+   "hint": "Aunt"
+  }
+ ],
+ "under_strict_grading": {
+  "additions_accepted": 313,
+  "collateral_accepted": 0
+ }
+}

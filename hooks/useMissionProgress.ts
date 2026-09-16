@@ -205,7 +205,9 @@ export function useMissionProgress(userId: string | undefined, targetLanguage: s
     const [progressRes, attemptsRes, sessionsRes, goalRes] = await Promise.allSettled([
       fetchMissionProgress(userId, targetLanguage),
       fetchOpenMissionAttempts(userId, targetLanguage),
-      listChatSessions(userId, SESSION_SCAN_LIMIT),
+      // Language-scoped: the scan window is bounded, so an unfiltered page of
+      // another language's sessions could hide the resumable one here.
+      listChatSessions(userId, SESSION_SCAN_LIMIT, targetLanguage),
       // The hook takes the language as a plain string (it is also the chat
       // scenario key's partner); the query wants the narrowed code.
       fetchGoalTrack(userId, targetLanguage as LanguageCode),

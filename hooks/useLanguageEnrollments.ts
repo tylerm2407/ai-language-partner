@@ -20,8 +20,16 @@
  *    it is refreshed rather than left showing the other deck's number.
  * The read caches need no purge: every language-sensitive key already carries
  * the language (review queue, insights, ranked books, courses).
+ *
+ * And the NAVIGATOR is reset — every stack popped to its root, Home selected.
+ * The tab navigator keeps each tab's stack across a switch, so without this a
+ * learner who switched away mid-lesson found that lesson still waiting on the
+ * Learn tab, in the language they had just left. See
+ * lib/language-switch-navigation.ts for why it pops every stack rather than a
+ * list of the language-specific ones.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigationContainerRef } from 'expo-router';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import {
@@ -32,6 +40,7 @@ import {
 import { resolvePlacement } from '../lib/course-placement';
 import { loadErrorCopy, type ErrorCopy } from '../lib/error-copy';
 import { trackEvent } from '../lib/analytics';
+import { languageSwitchNavigationActions } from '../lib/language-switch-navigation';
 import type { LanguageCode, LanguageEnrollment, ProficiencyLevel } from '../types';
 
 export interface UseLanguageEnrollments {
@@ -61,6 +70,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorCopy | null>(null);
   const [switching, setSwitching] = useState<LanguageCode | null>(null);
+  const rootNavigation = useNavigationContainerRef();
 
   const reload = useCallback(async () => {
     if (!user) {
@@ -87,16 +97,31 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
     // elsewhere (Settings and the Home chip are two mounts of this hook).
   }, [reload, active]);
 
+  /**
+   * Drop every screen the learner was on in the language they left.
+   *
+   * Dispatched before the profile is adopted: the screens being popped read
+   * the profile, and letting a Russian lesson re-render against a Spanish
+   * profile for a frame is exactly the mixed state this is here to prevent.
+   */
+  const resetNavigation = useCallback(() => {
+    if (!rootNavigation.isReady()) return;
+    for (const action of languageSwitchNavigationActions(rootNavigation.getRootState())) {
+      rootNavigation.dispatch(action);
+    }
+  }, [rootNavigation]);
+
   /** Shared tail of both switch paths: adopt the new profile, drop the old
-   *  language's derived state, and re-read the list. */
+   *  language's derived state and screens, and re-read the list. */
   const adopt = useCallback(
     async (profile: Awaited<ReturnType<typeof switchTargetLanguage>>) => {
+      resetNavigation();
       setProfile(profile);
       setMeasuredBand(null);
       if (user) void refreshReviewCount(user.id);
       await reload();
     },
-    [setProfile, setMeasuredBand, refreshReviewCount, user, reload],
+    [resetNavigation, setProfile, setMeasuredBand, refreshReviewCount, user, reload],
   );
 
   const switchTo = useCallback(

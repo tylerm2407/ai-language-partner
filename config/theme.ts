@@ -388,18 +388,22 @@ export const ui2Light = {
    *  so the groove goes to the ground colour to stay visible. */
   trackOnCard: '#FFFFFF',
   error: '#E5484D',
-  /** Atmosphere (Home, picked 2026-09-14 from the "Home · Atmosphere" board):
-   *  cards go translucent over soft colour glows drawn behind the page. The
-   *  glows are `primary`/`yellow`/`green` at low opacity (see
-   *  components/ui2/home/Atmosphere.tsx); these are the glass fills that sit
-   *  on top of them, a hairline that reads as a lit edge, and the one shadow
-   *  colour every lifted surface shares. */
-  glass: 'rgba(255,255,255,0.62)',
-  glassPrimary: 'rgba(239,235,255,0.74)',
-  glassGreen: 'rgba(230,248,240,0.78)',
-  glassYellow: 'rgba(253,240,218,0.80)',
-  glassPink: 'rgba(255,233,241,0.80)',
-  glassBorder: 'rgba(255,255,255,0.85)',
+  /** Clay (Home, picked 2026-09-16 from the "Home · depth" canvas, board 4):
+   *  cards are soft volumes on a lilac ground. A clay surface is `clayCard`
+   *  with three shadows — an inner light edge top-left (`clayRim`), an inner
+   *  shade bottom-right (`clayShade`) and a soft drop (`clayDrop`) — so it
+   *  reads as pressable without the hard bottom slab the app dropped
+   *  (see `useClay` in components/ui2/SlabCard.tsx). `clayWell` is the one
+   *  inner shadow a sunken groove (progress track, unticked dot) takes. The
+   *  masthead is a `clayShelfFrom → clayShelfTo` gradient. */
+  clayGround: '#EDE9F8',
+  clayCard: '#F8F6FE',
+  clayShelfFrom: '#DCD3FF',
+  clayShelfTo: '#C9BCFF',
+  clayRim: 'rgba(255,255,255,0.95)',
+  clayShade: 'rgba(77,51,214,0.10)',
+  clayDrop: 'rgba(77,51,214,0.28)',
+  clayWell: 'rgba(77,51,214,0.12)',
   shadow: '#4D33D6',
   /** The hero's mesh: a highlight stop at its top-right and a shade stop at
    *  its bottom-left, both faded into `primary` by a radial gradient. */
@@ -442,12 +446,14 @@ export const ui2Dark: Ui2Palette = {
   track: '#26224A',
   trackOnCard: '#26224A',
   error: '#FF6B70',
-  glass: 'rgba(23,21,42,0.72)',
-  glassPrimary: 'rgba(42,36,80,0.80)',
-  glassGreen: 'rgba(26,58,47,0.80)',
-  glassYellow: 'rgba(58,46,22,0.80)',
-  glassPink: 'rgba(58,34,48,0.80)',
-  glassBorder: 'rgba(255,255,255,0.07)',
+  clayGround: '#110F20',
+  clayCard: '#1C192F',
+  clayShelfFrom: '#2E2560',
+  clayShelfTo: '#1F1A44',
+  clayRim: 'rgba(255,255,255,0.05)',
+  clayShade: 'rgba(0,0,0,0.45)',
+  clayDrop: 'rgba(0,0,0,0.85)',
+  clayWell: 'rgba(0,0,0,0.50)',
   shadow: '#000000',
   heroHighlight: '#8B75FF',
   heroShade: '#2A1A8A',
@@ -514,14 +520,16 @@ export const ui2Warm: Ui2Palette = {
   track: '#1F1800',
   trackOnCard: '#2A2000',
   error: '#FF4A00',
-  // Night reading never shows Home, so the glass keys are the opaque tints:
+  // Night reading never shows Home, so the clay keys are opaque stand-ins:
   // every warm value must stay a blue-free hex (hooks/useUi2Theme.test.ts).
-  glass: '#161100',
-  glassPrimary: '#2A1E00',
-  glassGreen: '#161A00',
-  glassYellow: '#2E2400',
-  glassPink: '#2E1600',
-  glassBorder: '#1F1800',
+  clayGround: '#000000',
+  clayCard: '#161100',
+  clayShelfFrom: '#2A1E00',
+  clayShelfTo: '#1F1800',
+  clayRim: '#1F1800',
+  clayShade: '#000000',
+  clayDrop: '#000000',
+  clayWell: '#000000',
   shadow: '#000000',
   heroHighlight: '#FFB300',
   heroShade: '#7A5000',

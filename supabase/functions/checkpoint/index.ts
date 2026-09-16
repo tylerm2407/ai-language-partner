@@ -198,7 +198,19 @@ async function handleSeed(supabase: Db, body: Record<string, unknown>): Promise<
             // sitting, and output runs $5/MTok against $1 for input — so this ceiling
             // cost more than everything fed into it. 8000 tokens is ~6,000 words of
             // report nobody asked for.
-            max_tokens: 3000,
+            // 8000, and it must stay there. A cost-optimisation pass cut this to
+            // 3000 with a comment about "a progress summary the learner reads in
+            // a sitting" — but this call does not write a summary, it writes the
+            // whole 48-item pool for one (language, band). The ceiling silently
+            // broke seeding for every band above A1: A1 items are short enough to
+            // fit, everything longer got truncated mid-JSON, `JSON.parse` threw,
+            // and the caller saw a bland 502 SEED_FAILED with nothing in the logs.
+            //
+            // Seeding is a once-per-segment operation — 54 of them, ever — so the
+            // ceiling is worth at most a couple of dollars in total even if every
+            // call ran to the limit. Do not "optimise" it again without seeding a
+            // C2 segment to prove the new ceiling holds.
+            max_tokens: 8000,
             system: buildSeedPrompt(language, band),
             messages: [{ role: 'user', content: `Generate the ${language} ${band} item pool.` }],
           }),
@@ -221,12 +233,26 @@ async function handleSeed(supabase: Db, body: Record<string, unknown>): Promise<
   try {
     const t = result.text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     parsed = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
-  } catch {
+  } catch (err) {
+    // Every seed exit logs its reason. A bare 502 made a truncated completion,
+    // a model outage and a wrong key indistinguishable from each other, and
+    // that ambiguity cost two separate debugging rounds on this one function.
+    console.error(
+      `[checkpoint] seed parse failed for ${language} ${band} (${result.text.length} chars):`,
+      (err as Error).message,
+    );
     return json({ error: 'Seeding produced unusable output.', code: 'SEED_FAILED' }, 502);
   }
 
   const items = parseSeeded(parsed);
   if (items.length === 0) {
+    // Parsed but nothing usable: the model returned a shape `parseSeeded`
+    // rejects wholesale. Logging a slice of what arrived is the only way to
+    // tell that from an empty completion without reproducing it.
+    console.error(
+      `[checkpoint] seed parsed but no items survived for ${language} ${band}:`,
+      result.text.slice(0, 400),
+    );
     return json({ error: 'Seeding produced no usable items.', code: 'SEED_FAILED' }, 502);
   }
 
@@ -266,6 +292,7 @@ async function handleSeed(supabase: Db, body: Record<string, unknown>): Promise<
   }
 
   if (rows.length === 0) {
+    console.error(`[checkpoint] seed produced no storable rows for ${language} ${band}`);
     return json({ error: 'No items survived validation.', code: 'SEED_FAILED' }, 502);
   }
 

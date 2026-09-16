@@ -18,7 +18,7 @@ unfinished content reconciliation from runtime fixes and pending product decisio
 
 The content patch is **live in production** (`ngqpsuixmumdnqbqxjxv`): 5,556 rows
 and 10,255 fields, plus the 5 authored reading questions. Applied as one
-transaction from `supabase/migrations/131_question_audit_content_patch.sql`,
+transaction from `supabase/migrations/134_question_audit_content_patch.sql`,
 which is `remediation/draft.sql` verbatim under a provenance header.
 
 Nothing was overwritten. A drift check across all 21,706 guarded fields came

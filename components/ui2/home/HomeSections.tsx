@@ -11,11 +11,14 @@
  * not have: while the report loads the ring is empty and the eyebrow reads
  * "Level"; at C2 it reads "Top band" and the ring is full.
  *
- * Atmosphere (canvas "Fluenci Home, Talk and Profile", picked 2026-09-14):
- * every card on Home is `glass` over the colour glows in
- * `./Atmosphere.tsx`, and the hero is a mesh — `primary` with a highlight
- * stop at its top-right, a shade stop at its bottom-left, a soft white disc
- * and an amber glow, all SVG. Layout and copy did not move.
+ * Clay (canvas "Fluenci Home · Depth", board 4, picked 2026-09-16): every
+ * card on Home is a soft clay volume on the lilac `clayGround` (`SlabCard
+ * clay`, `useClay`). The masthead is a lilac gradient shelf with Sol sitting
+ * on its bottom edge; level and due are two equal clay cards; the hero keeps
+ * its mesh — `primary` with a highlight stop top-right, a shade stop
+ * bottom-left, a soft white disc and an amber glow, all SVG — under a clay
+ * light and shade. Solid pills and tiles are `useClay().raised`, grooves
+ * `useClay().well`. Sections, order and copy did not move.
  */
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -27,8 +30,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { SlabCard, useLiftShadow } from '../SlabCard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ClayOverlay, SlabCard, useClay } from '../SlabCard';
 import { SlabButton } from '../SlabButton';
+import { MascotSol } from '../MascotSol';
 import { haptic } from '../../../lib/haptics';
 import { cefrCanDo } from '../../../lib/cefr-labels';
 import { displayMinutes, goalProgress } from '../../../lib/active-time';
@@ -68,14 +73,19 @@ export function HomeHeader({
   const enter = useHomeEnter();
   const now = new Date();
   return (
-    <Animated.View entering={enter(0)} style={styles.header}>
+    <Animated.View entering={enter(0)} style={[styles.header, { boxShadow: `0px 22px 36px -16px ${c.clayDrop}` }]}>
+      {/* The shelf's colour is a gradient child, so its clay light and shade
+          ride an overlay above it (see ClayOverlay). */}
+      <LinearGradient
+        colors={[c.clayShelfFrom, c.clayShelfTo]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        style={[StyleSheet.absoluteFill, { borderRadius: SHELF_RADIUS }]}
+      />
+      <ClayOverlay radius={SHELF_RADIUS} rim={c.clayRim} shade={c.clayShade} />
       <View style={styles.headerTop}>
-        <Text
-          accessibilityRole="header"
-          style={{ fontFamily: type.heading, fontSize: 34, lineHeight: 38, letterSpacing: -0.6, color: c.ink, flex: 1 }}
-        >
-          {greeting}
-          {name ? `, ${name}` : ''}
+        <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: c.onTint, flex: 1 }} numberOfLines={1}>
+          {DAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}
         </Text>
         {languageChip && onSwitchLanguage ? (
           <Pressable
@@ -86,7 +96,13 @@ export function HomeHeader({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Language: ${languageChip}. Switch language`}
-            style={[styles.langChip, { backgroundColor: c.primaryTint, borderColor: c.primary }]}
+            style={[
+              styles.langChip,
+              {
+                backgroundColor: c.clayCard,
+                boxShadow: `inset 2px 2px 4px ${c.clayRim}, inset -3px -3px 6px ${c.clayShade}, 0px 4px 8px -4px ${c.clayDrop}`,
+              },
+            ]}
           >
             <Text style={{ fontFamily: type.uiBold, fontSize: 13, color: c.onTint, letterSpacing: 0.5 }}>
               {languageChip}
@@ -95,9 +111,22 @@ export function HomeHeader({
           </Pressable>
         ) : null}
       </View>
-      <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.muted }}>
-        {DAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}
+      {/* Held clear of Sol, who stands in the shelf's bottom-right corner. */}
+      <Text
+        accessibilityRole="header"
+        style={{ fontFamily: type.heading, fontSize: 36, lineHeight: 40, letterSpacing: -1, color: c.ink, maxWidth: '64%' }}
+      >
+        {greeting}
+        {name ? `, ${name}` : ''}
       </Text>
+      <View
+        pointerEvents="none"
+        style={styles.sol}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <MascotSol size={SOL_SIZE} />
+      </View>
     </Animated.View>
   );
 }
@@ -146,7 +175,8 @@ export function levelEyebrow(
 }
 
 export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, dueCount, onReview, onExplain }: LevelDueRowProps) {
-  const { c, type } = useUi2Theme();
+  const { c, type, scheme } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
   const eyebrow = levelEyebrow(nextBand, progressPercent, measured);
   const ringPct = progressPercent === null ? 0 : progressPercent / 100;
@@ -165,8 +195,7 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
         accessibilityHint="Explains the A1 to C2 scale"
       >
         <SlabCard
-          tint="primary"
-          glass
+          clay
           style={styles.levelCard}
           accessible
           accessibilityRole="progressbar"
@@ -186,15 +215,27 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
                 }
           }
         >
-          <View style={styles.levelRing}>
-            <ProgressRing pct={ringPct} size={48} stroke={5} color={c.primary} track={c.primaryTintBorder}>
-              <Text style={{ fontFamily: type.heading, fontSize: 15, lineHeight: 18, color: c.onTint }}>{band}</Text>
-            </ProgressRing>
-          </View>
-          <View style={styles.levelText}>
-            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11, letterSpacing: 0.6 }]} numberOfLines={1}>
+          <View style={styles.levelTop}>
+            {/* The ring sits in a shallow clay bowl pressed into the card. */}
+            <View style={[styles.ringBowl, { backgroundColor: c.primaryTint }, clay.bowl]}>
+              <ProgressRing
+                pct={ringPct}
+                size={52}
+                stroke={6}
+                color={c.primary}
+                track={scheme === 'dark' ? c.primaryTintBorder : c.trackOnCard}
+              >
+                <Text style={{ fontFamily: type.heading, fontSize: 15, lineHeight: 18, color: c.onTint }}>{band}</Text>
+              </ProgressRing>
+            </View>
+            <Text
+              style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 10, lineHeight: 13, letterSpacing: 0.6, flex: 1 }]}
+              numberOfLines={2}
+            >
               {eyebrow}
             </Text>
+          </View>
+          <View style={styles.levelText}>
             <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
               {cefrCanDo(band)}
             </Text>
@@ -210,9 +251,9 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
         </SlabCard>
       </Pressable>
 
-      <SlabCard tint="green" glass style={styles.dueInner}>
+      <SlabCard clay style={styles.dueInner}>
         <View>
-          <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 28, color: c.ink }}>{dueCount}</Text>
+          <Text style={{ fontFamily: type.heading, fontSize: 34, lineHeight: 38, color: c.ink }}>{dueCount}</Text>
           <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>{dueLabel}</Text>
         </View>
         <Pressable
@@ -224,7 +265,7 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
           accessibilityRole="button"
           accessibilityLabel={dueCount > 0 ? `Review ${dueCount} ${dueLabel}` : 'No cards due'}
           accessibilityState={{ disabled: dueCount === 0 }}
-          style={[styles.reviewPill, { backgroundColor: dueCount > 0 ? c.green : c.greenBorder }]}
+          style={[styles.reviewPill, dueCount > 0 ? clay.raised(c.green) : { backgroundColor: c.greenBorder }]}
         >
           <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: dueCount > 0 ? c.onGreen : c.muted }}>
             {dueCount > 0 ? 'Review' : 'Caught up'}
@@ -351,10 +392,15 @@ function HeroMesh() {
   );
 }
 
+/** The hero's clay light and shade, over the violet mesh. Fixed rather than
+ *  per-scheme: they sit on `primary`, which barely moves between schemes. */
+const HERO_RIM = 'rgba(255,255,255,0.28)';
+const HERO_SHADE = 'rgba(20,10,80,0.35)';
+const START_CLAY = 'inset 2px 3px 5px rgba(255,255,255,1), inset -3px -4px 8px rgba(77,51,214,0.25), 0px 10px 18px -8px rgba(20,10,80,0.6)';
+
 export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStart }: SessionHeroProps) {
-  const { c, type, shape } = useUi2Theme();
+  const { c, type, scheme } = useUi2Theme();
   const enter = useHomeEnter();
-  const lift = useLiftShadow();
 
   const { pct, remainingMinutes, met } = goalProgress(minutesToday, goalMinutes);
   const done = displayMinutes(minutesToday);
@@ -371,17 +417,22 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
   const countLabel = `${done} of ${goal} min`;
 
   return (
-    <Animated.View entering={enter(2)}>
+    // The drop shadow lives on the wrapper: the hero clips its mesh, and a
+    // clipped view would clip its own shadow with it.
+    <Animated.View
+      entering={enter(2)}
+      style={{
+        borderRadius: HERO_RADIUS,
+        boxShadow: `0px 24px 36px -16px ${scheme === 'dark' ? c.clayDrop : `${c.slab}B3`}`,
+      }}
+    >
       <View
-        style={[
-          styles.hero,
-          lift,
-          { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab, borderRadius: shape.radiusHero },
-        ]}
+        style={[styles.hero, { backgroundColor: c.primary, borderRadius: HERO_RADIUS }]}
         accessibilityRole="summary"
         accessibilityLabel={`Today's session: ${title}`}
       >
         <HeroMesh />
+        <ClayOverlay radius={HERO_RADIUS} rim={HERO_RIM} shade={HERO_SHADE} />
         <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onPrimaryMuted }]}>
           Today's session
         </Text>
@@ -413,7 +464,7 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
           <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.onPrimaryMuted, flex: 1 }} numberOfLines={2}>
             {subtitle}
           </Text>
-          <SlabButton label="Start" variant="onPrimary" onPress={onStart} style={{ ...styles.heroCta, ...lift }} />
+          <SlabButton label="Start" variant="onPrimary" onPress={onStart} style={styles.heroCta} fillStyle={{ boxShadow: START_CLAY }} />
         </View>
       </View>
     </Animated.View>
@@ -432,6 +483,7 @@ interface ReadRowProps {
 
 export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: ReadRowProps) {
   const { c, type } = useUi2Theme();
+  const clay = useClay();
   const enter = useHomeEnter();
   const label = loading ? 'Loading today’s read' : error ? 'Today’s read could not load' : `Today's read${minutes ? ` · ${minutes} min` : ''}`;
   const body = loading ? '…' : error ? error : title ?? 'Nothing published yet today';
@@ -446,8 +498,8 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${body}`}
       >
-        <SlabCard tint="yellow" glass style={styles.readRow}>
-          <View style={[styles.iconTile, { backgroundColor: c.yellow }]}>
+        <SlabCard clay style={styles.readRow}>
+          <View style={[styles.iconTile, clay.raised(c.yellow)]}>
             <Ionicons name={hasRead ? 'checkmark' : 'book-outline'} size={18} color="#23203A" />
           </View>
           <View style={styles.readText}>
@@ -463,14 +515,22 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
   );
 }
 
+/** Sol's size on the shelf, and the shelf's corner. */
+const SOL_SIZE = 132;
+const SHELF_RADIUS = 36;
+const HERO_RADIUS = 34;
+
 const styles = StyleSheet.create({
-  header: { gap: 4 },
+  // Wider than the page column by 8pt a side, so the shelf reads as the
+  // screen's masthead rather than one more card. Sol hangs 30pt below its
+  // bottom edge and must paint over the level row, hence the zIndex.
+  header: { gap: 10, marginHorizontal: -8, borderRadius: SHELF_RADIUS, padding: 20, paddingBottom: 44, zIndex: 2 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sol: { position: 'absolute', right: 14, bottom: -30 },
   langChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 10,
     // 32pt tall inside a 44pt hit area (hitSlop): the greeting is the tallest
@@ -478,20 +538,21 @@ const styles = StyleSheet.create({
     height: 32,
   },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
-  statRow: { flexDirection: 'row', gap: 12 },
-  levelPress: { flex: 1.5 },
-  levelCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
-  levelRing: { flexShrink: 0 },
-  levelText: { flex: 1, gap: 4, minWidth: 0 },
-  dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 14 },
-  reviewPill: { minHeight: 36, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  statRow: { flexDirection: 'row', gap: 14 },
+  levelPress: { flex: 1 },
+  levelCard: { flex: 1, gap: 10, padding: 16 },
+  levelTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ringBowl: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  levelText: { gap: 4, minWidth: 0 },
+  dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 16 },
+  reviewPill: { minHeight: 44, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
   ringCentre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  hero: { padding: 20, gap: 12, overflow: 'hidden' },
+  iconTile: { width: 40, height: 40, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  hero: { padding: 20, gap: 14, overflow: 'hidden' },
   heroBottom: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroCta: { minWidth: 104 },
   goal: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   goalText: { flex: 1, gap: 4 },
-  readRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  readRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 },
   readText: { flex: 1, gap: 1, minWidth: 0 },
 });

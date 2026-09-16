@@ -142,6 +142,7 @@ function makeUnitProgress(index: number, completedCount: number): UnitProgress {
     id: `u${index}-l${i}`,
     unitId: unit.id,
     courseId: 'c1',
+    targetLanguage: 'es',
     title: `Lesson ${i + 1}`,
     description: '',
     orderIndex: i,
