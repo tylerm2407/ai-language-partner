@@ -30,6 +30,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { usePressed } from '../../hooks/usePressed';
 import { haptic } from '../../lib/haptics';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { SlabButton } from '../ui2/SlabButton';
@@ -206,7 +207,12 @@ interface OptionButtonProps {
  * HIG floor and applies even to a one-word option.
  */
 function OptionButton({ label, selected, verdict, locked, onPress }: OptionButtonProps) {
-  const { c } = useUi2Theme();
+  // `shape` rather than a literal: these are the same selectable-slab rows as
+  // `components/ui2/OptionRow`, which is the established idiom for a picker.
+  const { c, shape } = useUi2Theme();
+  // NOT the callback form of `style`. NativeWind wraps Pressable and drops a
+  // style function silently — see hooks/usePressed.ts.
+  const { pressed, pressHandlers } = usePressed();
 
   const bg = verdict === true ? c.greenTint : verdict === false ? c.pinkTint : selected ? c.primary : c.card;
   const border =
@@ -219,14 +225,16 @@ function OptionButton({ label, selected, verdict, locked, onPress }: OptionButto
     <Pressable
       onPress={onPress}
       disabled={locked}
+      {...pressHandlers}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled: locked }}
       accessibilityLabel={verdictWord ? `${label}, ${verdictWord}` : label}
-      style={({ pressed }) => [
+      style={[
         styles.option,
         {
           backgroundColor: bg,
           borderColor: border,
+          borderRadius: shape.radiusCard,
           opacity: pressed && !locked ? 0.85 : 1,
         },
       ]}
@@ -275,7 +283,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderRadius: 12,
   },
   optionLabel: {
     flex: 1,
