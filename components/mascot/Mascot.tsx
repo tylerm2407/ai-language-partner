@@ -225,12 +225,15 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
     timerRef.current = null;
   };
 
-  const play = (next: Clip) => {
+  // Stable for the life of the component: it closes over refs, setters and
+  // module constants only, so the two effects below can depend on it without
+  // re-running on every render.
+  const play = useCallback((next: Clip) => {
     clearTimer();
     busyRef.current = !LOOPS.has(next);
     setFront({ clip: next, run: nextRun() });
     setBack(LOOPS.has(next) ? null : { clip: afterClip(next), run: nextRun() });
-  };
+  }, []);
 
   // The one-shot timer starts when the front clip has actually loaded, not
   // when it was requested: decode time would otherwise be taken off the end
@@ -275,9 +278,9 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
       return;
     }
     play(wanted);
-    // Re-running on the wanted clip alone is the intended trigger; `play`
-    // closes over refs and setters only.
-  }, [wanted]);
+    // Re-running on the wanted clip alone is the intended trigger; `play` is
+    // stable, so listing it changes nothing.
+  }, [wanted, play]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -285,7 +288,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
       play(wanted);
     });
     return () => sub.remove();
-  }, [wanted]);
+  }, [wanted, play]);
 
   useEffect(() => () => clearTimer(), []);
 

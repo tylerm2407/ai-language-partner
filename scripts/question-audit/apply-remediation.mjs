@@ -36,7 +36,7 @@ if (!token) throw new Error('SUPABASE_ACCESS_TOKEN is required; do not paste it 
 
 const path = reverse
   ? resolve(root, 'docs/audits/question-verification/remediation/reverse.sql')
-  : resolve(root, 'supabase/migrations/131_question_audit_content_patch.sql');
+  : resolve(root, 'supabase/migrations/134_question_audit_content_patch.sql');
 const body = await readFile(path, 'utf8');
 
 // The block walks 5,556 rows with a lock and an update each, which is well past
