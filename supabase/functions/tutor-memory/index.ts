@@ -179,7 +179,10 @@ serve(async (req: Request) => {
       console.warn(`[tutor-memory] edit failed (${error.code}):`, error.message);
       return json({ error: mapped.error, code: mapped.code }, mapped.status);
     }
-    return json({ id: data, kind: note.kind, content: note.content });
+    // No `kind` in the reply: an edit never changes one, and this handler's
+    // `note.kind` is the placeholder the content guard was run with — echoing
+    // it would tell the client a note had changed kind when it had not.
+    return json({ id: data, content: note.content });
   }
 
   const targetLanguage = typeof body.targetLanguage === 'string' ? body.targetLanguage : '';
