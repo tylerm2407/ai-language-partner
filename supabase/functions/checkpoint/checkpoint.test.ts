@@ -14,6 +14,15 @@ import {
   normalizeAnswer,
   selectItems,
   serveItem,
+  RUNG_PASS,
+  bandFromStaircase,
+  bandsForAttempt,
+  bandsForStrand,
+  rungs,
+  selectAdaptiveItems,
+  strandMeans,
+  type Band,
+  type GradedItem,
   type PoolItem,
   type Strand,
 } from './checkpoint-core.ts';
@@ -22,6 +31,7 @@ function item(id: string, strand: Strand, extra: Partial<PoolItem> = {}): PoolIt
   return {
     id,
     strand,
+    band: 'B1',
     prompt: 'p',
     audio_text: 'the secret sentence',
     correct_answer: 'la maison',
@@ -49,7 +59,8 @@ Deno.test('a served item carries no answer key and no audio source text', () => 
   // authenticated reader; this must not.
   const served = serveItem(item('a', 'listening'));
   const keys = Object.keys(served).sort();
-  assertEquals(keys, ['id', 'options', 'prompt', 'strand']);
+  // `band` is served on purpose — see ServedItem. The answer key is not.
+  assertEquals(keys, ['band', 'id', 'options', 'prompt', 'strand']);
   assert(!JSON.stringify(served).includes('la maison'));
   assert(!JSON.stringify(served).includes('the secret sentence'));
 });
@@ -245,4 +256,165 @@ Deno.test('frozen checkpoint train dictation retains 17 and rejects signed or de
   // spelling alternatives are explicit, not a language-dependent minus guess.
   assert(!isCorrect('COVID19', item('code', 'reading', {correct_answer: 'COVID-19', accepted_answers: []})));
   assert(isCorrect('COVID19', item('code', 'reading', {correct_answer: 'COVID-19', accepted_answers: ['COVID19']})));
+});
+
+// ── the staircase ──────────────────────────────────────────────────────────
+
+function graded(strand: Strand, band: Band, score: number | null): GradedItem {
+  return { strand, band, score };
+}
+
+/** A pool seeded at every band, so the spread is never clamped by absence. */
+function fullPool(): PoolItem[] {
+  const out: PoolItem[] = [];
+  for (const band of BANDS) {
+    for (const strand of ['listening', 'reading', 'speaking', 'writing'] as Strand[]) {
+      out.push(item(`${strand}-${band}-1`, strand, { band }));
+      out.push(item(`${strand}-${band}-2`, strand, { band }));
+    }
+  }
+  return out;
+}
+
+Deno.test('a strand is asked below, at, and above the set band', () => {
+  assertEquals(bandsForStrand('B1', 'listening'), ['A2', 'B1', 'B2']);
+  assertEquals(bandsForStrand('B1', 'reading'), ['A2', 'B1', 'B2']);
+  // Writing and speaking cost a model call / a recording per rung, so they get
+  // two. See STRAND_BAND_OFFSETS.
+  assertEquals(bandsForStrand('B1', 'writing'), ['B1', 'B2']);
+  assertEquals(bandsForStrand('B1', 'speaking'), ['B1', 'B2']);
+});
+
+Deno.test('the spread narrows at the ends of the ladder rather than being faked', () => {
+  assertEquals(bandsForStrand('A1', 'listening'), ['A1', 'A2']);
+  assertEquals(bandsForStrand('C2', 'listening'), ['C1', 'C2']);
+  assertEquals(bandsForStrand('C2', 'writing'), ['C2']);
+  assertEquals(bandsForAttempt('A1'), ['A1', 'A2']);
+  assertEquals(bandsForAttempt('B1'), ['A2', 'B1', 'B2']);
+});
+
+Deno.test('an attempt serves one item per strand per rung, not one per strand', () => {
+  const picked = selectAdaptiveItems(fullPool(), 'B1', 0);
+  // 3 listening + 3 reading + 2 speaking + 2 writing.
+  assertEquals(picked.length, 10);
+  assertEquals(picked.filter((i) => i.strand === 'listening').map((i) => i.band), ['A2', 'B1', 'B2']);
+  assertEquals(picked.filter((i) => i.strand === 'writing').map((i) => i.band), ['B1', 'B2']);
+});
+
+Deno.test('adaptive selection is deterministic, so a checkpoint cannot be rerolled', () => {
+  const pool = fullPool();
+  assertEquals(
+    selectAdaptiveItems(pool, 'B1', 3).map((i) => i.id),
+    selectAdaptiveItems(pool, 'B1', 3).map((i) => i.id),
+  );
+  assert(selectAdaptiveItems(pool, 'B1', 0)[0].id !== selectAdaptiveItems(pool, 'B1', 1)[0].id);
+});
+
+Deno.test('a rung with no seeded items is skipped, not faked', () => {
+  // Only B1 was ever seeded for this language.
+  const pool = fullPool().filter((i) => i.band === 'B1');
+  const picked = selectAdaptiveItems(pool, 'B1', 0);
+  assertEquals(new Set(picked.map((i) => i.band)), new Set(['B1']));
+  assertEquals(picked.length, 4);
+});
+
+Deno.test('the band is where the learner stops passing, not the best rung they fluked', () => {
+  // Passes A2, fails B1, then guesses the B2 multiple choice. Not B2, and not
+  // B1 either — contiguity, the same rule highestContiguousBand applies.
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 1),
+    graded('reading', 'A2', 1),
+    graded('listening', 'B1', 0),
+    graded('reading', 'B1', 0),
+    graded('listening', 'B2', 1),
+    graded('reading', 'B2', 1),
+  ]);
+  assertEquals(band, 'A2');
+});
+
+Deno.test('passing every rung promotes exactly one band', () => {
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 1),
+    graded('listening', 'B1', 1),
+    graded('listening', 'B2', 1),
+    graded('writing', 'B1', 0.9),
+    graded('writing', 'B2', 0.9),
+  ]);
+  assertEquals(band, 'B2');
+});
+
+Deno.test('failing the lowest rung served demotes to it', () => {
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 0),
+    graded('listening', 'B1', 0),
+    graded('listening', 'B2', 0),
+  ]);
+  assertEquals(band, 'A2');
+});
+
+Deno.test('an unproved band is not a disproved one — no rung below means hold', () => {
+  // At A1 there is nothing below to drop to. Failing everything holds A1
+  // rather than inventing a floor.
+  assertEquals(
+    bandFromStaircase('A1', [graded('listening', 'A1', 0), graded('listening', 'A2', 0)]),
+    'A1',
+  );
+});
+
+Deno.test('answering nothing holds the band', () => {
+  // Opened the checkpoint and closed it. That is not evidence of anything.
+  assertEquals(
+    bandFromStaircase('B1', [
+      graded('listening', 'A2', null),
+      graded('listening', 'B1', null),
+      graded('listening', 'B2', null),
+    ]),
+    'B1',
+  );
+});
+
+Deno.test('an unanswered rung breaks contiguity rather than promoting through it', () => {
+  // A skipped writing task must not carry the learner past the rung it was on.
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 1),
+    graded('writing', 'B1', null),
+    graded('listening', 'B2', 1),
+  ]);
+  assertEquals(band, 'A2');
+});
+
+Deno.test('a one-rung spread falls back to the single-band rule rather than freezing', () => {
+  // An under-seeded language would otherwise hold every learner at whatever
+  // band they self-declared, forever.
+  assertEquals(bandFromStaircase('B1', [graded('listening', 'B1', 1)]), 'B2');
+  assertEquals(bandFromStaircase('B1', [graded('listening', 'B1', 0)]), 'A2');
+  assertEquals(bandFromStaircase('B1', [graded('listening', 'B1', 0.6)]), 'B1');
+});
+
+Deno.test('the rung pass mark is the same 0.7 every scored strand uses', () => {
+  assertEquals(RUNG_PASS, 0.7);
+  const justUnder = rungs([graded('listening', 'B1', 0.69)]);
+  const justOver = rungs([graded('listening', 'B1', 0.7)]);
+  assertEquals(justUnder[0].passed, false);
+  assertEquals(justOver[0].passed, true);
+});
+
+Deno.test('a rung nobody answered is not a pass', () => {
+  const ladder = rungs([graded('listening', 'B1', null)]);
+  assertEquals(ladder[0].answered, 0);
+  assertEquals(ladder[0].passed, false);
+});
+
+Deno.test('a strand mean spans its rungs and excludes the ones left blank', () => {
+  const means = strandMeans([
+    graded('listening', 'A2', 1),
+    graded('listening', 'B1', 0),
+    graded('listening', 'B2', null),
+    graded('writing', 'B1', 0.8),
+  ]);
+  assertEquals(means.listening, 0.5);
+  assertEquals(means.writing, 0.8);
+  // A strand with nothing answered is absent, not zero — a denied microphone
+  // has not demonstrated that a learner cannot speak.
+  assertEquals(means.speaking, undefined);
 });

@@ -526,7 +526,38 @@ export interface BandScore {
 }
 
 export interface ProficiencyReport {
+  /**
+   * The level the app SHOWS and pitches content at.
+   *
+   * Usually the practice estimate. It is the tested band instead when practice
+   * has measured nothing at all — see `levelSource` and
+   * `ProficiencyReportOptions.checkpointBand` for why that exception exists and
+   * why it is only that one direction.
+   */
   overallLevel: CefrBand | null;
+  /**
+   * The weighted six-strand estimate from practice history alone — what
+   * `overallLevel` used to be, unconditionally.
+   *
+   * Kept separate because the two answer different questions and the UI needs
+   * both. Progress toward the next band is a fact about PRACTICE: a learner
+   * whose level was published by a test has proved nothing in the strand model
+   * yet, so drawing their ring against the band after the tested one would
+   * report ~0% toward a band they were never working on. The ring reads this;
+   * the hero reads `overallLevel`.
+   */
+  practiceLevel: CefrBand | null;
+  /** The band from the learner's most recent completed checkpoint, if any. */
+  testedLevel: CefrBand | null;
+  /**
+   * Where `overallLevel` came from. Null when there is no level at all.
+   *
+   * `'test'` is the gap-filler: five minutes of fresh graded questions, which
+   * is real evidence but does not measure live conversation at all — and
+   * conversation is 0.55 of the practice model. So a test never displaces a
+   * practice level, and this field exists so no surface can imply it did.
+   */
+  levelSource: 'practice' | 'test' | null;
   confidence: Confidence;
   skills: SkillAssessment[];
   bands: BandBreakdown[];
@@ -578,6 +609,33 @@ export interface ProficiencyReport {
 export interface ProficiencyReportOptions {
   /** See `ProficiencyReport.placementBand`. */
   placementBand?: CefrBand | null;
+  /**
+   * The band from the learner's most recent COMPLETED checkpoint.
+   *
+   * WHY A TEST MAY PUBLISH A LEVEL, AND ONLY HERE
+   *
+   * Credibility rule 1 at the top of this file says we never report a level we
+   * cannot evidence. A graded checkpoint is evidence — fresh items the learner
+   * has not seen, chosen server-side, graded server-side, now spread across
+   * three bands so the result locates a band rather than nudging one (see
+   * `bandFromStaircase` in supabase/functions/checkpoint/checkpoint-core.ts).
+   * What it is not is BETTER evidence than the practice model, for one concrete
+   * reason: it does not measure live conversation, and conversation is 0.55 of
+   * the practice score. A five-minute test of listening, reading, writing and
+   * speaking cannot outrank weeks of the thing the app is actually for.
+   *
+   * So the rule is one-directional and deliberately unclever: the tested band
+   * is published only when practice has measured NOTHING. Not the higher of the
+   * two, not the more recent — either would let a learner choose their level by
+   * testing on a good day, which is the self-assigned band this module exists
+   * to prevent.
+   *
+   * What this buys: the twelve-day floor stops being a wall. `MIN_INTERACTION_DAYS`
+   * plus the `CONFIDENCE_TIERS.low` gate meant a new learner saw "Not yet
+   * assessed" for a fortnight no matter what they did, on the one screen whose
+   * whole job is to tell them where they are.
+   */
+  checkpointBand?: CefrBand | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -674,8 +732,19 @@ export function formatBandRange(bands: CefrBand[]): string {
  * The sentence that keeps a placed learner's level honest. Null when there is
  * nothing to disclose, so the UI can render it unconditionally.
  */
-export function levelBasis(level: CefrBand | null, assumed: CefrBand[]): string | null {
-  if (!level || assumed.length === 0) return null;
+export function levelBasis(
+  level: CefrBand | null,
+  assumed: CefrBand[],
+  source: 'practice' | 'test' | null = 'practice',
+): string | null {
+  if (!level) return null;
+  // A tested level has no assumed rungs to disclose — the test asked directly —
+  // but it has a different thing to disclose, which is that it is not the
+  // practice estimate the rest of the screen is about.
+  if (source === 'test') {
+    return 'From your level test. Your practice history has not measured a level yet.';
+  }
+  if (assumed.length === 0) return null;
   return `Measured from your ${level} work; ${formatBandRange(assumed)} assumed from your placement.`;
 }
 
@@ -1843,9 +1912,24 @@ export function buildProficiencyReport(
     confidence === 'none'
       ? { level: null, assumedBands: [] as CefrBand[] }
       : overallFromBands(bandScores, placementBand);
-  const overallLevel = blended.level;
+  const practiceLevel = blended.level;
 
-  const { nextLevel, requirement, steps } = nextLevelRequirement(overallLevel, bands, placementBand, {
+  // The tested band fills the gap when practice cannot speak, and never
+  // otherwise. See `ProficiencyReportOptions.checkpointBand`.
+  const testedLevel = options.checkpointBand ?? null;
+  const overallLevel = practiceLevel ?? testedLevel;
+  const levelSource: 'practice' | 'test' | null = practiceLevel
+    ? 'practice'
+    : testedLevel
+      ? 'test'
+      : null;
+
+  // Computed from the PRACTICE level, not the published one. What the learner
+  // has to do next is a fact about the strand model: a test-published B1 has
+  // proved no rung of it, so asking them for B2 evidence would be asking for
+  // work on a band they have no A1 or A2 practice behind. The requirement is
+  // "prove your first band", exactly as it was before the test could publish.
+  const { nextLevel, requirement, steps } = nextLevelRequirement(practiceLevel, bands, placementBand, {
     strands,
     skills,
     totalReviews: evidence.totalReviews,
@@ -1865,10 +1949,10 @@ export function buildProficiencyReport(
   //
   // So: rungs under the published level that either the walk assumed, or an
   // assessed strand assumed on its own way up.
-  const assumedBands = overallLevel
+  const assumedBands = practiceLevel
     ? CEFR_LADDER.filter(
         (band) =>
-          bandIndex(band) < bandIndex(overallLevel) &&
+          bandIndex(band) < bandIndex(practiceLevel) &&
           (blended.assumedBands.includes(band) ||
             skills.some((s) => s.status === 'assessed' && s.assumedBands.includes(band))),
       )
@@ -1876,6 +1960,9 @@ export function buildProficiencyReport(
 
   return {
     overallLevel,
+    practiceLevel,
+    testedLevel,
+    levelSource,
     confidence,
     skills,
     bands,
@@ -1887,7 +1974,7 @@ export function buildProficiencyReport(
     nextLevelSteps: steps,
     placementBand,
     assumedBands,
-    levelBasis: levelBasis(overallLevel, assumedBands),
+    levelBasis: levelBasis(overallLevel, assumedBands, levelSource),
     generatedAt: now.toISOString(),
   };
 }

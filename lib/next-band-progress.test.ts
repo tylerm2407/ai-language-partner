@@ -21,8 +21,18 @@ import {
   type SkillKey,
   type StrandBandStats,
   type StrandBreakdown,
+  buildProficiencyReport,
+  type ProficiencyEvidence,
+  type ProficiencyReport,
 } from './cefr-proficiency';
-import { nextBandAfter, nextBandProgress, progressToward, type RingEvidence } from './next-band-progress';
+import {
+  nextBandAfter,
+  nextBandProgress,
+  progressToward,
+  ringForReport,
+  ringIsMeasured,
+  type RingEvidence,
+} from './next-band-progress';
 
 function band(partial: Partial<BandBreakdown> & { band: CefrBand }): BandBreakdown {
   return { seen: 0, mature: 0, retained: 0, retentionRate: 0, status: 'insufficient', ...partial };
@@ -227,5 +237,68 @@ describe('progressToward', () => {
     const p = progressToward('A2', 'A2', evidence({ bands: [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND })] }));
     expect(p.next).toBe('A2');
     expect(p.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBeCloseTo(1 / 3);
+  });
+});
+
+describe('ringForReport', () => {
+  /**
+   * A real report with no evidence, then the three level states written onto
+   * it. The reports themselves are built and asserted in
+   * cefr-proficiency.test.ts; what is under test here is only which target the
+   * ring picks, so overriding the three fields is more legible than assembling
+   * weeks of evidence to arrive at them.
+   */
+  function reportWith(over: Partial<ProficiencyReport>): ProficiencyReport {
+    const evidence: ProficiencyEvidence = {
+      interaction: [],
+      vocabulary: [],
+      reading: [],
+      writing: [],
+      orthography: [],
+      speaking: [],
+      listening: [],
+      listeningMinutes: 0,
+      speakingMinutes: 0,
+      activeDays: 0,
+      totalReviews: 0,
+    };
+    return { ...buildProficiencyReport(evidence, new Date('2026-09-17T00:00:00.000Z')), ...over };
+  }
+
+  it('points at the band after a practice level', () => {
+    const report = reportWith({
+      practiceLevel: 'A2',
+      overallLevel: 'A2',
+      levelSource: 'practice',
+    });
+    expect(ringForReport(report)?.next).toBe('B1');
+    expect(ringIsMeasured(report)).toBe(true);
+  });
+
+  it('points at the TESTED band, not the one above it, when a test published the level', () => {
+    // Otherwise a B1 badge would sit over "0% to B2" — progress toward a band
+    // the learner was never working on, measured with evidence they have none
+    // of. The honest claim is "n% of the way to confirming B1".
+    const report = reportWith({
+      practiceLevel: null,
+      overallLevel: 'B1',
+      testedLevel: 'B1',
+      levelSource: 'test',
+    });
+    expect(ringForReport(report)?.next).toBe('B1');
+    // The band is not measured from practice, so the card says "Proving B1".
+    expect(ringIsMeasured(report)).toBe(false);
+  });
+
+  it('points at the band to prove first when there is no level at all', () => {
+    const report = reportWith({});
+    expect(report.overallLevel).toBeNull();
+    expect(ringForReport(report)?.next).toBe('A1');
+    expect(ringIsMeasured(report)).toBe(false);
+  });
+
+  it('has no target at the top of the ladder', () => {
+    const report = reportWith({ practiceLevel: 'C2', overallLevel: 'C2', levelSource: 'practice' });
+    expect(ringForReport(report)?.next).toBeNull();
   });
 });

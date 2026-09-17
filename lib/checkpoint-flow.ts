@@ -49,15 +49,47 @@ export const CHECKPOINT_STRAND_ORDER: CheckpointStrand[] = [
 ];
 
 /**
- * Items in the order they will be asked.
+ * Items in the order they will be asked: strand by strand, easiest rung first.
  *
- * Stable within a strand: the server chose the rotation (`selectItems`) and
- * reordering inside it would discard that choice. A strand the server did not
- * send simply does not appear.
+ * The band sort is what the staircase added. An attempt now carries two or
+ * three items per strand, one per rung, and the server sends them grouped by
+ * strand but a learner should meet the easier one first — a B2 question before
+ * the A2 one reads as the test being broken, and answering downhill is a worse
+ * measurement because a hard opener makes people give up on the strand.
+ *
+ * Ties are left alone: the server chose the rotation within a rung
+ * (`selectAdaptiveItems`) and reordering inside it would discard that choice.
+ * A strand the server did not send simply does not appear.
  */
 export function orderCheckpointItems(items: CheckpointItem[]): CheckpointItem[] {
   const rank = new Map(CHECKPOINT_STRAND_ORDER.map((s, i) => [s, i]));
-  return [...items].sort((a, b) => (rank.get(a.strand) ?? 99) - (rank.get(b.strand) ?? 99));
+  const bandRank = (band: string) => {
+    const i = CHECKPOINT_BAND_ORDER.indexOf(band);
+    return i < 0 ? 99 : i;
+  };
+  return [...items].sort((a, b) => {
+    const byStrand = (rank.get(a.strand) ?? 99) - (rank.get(b.strand) ?? 99);
+    return byStrand !== 0 ? byStrand : bandRank(a.band) - bandRank(b.band);
+  });
+}
+
+/**
+ * Which rung this item is within its strand, as "2 of 3".
+ *
+ * The question caption used to read `Listening · 4` off the global index, which
+ * with one item per strand happened to be the question number. With three
+ * listening rungs in an attempt that number says nothing a learner can use,
+ * and the per-strand position is what tells them how much of the strand is
+ * left.
+ */
+export function checkpointRungLabel(
+  item: CheckpointItem,
+  items: CheckpointItem[],
+): string {
+  const inStrand = items.filter((i) => i.strand === item.strand);
+  const position = inStrand.findIndex((i) => i.id === item.id) + 1;
+  if (position === 0 || inStrand.length <= 1) return STRAND_LABELS[item.strand];
+  return `${STRAND_LABELS[item.strand]} · ${position} of ${inStrand.length}`;
 }
 
 /**
@@ -168,23 +200,59 @@ export function checkpointScoreLines(result: CheckpointResult): CheckpointScoreL
 /**
  * What the result means, in one sentence.
  *
- * It never says "you are now B1". A checkpoint moves the learner's cohort
- * segment; the band on their report still comes from practice history, and a
- * result screen implying otherwise would be the gate we deliberately did not
- * build. `movedFrom` and `band` differing is real information — the instrument
- * disagreed with where they sat — and it is reported as exactly that.
+ * WHAT THE TEST NOW DOES TO THE REPORT
+ *
+ * It used to do nothing: the band came from practice history, full stop, and
+ * this line was careful never to say "you are now B1". That was the right call
+ * while the instrument was four questions at one band — see
+ * `lib/cefr-proficiency.ts` and the checkpoint function header for the old
+ * reasoning — but it left an unmeasured learner with no way to get a level at
+ * all short of twelve days of conversation, which is the dead end this work
+ * exists to close.
+ *
+ * So: the test publishes the level WHEN PRACTICE HAS NOT MEASURED ONE, and
+ * never overrides one that practice has. `testPublishesLevel` is that rule, and
+ * this line has to tell the learner which case they are in before they read the
+ * band — a result that quietly did or did not become their level would be worse
+ * than either behaviour on its own.
+ *
+ * @param publishes Whether this result becomes the level on the report. The
+ *   caller knows, because it holds the report.
  */
-export function checkpointOutcomeLine(result: CheckpointResult): string {
+export function checkpointOutcomeLine(result: CheckpointResult, publishes = false): string {
   if (result.composite === null) {
     return 'Nothing was scored this time, so your level is unchanged.';
   }
-  if (result.band === result.movedFrom) {
-    return `This check-in agrees with ${result.movedFrom}.`;
-  }
-  const up = CHECKPOINT_BAND_ORDER.indexOf(result.band) > CHECKPOINT_BAND_ORDER.indexOf(result.movedFrom);
-  return up
-    ? `This check-in put you above ${result.movedFrom}, at ${result.band}.`
-    : `This check-in put you below ${result.movedFrom}, at ${result.band}.`;
+  const moved = result.band !== result.movedFrom;
+  const up =
+    CHECKPOINT_BAND_ORDER.indexOf(result.band) > CHECKPOINT_BAND_ORDER.indexOf(result.movedFrom);
+
+  const measurement = !moved
+    ? `This test agrees with ${result.movedFrom}.`
+    : up
+      ? `This test put you above ${result.movedFrom}, at ${result.band}.`
+      : `This test put you below ${result.movedFrom}, at ${result.band}.`;
+
+  return publishes
+    ? `${measurement} Your report now shows ${result.band} — your practice history will take over once it has measured enough.`
+    : `${measurement} Your report keeps the level measured from your practice.`;
+}
+
+/**
+ * Does a test result become the level shown on the report?
+ *
+ * Only when practice has not measured one. The weighted six-strand estimate is
+ * the better instrument when it can speak at all — it is built from weeks of
+ * real work rather than five minutes of questions, and it weights live
+ * conversation at 0.55, which the test does not measure at all. So the test
+ * fills the gap and then stands down; it does not compete.
+ *
+ * Deliberately NOT "the higher of the two" and not "the newer of the two".
+ * Either would let a learner pick their level by taking a test on a good day,
+ * which is the self-assigned band this whole subsystem is built to avoid.
+ */
+export function testPublishesLevel(measuredLevel: string | null): boolean {
+  return measuredLevel === null;
 }
 
 /** Mirrors `BANDS` in supabase/functions/checkpoint/checkpoint-core.ts. */

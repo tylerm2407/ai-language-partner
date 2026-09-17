@@ -918,6 +918,18 @@ async function goalTrackError(error: unknown, prefix: string): Promise<Translate
 export interface CheckpointItem {
   id: string;
   strand: 'listening' | 'reading' | 'speaking' | 'writing';
+  /**
+   * The CEFR band this item was authored for.
+   *
+   * An attempt is a staircase: each strand is asked at the band below, at the
+   * band, and at the band above, and the result is read off where the learner
+   * stops passing. So an item's band is not the attempt's band, and the screen
+   * needs it to order a strand's questions easiest-first and to label them.
+   *
+   * Serving it leaks nothing — the learner is about to be told their band
+   * either way — unlike the answer key, which never reaches a client.
+   */
+  band: string;
   prompt: string;
   options: string[] | null;
   /** Signed URL, listening items only. Expires. */

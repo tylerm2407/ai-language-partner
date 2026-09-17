@@ -1476,3 +1476,74 @@ describe('writing strand: orthography strengthens but never carries', () => {
     expect(strand.bands.find((b) => b.band === 'B1')!.total).toBe(1);
   });
 });
+
+describe('a level test filling the gap', () => {
+  it('publishes the tested band when practice has measured nothing', () => {
+    // The dead end this exists to close: MIN_INTERACTION_DAYS plus the
+    // confidence gate meant a fortnight of "Not yet assessed" no matter what.
+    const report = buildProficiencyReport(emptyEvidence(), NOW, { checkpointBand: 'B1' });
+    expect(report.practiceLevel).toBeNull();
+    expect(report.overallLevel).toBe('B1');
+    expect(report.testedLevel).toBe('B1');
+    expect(report.levelSource).toBe('test');
+  });
+
+  it('discloses that the level came from the test, not from practice', () => {
+    const report = buildProficiencyReport(emptyEvidence(), NOW, { checkpointBand: 'B1' });
+    expect(report.levelBasis).toContain('level test');
+    expect(report.levelBasis).toContain('has not measured a level yet');
+  });
+
+  it('never displaces a practice level, even with a higher tested band', () => {
+    // Not "the higher of the two" and not "the newer of the two": either would
+    // let a learner choose their band by testing on a good day.
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        vocabulary: [...vocab('A1', 60, 55), ...vocab('A2', 60, 50)],
+        ...fullStrands('A2'),
+        totalReviews: 400,
+        activeDays: 25,
+      },
+      NOW,
+      { checkpointBand: 'C2' },
+    );
+    expect(report.practiceLevel).toBe('A2');
+    expect(report.overallLevel).toBe('A2');
+    expect(report.levelSource).toBe('practice');
+    // Still exposed, so the report can show the two side by side.
+    expect(report.testedLevel).toBe('C2');
+  });
+
+  it('never lowers a practice level with a worse tested band either', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        vocabulary: [...vocab('A1', 60, 55), ...vocab('A2', 60, 50)],
+        ...fullStrands('A2'),
+        totalReviews: 400,
+        activeDays: 25,
+      },
+      NOW,
+      { checkpointBand: 'A1' },
+    );
+    expect(report.overallLevel).toBe('A2');
+  });
+
+  it('keeps the next step a fact about practice, not about the tested band', () => {
+    // A test-published B1 has proved no rung of the strand model, so asking for
+    // B2 evidence would be asking for work on a band with nothing beneath it.
+    const report = buildProficiencyReport(emptyEvidence(), NOW, { checkpointBand: 'B1' });
+    expect(report.overallLevel).toBe('B1');
+    expect(report.nextLevel).toBe('A1');
+    expect(report.nextLevelSteps.length).toBeGreaterThan(0);
+  });
+
+  it('is unchanged from before when no test has been taken', () => {
+    const withOption = buildProficiencyReport(emptyEvidence(), NOW, { checkpointBand: null });
+    const without = buildProficiencyReport(emptyEvidence(), NOW);
+    expect(withOption.overallLevel).toBeNull();
+    expect(withOption.levelSource).toBeNull();
+    expect(without.levelSource).toBeNull();
+  });
+});

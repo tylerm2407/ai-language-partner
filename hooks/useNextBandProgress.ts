@@ -8,12 +8,16 @@
  * above the learner's entry band; the ring is `progressToward` over the
  * report's five strands.
  *
- * Which band the ring points at depends on that same distinction. Measured,
- * it is the band after the measured level. Unmeasured, it is the band the
- * report says the learner has to prove next (`report.nextLevel`) — for a
- * learner placed at B1 that is B1 itself, not "B2", which is what the ring
- * used to show while they were still proving their entry band. The card
- * renders that case as "Proving B1", never as "B1 · n% to B1".
+ * Which band the ring points at depends on that same distinction, and
+ * `ringForReport` owns the choice so this hook and the proficiency screen
+ * cannot disagree. Measured, it is the band after the measured level.
+ * Unmeasured, it is the band the learner has to prove — their entry band, or
+ * the band their level test published. The card renders that case as
+ * "Proving B1", never as "B1 · n% to B1".
+ *
+ * `measured` therefore means "measured FROM PRACTICE", not "has a level". A
+ * learner whose band came from their level test has a real level and an
+ * entirely unproved strand model, and the ring has to say the second part.
  *
  * "Live" here means: rebuilt from the database every time Home regains
  * focus, at most once a minute. The evidence query is nine capped reads
@@ -26,7 +30,7 @@
 import { useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useProficiencyReport } from './useProficiencyReport';
-import { nextBandProgress, progressToward, type NextBandProgress } from '../lib/next-band-progress';
+import { ringForReport, ringIsMeasured, type NextBandProgress } from '../lib/next-band-progress';
 import type { CefrBand, SkillKey } from '../lib/cefr-proficiency';
 
 /** Minimum gap between two focus-triggered rebuilds. */
@@ -73,15 +77,13 @@ export function useNextBandProgress(fallbackBand: CefrBand): NextBandState {
     }, [refresh]),
   );
 
-  const measured = report?.overallLevel != null;
+  // Two different questions, and conflating them is what made a test-published
+  // band read "0% to B2". `band` is the level the learner HAS — practice when
+  // practice can speak, else their level test. `measured` is whether the RING's
+  // band was earned in the strand model, which a tested band has not been.
   const band = report?.overallLevel ?? fallbackBand;
-  let progress: NextBandProgress | null = null;
-  if (report) {
-    progress =
-      !measured && report.nextLevel
-        ? progressToward(band, report.nextLevel, report)
-        : nextBandProgress(band, report);
-  }
+  const measured = report ? ringIsMeasured(report) : false;
+  const progress: NextBandProgress | null = report ? ringForReport(report) : null;
 
   return {
     band,

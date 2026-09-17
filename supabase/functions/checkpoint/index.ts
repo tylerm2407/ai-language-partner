@@ -3,7 +3,13 @@
 // One ~5 minute, four-strand instrument with two readouts: the learner's CEFR
 // band, and the anchor their weekly cohort board is ranked against. Taken once
 // at onboarding as a placement test — replacing the bundled trial lesson,
-// which measured nothing — and monthly after that.
+// which measured nothing — and on a seven-day cooldown after that.
+//
+// It is a STAIRCASE, not a single-level quiz: each strand is asked at the band
+// below, at the band, and at the band above, and the result is read off where
+// the learner stops passing. See `bandFromStaircase` in checkpoint-core.ts for
+// what that replaced (four items, one per strand, all at one band) and why four
+// items could confirm a band but never locate one.
 //
 // Actions:
 //   seed   — build the shared item pool for one (language, band). Service-role
@@ -21,11 +27,17 @@
 //
 // QUOTA-EXEMPT, INCLUDING FREE ACCOUNTS
 //
-// Spend is bounded by cadence, not usage: one placement plus one a month is at
-// most 13 a year, the items are pre-rendered so there is no synthesis cost per
-// attempt, and only the writing strand costs a model call. Metering it would
-// mean a learner who ran out of chat could not find out how they were doing,
-// which is the one thing the app is for.
+// Spend is bounded by cadence, not usage: one placement plus a seven-day
+// cooldown is at most ~52 a year, the items are pre-rendered so there is no
+// synthesis cost per attempt, and only the writing strand costs a model call
+// (two per attempt under the staircase). Metering it would mean a learner who
+// ran out of chat could not find out how they were doing, which is the one
+// thing the app is for.
+//
+// That cadence is now ENFORCED (`checkCooldown`). It previously was not: this
+// header claimed a monthly limit and nothing in the function or the client
+// implemented one, so the real ceiling was `DAILY_CHECKPOINT_GRADES` and a
+// learner could take thirty attempts in an afternoon.
 //
 // Deploy: npx supabase functions deploy checkpoint --project-ref <ref>
 
@@ -43,13 +55,16 @@ import {
   COHORT_TARGET_SIZE,
   MAX_ANSWER_CHARS,
   aliasFor,
-  bandFromComposite,
+  bandFromStaircase,
+  bandsForAttempt,
   buildCheckpointWritingPrompt,
   composite,
   isCorrect,
-  selectItems,
+  selectAdaptiveItems,
   serveItem,
+  strandMeans,
   type Band,
+  type GradedItem,
   type PoolItem,
   type Strand,
 } from './checkpoint-core.ts';
@@ -307,6 +322,71 @@ async function handleSeed(supabase: Db, body: Record<string, unknown>): Promise<
   return json({ seeded: rows.length, byStrand });
 }
 
+// ─── cadence ───────────────────────────────────────────────────────────────
+
+/**
+ * Days between checkpoints, once the learner has completed one.
+ *
+ * There was NO server-side cadence gate before this. The function header
+ * claimed "one placement plus one a month" and nothing enforced it: the only
+ * ceiling on spend was `DAILY_CHECKPOINT_GRADES`, which caps writing grades per
+ * day rather than attempts, so a learner could take thirty checkpoints in an
+ * afternoon. The staircase raises the per-attempt cost (two writing grades now,
+ * not one), so the gate had to become real.
+ *
+ * Seven days rather than the thirty the header claimed, deliberately. The
+ * staircase moves at most one band per attempt, so a learner placed two bands
+ * wrong needs two attempts to converge; at a monthly cadence that is two months
+ * spent looking at a level that is wrong, on the one screen whose entire job is
+ * to be right about it. A week bounds the worst case at ~52 attempts a year —
+ * ~104 writing grades, which is inside a single day's grade allowance.
+ *
+ * The first checkpoint in a language has NO cooldown. An unassessed learner
+ * taking the test is exactly the path this work exists to open, and making them
+ * wait for a level they have never had would be the old dead end with a timer
+ * on it.
+ */
+const CHECKPOINT_COOLDOWN_DAYS = 7;
+
+/**
+ * 429 with the wait remaining, or null to proceed.
+ *
+ * Reads only COMPLETED attempts: an abandoned checkpoint must not lock the
+ * learner out for a week, and the deterministic rotation already means
+ * abandoning cannot reroll into an easier set.
+ */
+async function checkCooldown(
+  supabase: Db,
+  userId: string,
+  language: string,
+): Promise<Response | null> {
+  const { data: last } = await supabase
+    .from('checkpoints')
+    .select('completed_at')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!last?.completed_at) return null;
+
+  const elapsedMs = Date.now() - new Date(last.completed_at as string).getTime();
+  const cooldownMs = CHECKPOINT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  if (elapsedMs >= cooldownMs) return null;
+
+  const daysLeft = Math.max(1, Math.ceil((cooldownMs - elapsedMs) / (24 * 60 * 60 * 1000)));
+  return json(
+    {
+      error: `You can take the level test again in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.`,
+      code: 'COOLDOWN',
+      daysLeft,
+    },
+    429,
+  );
+}
+
 // ─── start ─────────────────────────────────────────────────────────────────
 
 async function handleStart(supabase: Db, userId: string, body: Record<string, unknown>): Promise<Response> {
@@ -317,11 +397,19 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
     return json({ error: 'Invalid request' }, 400);
   }
 
+  const cooldown = await checkCooldown(supabase, userId, language);
+  if (cooldown) return cooldown;
+
+  // The staircase asks each strand at the band below, at the band, and at the
+  // band above, so the pool query spans the spread rather than one band. A band
+  // in the spread that has never been seeded simply contributes no rungs — see
+  // `bandFromStaircase`, which falls back to the single-band rule rather than
+  // freezing the learner when the spread collapses to one rung.
   const { data: pool } = await supabase
     .from('checkpoint_items')
-    .select('id, strand, prompt, audio_text, audio_path, correct_answer, accepted_answers, options')
+    .select('id, strand, band, prompt, audio_text, audio_path, correct_answer, accepted_answers, options')
     .eq('language', language)
-    .eq('band', band);
+    .in('band', bandsForAttempt(band as Band));
 
   if (!pool || pool.length === 0) {
     return json({ error: 'No checkpoint is available for this level yet.', code: 'NO_POOL' }, 404);
@@ -335,7 +423,7 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
     .eq('user_id', userId)
     .eq('language', language);
 
-  const chosen = selectItems(pool as PoolItem[], priorAttempts ?? 0);
+  const chosen = selectAdaptiveItems(pool as PoolItem[], band as Band, priorAttempts ?? 0);
   if (chosen.length === 0) {
     return json({ error: 'No checkpoint is available for this level yet.', code: 'NO_POOL' }, 404);
   }
@@ -524,6 +612,54 @@ async function placeInCohort(supabase: Db, userId: string, language: string, ban
   if (error) console.error('[checkpoint] cohort join failed:', error.message);
 }
 
+/**
+ * Append a row to `level_history` when this attempt CHANGED the tested band.
+ *
+ * One row per change, not per attempt. A learner who tests at B1 four times
+ * running has one history row, because four identical measurements are one
+ * fact; `checkpoints` already keeps every attempt for anyone who wants the
+ * scores behind it.
+ *
+ * `previous_band` comes from the last recorded row rather than from
+ * `attempt.band`. The attempt's band is where the instrument was POINTED —
+ * seeded from the learner's self-declaration at onboarding, and unchanged
+ * between attempts — so reading it would record "B1, previously B1" on a real
+ * promotion. Null on the first row: there was nothing before it.
+ *
+ * Failure is logged and swallowed. The learner's band, scores and cohort are
+ * already written at this point, and losing one history row is not worth
+ * turning a completed checkpoint into an error the learner has to retake.
+ */
+async function recordLevelChange(
+  supabase: Db,
+  userId: string,
+  language: string,
+  band: Band,
+  checkpointId: string,
+): Promise<void> {
+  const { data: previous } = await supabase
+    .from('level_history')
+    .select('band')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .order('measured_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const previousBand = typeof previous?.band === 'string' ? previous.band : null;
+  if (previousBand === band) return;
+
+  const { error } = await supabase.from('level_history').insert({
+    user_id: userId,
+    language,
+    band,
+    previous_band: previousBand,
+    source: 'test',
+    checkpoint_id: checkpointId,
+  });
+  if (error) console.error('[checkpoint] level_history insert failed:', error.message);
+}
+
 async function handleSubmit(supabase: Db, userId: string, body: Record<string, unknown>): Promise<Response> {
   const checkpointId = String(body.checkpointId ?? '');
   if (!isValidUUID(checkpointId)) return json({ error: 'Invalid request' }, 400);
@@ -541,29 +677,40 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
 
   const { data: items } = await supabase
     .from('checkpoint_items')
-    .select('id, strand, prompt, audio_text, correct_answer, accepted_answers, options')
+    .select('id, strand, band, prompt, audio_text, correct_answer, accepted_answers, options')
     .in('id', attempt.item_ids as string[]);
 
-  const scores: Partial<Record<Strand, number>> = {};
+  // One graded entry per SERVED item, keeping its band. The band is what makes
+  // the result a measurement rather than a nudge — see `bandFromStaircase`.
+  // A blank answer is `null`, never 0: an unanswered rung is not a failed one,
+  // and the difference decides whether the learner can be demoted on it.
+  const graded: GradedItem[] = [];
+  const served = ((items ?? []) as PoolItem[]).slice();
 
-  for (const item of (items ?? []) as PoolItem[]) {
+  for (const item of served) {
+    if (item.strand === 'speaking') continue; // scored from pronunciation_scores below
     const given = answers[item.id];
-    if (typeof given !== 'string') continue;
-    const answer = sanitizeText(given, MAX_ANSWER_CHARS);
-    if (!answer) continue;
+    const answer = typeof given === 'string' ? sanitizeText(given, MAX_ANSWER_CHARS) : '';
+    if (!answer) {
+      graded.push({ strand: item.strand, band: item.band, score: null });
+      continue;
+    }
 
     if (item.strand === 'listening' || item.strand === 'reading') {
-      scores[item.strand] = isCorrect(answer, item) ? 1 : 0;
+      graded.push({ strand: item.strand, band: item.band, score: isCorrect(answer, item) ? 1 : 0 });
     } else if (item.strand === 'writing') {
       const score = await gradeWriting(
         supabase,
         userId,
         answer,
         attempt.language as string,
-        attempt.band as string,
+        // Graded AGAINST THE ITEM'S band, not the attempt's. The staircase asks
+        // writing at two bands and a B2 task judged against a B1 rubric would
+        // score high for the wrong reason, which would promote on nothing.
+        item.band,
         item.prompt,
       );
-      if (score !== null) scores.writing = score;
+      graded.push({ strand: 'writing', band: item.band, score });
     }
   }
 
@@ -571,27 +718,44 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
   // source 'checkpoint' and which writes to `pronunciation_scores` under the
   // service role. Read back rather than trusting a client-supplied number: a
   // self-reported speaking score is a self-assigned leaderboard rank.
-  const { data: spoken } = await supabase
+  //
+  // Attempts are matched to rungs by `expected_text`, which the checkpoint
+  // screen sets to the item's own prompt — so two speaking rungs in one attempt
+  // are attributed to the right band instead of the newest row standing in for
+  // both. `limit` is generous because a learner may re-record a rung; the
+  // LATEST row per prompt wins (rows come back newest first).
+  const { data: spokenRows } = await supabase
     .from('pronunciation_scores')
-    .select('score, created_at')
+    .select('score, expected_text, created_at')
     .eq('user_id', userId)
     .eq('source', 'checkpoint')
     .gte('created_at', attempt.started_at as string)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  // `pronunciation_scores.score` is a smallint 0–100 (migration 089; see
-  // `calculatePronunciationScore` in score-pronunciation/scoring.ts), while
-  // `composite` and SPEAKING_PASS_SCORE (0.7) speak 0–1. This used to clamp
-  // the raw column as if it were already 0–1, so every real score above 1
-  // became exactly 1.0 and the speaking strand passed unconditionally. The
-  // clamp stays, for a malformed row.
-  if (spoken && typeof spoken.score === 'number') {
-    scores.speaking = Math.min(1, Math.max(0, spoken.score / 100));
+    .limit(20);
+
+  const spokenByPrompt = new Map<string, number>();
+  for (const row of spokenRows ?? []) {
+    const text = typeof row.expected_text === 'string' ? row.expected_text : null;
+    if (!text || spokenByPrompt.has(text)) continue;
+    // `pronunciation_scores.score` is a smallint 0–100 (migration 089; see
+    // `calculatePronunciationScore` in score-pronunciation/scoring.ts), while
+    // `composite` and SPEAKING_PASS_SCORE (0.7) speak 0–1. This used to clamp
+    // the raw column as if it were already 0–1, so every real score above 1
+    // became exactly 1.0 and the speaking strand passed unconditionally. The
+    // clamp stays, for a malformed row.
+    if (typeof row.score === 'number') {
+      spokenByPrompt.set(text, Math.min(1, Math.max(0, row.score / 100)));
+    }
   }
 
+  for (const item of served) {
+    if (item.strand !== 'speaking') continue;
+    graded.push({ strand: 'speaking', band: item.band, score: spokenByPrompt.get(item.prompt) ?? null });
+  }
+
+  const scores = strandMeans(graded);
   const value = composite(scores);
-  const newBand = bandFromComposite(attempt.band as Band, value);
+  const newBand = bandFromStaircase(attempt.band as Band, graded);
 
   const { error: updateError } = await supabase
     .from('checkpoints')
@@ -610,6 +774,13 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
   }
 
   await placeInCohort(supabase, userId, attempt.language as string, newBand);
+  await recordLevelChange(
+    supabase,
+    userId,
+    attempt.language as string,
+    newBand,
+    checkpointId,
+  );
 
   return json({
     composite: value,

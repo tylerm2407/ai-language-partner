@@ -1,15 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { fetchProficiencyEvidence } from '../lib/supabase-queries';
+import {
+  fetchLatestCheckpoint,
+  fetchLevelHistory,
+  fetchProficiencyEvidence,
+} from '../lib/supabase-queries';
 import {
   buildProficiencyReport,
   normalizeBand,
   type ProficiencyReport,
 } from '../lib/cefr-proficiency';
+import type { LevelHistoryEntry } from '../types';
 
 interface UseProficiencyReportReturn {
   report: ProficiencyReport | null;
+  /**
+   * Recorded band changes for this language, newest first.
+   *
+   * Separate from `report` because it is persisted fact rather than derived
+   * estimate: the report is recomputed from evidence on every load, and this is
+   * the only thing on the screen that can answer "am I moving?" — see migration
+   * 143 for why a snapshot-per-visit would have answered nothing.
+   */
+  history: LevelHistoryEntry[];
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -30,7 +44,11 @@ interface UseProficiencyReportReturn {
  *
  * After every build the measured band is mirrored into the app store
  * (`measuredBand`), null when nothing is measured, so chat and the tutor can
- * pitch at the learner's real level without a second evidence fetch.
+ * pitch at the learner's real level without a second evidence fetch. That band
+ * may now come from the learner's level test rather than from practice — see
+ * `ProficiencyReportOptions.checkpointBand` — which is exactly what should
+ * happen: a tested B1 who has practised nothing should be spoken to at B1, not
+ * at the A1 default an unmeasured learner used to get.
  *
  * Errors surface to the UI with a retry rather than degrading to an empty
  * report — a blank report is indistinguishable from "you've learned nothing",
@@ -42,6 +60,7 @@ export function useProficiencyReport(): UseProficiencyReportReturn {
   const targetLanguage = useAppStore((s) => s.profile?.targetLanguage ?? null);
   const setMeasuredBand = useAppStore((s) => s.setMeasuredBand);
   const [report, setReport] = useState<ProficiencyReport | null>(null);
+  const [history, setHistory] = useState<LevelHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -62,10 +81,22 @@ export function useProficiencyReport(): UseProficiencyReportReturn {
       try {
         setIsLoading(true);
         setError(null);
-        const evidence = await fetchProficiencyEvidence(userId, language);
+        // The checkpoint and the history are fetched alongside the evidence, not
+        // after it: the tested band is an INPUT to the report (it publishes the
+        // level when practice has measured none), so sequencing it second would
+        // render an unassessed hero for a learner who has taken the test.
+        const [evidence, checkpoint, entries] = await Promise.all([
+          fetchProficiencyEvidence(userId, language),
+          fetchLatestCheckpoint(userId, language),
+          fetchLevelHistory(userId, language),
+        ]);
         if (cancelled) return;
-        const built = buildProficiencyReport(evidence, new Date(), { placementBand });
+        const built = buildProficiencyReport(evidence, new Date(), {
+          placementBand,
+          checkpointBand: normalizeBand(checkpoint?.band),
+        });
         setReport(built);
+        setHistory(entries);
         setMeasuredBand(built.overallLevel);
       } catch (e) {
         if (!cancelled) {
@@ -82,5 +113,5 @@ export function useProficiencyReport(): UseProficiencyReportReturn {
     };
   }, [user, reloadToken, placementBand, targetLanguage, setMeasuredBand]);
 
-  return { report, isLoading, error, refresh };
+  return { report, history, isLoading, error, refresh };
 }

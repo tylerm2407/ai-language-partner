@@ -69,6 +69,43 @@ export interface NextBandProgress {
   strands: StrandProgress[];
 }
 
+/**
+ * THE ring for a report. Both Home's level card and the proficiency screen call
+ * this rather than picking a target themselves.
+ *
+ * The target is always a fact about PRACTICE, because the ring measures the
+ * weighted strand score and nothing else. Three cases:
+ *
+ *  - Practice has measured a level: the band after it. The ordinary case.
+ *  - No practice level, but a TEST published one: progress toward proving that
+ *    tested band. Not the band after it — the learner has proved no rung of the
+ *    strand model, so pointing at the next band up would read "0% to B2" under
+ *    a B1 badge, which is both wrong and demoralising. The honest claim is
+ *    "your test says B1, your practice is n% of the way to confirming it".
+ *  - Nothing at all: the band the report says to prove first (`nextLevel`),
+ *    which for a placed learner is their entry band rather than A1.
+ *
+ * Returns null only when there is no target at all — a C2 practice level, or a
+ * report with no evidence and no placement.
+ */
+export function ringForReport(report: ProficiencyReport): NextBandProgress | null {
+  if (report.practiceLevel) return nextBandProgress(report.practiceLevel, report);
+  const target = report.levelSource === 'test' ? report.overallLevel : report.nextLevel;
+  if (!target) return null;
+  return progressToward(target, target, report);
+}
+
+/**
+ * Whether the ring's own band has been measured from practice.
+ *
+ * Drives the "Proving X" wording. It is NOT the same question as "does the
+ * learner have a level" — a test-published level is a level, and it still has
+ * every rung of the strand model left to prove.
+ */
+export function ringIsMeasured(report: ProficiencyReport): boolean {
+  return report.practiceLevel !== null;
+}
+
 export function nextBandAfter(band: CefrBand): CefrBand | null {
   const i = CEFR_LADDER.indexOf(band);
   if (i < 0 || i === CEFR_LADDER.length - 1) return null;

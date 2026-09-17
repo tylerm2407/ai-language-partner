@@ -1,19 +1,28 @@
 /**
- * The check-in: a voluntary five-minute, four-strand measurement.
+ * The level test: a five-minute, four-strand measurement, asked as a staircase.
  *
- * ── WHAT IT DOES NOT DO ──
+ * ── WHAT IT DOES TO THE LEVEL ──
  *
- * It does not set the learner's level. That still comes from
- * `buildProficiencyReport`, estimated from practice history. A checkpoint moves
- * which cohort board they sit on, and this screen says so in as many words —
- * see `checkpointOutcomeLine`, which is written never to claim a promotion.
+ * It publishes the learner's level WHEN PRACTICE HAS NOT MEASURED ONE, and
+ * never otherwise. `testPublishesLevel` is the rule and `publishes` below is
+ * the value; the screen states the consequence before the first question and
+ * again on the result, because a five-minute test that silently did or did not
+ * set the app's central number would be worse than either behaviour.
  *
- * The case for eventually letting a checkpoint gate promotion is real: the
- * report's weighted blend is compensatory and accumulative, where a fresh
- * standardized sample is neither. But no learner has ever taken one of these,
- * so gating the most visible number in the app on it would be betting on an
- * untested instrument. Shipping it as a measurement people can choose to take
- * is what produces the data that decision needs.
+ * It used to do nothing at all to the level, deliberately: a compensatory
+ * weighted blend of weeks of work is better evidence than a fresh sample, no
+ * learner had ever taken one of these, and gating the most visible number in
+ * the app on an untested instrument was not a bet worth making. Two things
+ * changed. The instrument became a staircase — each strand asked below, at, and
+ * above the band, so the result LOCATES a band rather than nudging one (see
+ * `bandFromStaircase`) — and the cost of the old behaviour became clear: an
+ * unmeasured learner faced `MIN_INTERACTION_DAYS` plus the confidence gate,
+ * which is a fortnight of "Not yet assessed" no matter what they did.
+ *
+ * The asymmetry is the safeguard. The test does not measure live conversation
+ * at all, and conversation is 0.55 of the practice score, so it fills the gap
+ * and then stands down. It is not the higher of the two and not the more recent
+ * — either would let a learner pick their band by testing on a good day.
  *
  * ── THE SPEAKING STRAND IS DIFFERENT ──
  *
@@ -57,11 +66,14 @@ import {
   checkpointOutcomeLine,
   checkpointProgress,
   checkpointScoreLines,
+  checkpointRungLabel,
   checkpointSubmission,
   orderCheckpointItems,
   skippedCheckpointStrands,
+  testPublishesLevel,
 } from '../../../lib/checkpoint-flow';
 import { normalizeBand } from '../../../lib/cefr-proficiency';
+import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
 import { spacing } from '../../../config/theme';
 import type { LanguageCode } from '../../../types';
 
@@ -77,6 +89,14 @@ export default function CheckpointScreen() {
   const profile = useAppStore((s) => s.profile);
   const targetLanguage = profile?.targetLanguage ?? null;
   const band = normalizeBand(profile?.placementBand) ?? 'A1';
+
+  // Whether this result will BECOME the learner's level, which they have to be
+  // told before they spend five minutes on it and again when they read the
+  // band. `practiceLevel`, deliberately, not the store's `measuredBand`: that
+  // mirror already holds a previously-tested band, so reading it would tell a
+  // learner on their second test that their level is safe when it is not.
+  const { report } = useProficiencyReport();
+  const publishes = testPublishesLevel(report?.practiceLevel ?? null);
 
   const [items, setItems] = useState<CheckpointItem[] | null>(null);
   const [checkpointId, setCheckpointId] = useState<string | null>(null);
@@ -133,14 +153,14 @@ export default function CheckpointScreen() {
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         <Ui2Header
-          title="Check in on your level"
-          subtitle={result ? 'Your result' : `About five minutes · ${band}`}
+          title="Level test"
+          subtitle={result ? 'Your result' : `About five minutes · around ${band}`}
           onBack={() => goBack()}
         />
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {result ? (
-            <ResultBody result={result} items={items ?? []} answers={answers} />
+            <ResultBody result={result} items={items ?? []} answers={answers} publishes={publishes} />
           ) : loadError ? (
             <SlabCard tint="pink" style={styles.card}>
               <Body size="sm">{loadError}</Body>
@@ -162,16 +182,24 @@ export default function CheckpointScreen() {
                 <Caption tone="tertiary">What this is</Caption>
                 <Body size="sm" tone="secondary" style={styles.spaced}>
                   Fresh questions you have not seen, graded by Fluenci rather than scored from
-                  your practice. It does not change the level on your report — it is a second
-                  opinion you can compare against it.
+                  your practice. Each skill is asked just below, at, and just above {band}, so
+                  the result finds your level rather than confirming a guess.
+                </Body>
+                {/* The consequence, stated before the first question rather than
+                    after the result. A learner is entitled to know whether five
+                    minutes is about to set the number the whole app shows. */}
+                <Body size="sm" tone="secondary" style={styles.spaced}>
+                  {publishes
+                    ? 'Your practice history has not measured a level yet, so this result becomes the level on your report — until your practice has enough evidence to take over.'
+                    : 'Your report keeps the level measured from your practice. This is a second opinion you can compare against it.'}
                 </Body>
               </SlabCard>
 
-              {items.map((item, index) => (
+              {items.map((item) => (
                 <CheckpointQuestion
                   key={item.id}
                   item={item}
-                  index={index}
+                  label={checkpointRungLabel(item, items)}
                   value={answers[item.id] ?? ''}
                   onAnswer={setAnswer}
                   userId={user?.id ?? null}
@@ -209,7 +237,8 @@ export default function CheckpointScreen() {
 
 interface QuestionProps {
   item: CheckpointItem;
-  index: number;
+  /** "Listening · 2 of 3". See `checkpointRungLabel`. */
+  label: string;
   value: string;
   onAnswer: (id: string, value: string) => void;
   userId: string | null;
@@ -217,16 +246,17 @@ interface QuestionProps {
   locked: boolean;
 }
 
-function CheckpointQuestion({ item, index, value, onAnswer, userId, language, locked }: QuestionProps) {
+function CheckpointQuestion({ item, label, value, onAnswer, userId, language, locked }: QuestionProps) {
   // `shape` rather than a literal radius: the option rows follow
   // `components/ui2/OptionRow`, the established picker idiom.
   const { c, shape } = useUi2Theme();
 
   return (
     <SlabCard style={styles.card}>
-      <Caption tone="tertiary">
-        {STRAND_LABELS[item.strand]} · {index + 1}
-      </Caption>
+      {/* The rung's position in its strand, not the global question number:
+          with three listening rungs in an attempt, "Listening · 4" said nothing
+          a learner could use. */}
+      <Caption tone="tertiary">{label}</Caption>
       <Body weight="semibold" style={styles.spaced}>
         {item.prompt}
       </Body>
@@ -449,10 +479,13 @@ function ResultBody({
   result,
   items,
   answers,
+  publishes,
 }: {
   result: CheckpointResult;
   items: CheckpointItem[];
   answers: Record<string, string>;
+  /** Whether this result became the level on the report. See `testPublishesLevel`. */
+  publishes: boolean;
 }) {
   const lines = checkpointScoreLines(result);
   const skipped = skippedCheckpointStrands(items, answers);
@@ -460,13 +493,21 @@ function ResultBody({
   return (
     <>
       <SlabCard tint="primary" style={styles.card}>
-        <Caption tone="accent">Check-in</Caption>
+        <Caption tone="accent">Level test</Caption>
+        {/* The BAND leads, not the percentage. The percentage is how the learner
+            did on this instrument; the band is what the five minutes were for,
+            and when it publishes it is the number the whole app now shows. */}
         <Heading level={2} style={styles.spaced}>
-          {result.composite === null ? 'Not scored' : `${Math.round(result.composite * 100)}%`}
+          {result.composite === null ? 'Not scored' : result.band}
         </Heading>
         <Body size="sm" style={styles.spaced}>
-          {checkpointOutcomeLine(result)}
+          {checkpointOutcomeLine(result, publishes)}
         </Body>
+        {result.composite !== null ? (
+          <Caption tone="accent" style={styles.spaced}>
+            Scored {Math.round(result.composite * 100)}% across the skills you answered
+          </Caption>
+        ) : null}
       </SlabCard>
 
       <SlabCard style={styles.card}>
@@ -491,12 +532,16 @@ function ResultBody({
         </Caption>
       ) : null}
 
-      {/* The whole point, restated where it cannot be missed. */}
+      {/* Restated where it cannot be missed, in whichever direction is true.
+          The publishing case is the one that needs saying twice: a learner has
+          just changed the app's central number in five minutes and should know
+          both that it happened and that it is provisional. */}
       <SlabCard style={[styles.card, styles.row]}>
         <Ionicons name="information-circle-outline" size={18} style={styles.icon} />
         <Body size="sm" tone="secondary" style={styles.flex}>
-          Your level on the proficiency report has not changed. That still comes from everything
-          you have practised — this is a second opinion to compare it against.
+          {publishes
+            ? `Your report now shows ${result.band}, measured by this test. It does not include live conversation, which is the biggest part of the level measured from practice — so once you have practised enough, that measurement takes over.`
+            : 'Your level on the proficiency report has not changed. That still comes from everything you have practised — this is a second opinion to compare it against.'}
         </Body>
       </SlabCard>
     </>

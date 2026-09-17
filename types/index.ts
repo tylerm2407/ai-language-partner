@@ -910,6 +910,29 @@ export interface Checkpoint {
 }
 
 /**
+ * One recorded change in the learner's measured CEFR band (`level_history`,
+ * migration 143).
+ *
+ * One row per CHANGE, per language. `previousBand` is null on the first row
+ * recorded — there was nothing before it — and a row where the band went DOWN
+ * is legitimate: a history that only ever went up would be a vanity metric.
+ */
+export interface LevelHistoryEntry {
+  id: string;
+  band: string;
+  previousBand: string | null;
+  /**
+   * `'test'` — a graded checkpoint, written by the `checkpoint` edge function.
+   * `'practice'` — the weighted six-strand estimate. Allowed by the schema but
+   * not written yet: that engine has no server-side home, and letting the
+   * client assert its own band is the thing the table's service-role-only rule
+   * exists to prevent. See migration 143's header.
+   */
+  source: 'test' | 'practice';
+  measuredAt: string;
+}
+
+/**
  * One row of the weekly cohort board.
  *
  * `displayName` is null unless that member opted out of pseudonymity — the

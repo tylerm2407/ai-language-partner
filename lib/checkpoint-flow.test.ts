@@ -11,16 +11,18 @@ import {
   canSubmitCheckpoint,
   checkpointOutcomeLine,
   checkpointProgress,
+  checkpointRungLabel,
   checkpointScoreLines,
   checkpointSubmission,
   isCheckpointAnswered,
   orderCheckpointItems,
   skippedCheckpointStrands,
+  testPublishesLevel,
 } from './checkpoint-flow';
 import type { CheckpointItem, CheckpointResult } from './ai';
 
-function item(id: string, strand: CheckpointItem['strand']): CheckpointItem {
-  return { id, strand, prompt: `prompt ${id}`, options: null };
+function item(id: string, strand: CheckpointItem['strand'], band = 'B1'): CheckpointItem {
+  return { id, strand, band, prompt: `prompt ${id}`, options: null };
 }
 
 const ITEMS: CheckpointItem[] = [
@@ -143,5 +145,82 @@ describe('checkpointOutcomeLine', () => {
 
   it('handles a checkpoint where nothing scored', () => {
     expect(checkpointOutcomeLine(result({ composite: null }))).toContain('unchanged');
+  });
+});
+
+// ─── the staircase, client side ─────────────────────────────────────────────
+
+describe('a strand asked at several bands', () => {
+  const RUNGS: CheckpointItem[] = [
+    item('l-b2', 'listening', 'B2'),
+    item('l-a2', 'listening', 'A2'),
+    item('l-b1', 'listening', 'B1'),
+    item('w-b2', 'writing', 'B2'),
+    item('w-b1', 'writing', 'B1'),
+  ];
+
+  it('asks the easier rung first', () => {
+    // A B2 question before the A2 one reads as the test being broken, and a
+    // hard opener makes people abandon the strand.
+    expect(orderCheckpointItems(RUNGS).map((i) => i.id)).toEqual([
+      'l-a2',
+      'l-b1',
+      'l-b2',
+      'w-b1',
+      'w-b2',
+    ]);
+  });
+
+  it('keeps strand order ahead of band order', () => {
+    // Receptive before productive, exactly as before: every listening rung
+    // comes before any writing rung, however the bands compare.
+    const strands = orderCheckpointItems(RUNGS).map((i) => i.strand);
+    expect(strands).toEqual(['listening', 'listening', 'listening', 'writing', 'writing']);
+  });
+
+  it('labels a rung by its position in the strand, not the global index', () => {
+    const ordered = orderCheckpointItems(RUNGS);
+    expect(checkpointRungLabel(ordered[0], ordered)).toBe('Listening · 1 of 3');
+    expect(checkpointRungLabel(ordered[2], ordered)).toBe('Listening · 3 of 3');
+    expect(checkpointRungLabel(ordered[3], ordered)).toBe('Writing · 1 of 2');
+  });
+
+  it('drops the counter when a strand has only one rung', () => {
+    const single = [item('r1', 'reading', 'B1')];
+    expect(checkpointRungLabel(single[0], single)).toBe('Reading');
+  });
+
+  it('counts every rung toward progress', () => {
+    // Five questions, not four. The learner is told how many are left.
+    expect(checkpointProgress(RUNGS, { 'l-a2': 'x' }).total).toBe(5);
+  });
+});
+
+describe('whether a test result becomes the level', () => {
+  it('publishes only when practice has measured nothing', () => {
+    expect(testPublishesLevel(null)).toBe(true);
+  });
+
+  it('never displaces a practice level, in either direction', () => {
+    // Not the higher of the two and not the newer of the two: either would let
+    // a learner choose their band by testing on a good day.
+    expect(testPublishesLevel('A1')).toBe(false);
+    expect(testPublishesLevel('C2')).toBe(false);
+  });
+
+  it('says which case the learner is in before it names the band', () => {
+    const publishes = checkpointOutcomeLine(result({ band: 'B2', movedFrom: 'B1' }), true);
+    expect(publishes).toContain('above B1, at B2');
+    expect(publishes).toContain('Your report now shows B2');
+
+    const advisory = checkpointOutcomeLine(result({ band: 'B2', movedFrom: 'B1' }), false);
+    expect(advisory).toContain('above B1, at B2');
+    expect(advisory).toContain('keeps the level measured from your practice');
+  });
+
+  it('still reports nothing scored as nothing changed', () => {
+    expect(checkpointOutcomeLine(result({ composite: null }), true)).toBe(
+      'Nothing was scored this time, so your level is unchanged.',
+    );
   });
 });

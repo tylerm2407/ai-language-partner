@@ -27,6 +27,7 @@ import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
   Checkpoint,
   LeaderboardRow,
+  LevelHistoryEntry,
   GoalTrack,
   UserProfile,
   OnboardingChecklist,
@@ -2719,6 +2720,41 @@ export async function fetchLatestCheckpoint(
     writingScore: (data.writing_score as number) ?? null,
     composite: (data.composite as number) ?? null,
   };
+}
+
+/**
+ * The learner's recorded band changes for a language, newest first.
+ *
+ * `level_history` (migration 143) holds one row per CHANGE, which is why this
+ * is bounded by a small `limit` rather than paged: a learner accumulates a
+ * handful of these a year, not a page of them, and the report only ever draws
+ * the recent ones. The `.limit()` is still mandatory — the table is
+ * user-growable (CLAUDE.md §3).
+ *
+ * Errors throw. An empty history and a failed read are completely different
+ * facts and the second one must not render as "you have never moved".
+ */
+export async function fetchLevelHistory(
+  userId: string,
+  language: string,
+  limit = 12,
+): Promise<LevelHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from('level_history')
+    .select('id, band, previous_band, source, measured_at')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .order('measured_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    id: r.id as string,
+    band: r.band as string,
+    previousBand: (r.previous_band as string) ?? null,
+    source: r.source as LevelHistoryEntry['source'],
+    measuredAt: r.measured_at as string,
+  }));
 }
 
 /**
