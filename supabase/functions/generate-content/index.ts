@@ -290,11 +290,15 @@ serve(async (req: Request) => {
     // fetchLearnerContext never throws; on any failure it returns null and
     // generation proceeds exactly as it did before.
     const personalised = PERSONALISED_TASKS.has(request.task) && isEntitledToLearnerContext(tier);
-    const learnerBlock = personalised
-      ? serializeLearnerContext(
-          await fetchLearnerContext(supabase, { userId: user.id, targetLanguage: request.language })
-        )
-      : '';
+    // Both reads issued together — see the note in ai-chat: a sequential second
+    // round trip would add its latency to every personalised generation.
+    const [learnerContext, memoryNotes] = personalised
+      ? await Promise.all([
+          fetchLearnerContext(supabase, { userId: user.id, targetLanguage: request.language }),
+          fetchTutorMemory(supabase, { userId: user.id, targetLanguage: request.language }),
+        ])
+      : [null, []];
+    const learnerBlock = personalised ? serializeLearnerContext(learnerContext) : '';
 
     // ── What Sol remembers ────────────────────────────────────────────────
     //
@@ -307,11 +311,7 @@ serve(async (req: Request) => {
     // Same gate as the profile — personalised tasks, paid tiers — because it is
     // the same feature, and giving one half of it away would be an accident
     // rather than a decision. Never throws; [] on any failure.
-    const memoryBlock = personalised
-      ? serializeTutorMemory(
-          await fetchTutorMemory(supabase, { userId: user.id, targetLanguage: request.language })
-        )
-      : null;
+    const memoryBlock = serializeTutorMemory(memoryNotes);
 
     // Both fenced blocks ride inside <REQUEST> for the reason stated on
     // `buildUserMessage`: every untrusted value belongs in the same place, and

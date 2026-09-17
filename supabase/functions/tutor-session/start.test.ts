@@ -37,7 +37,10 @@ function makeStub(opts: {
   const table = (name: string) => {
     const chain: Record<string, unknown> = {};
     const self = () => chain;
-    for (const m of ['select', 'gte', 'in', 'order', 'limit', 'is', 'update']) {
+    // `or` is how tutor_memory asks for this language's notes AND the
+    // account-wide ones in one read (migration 141). Missing from the double,
+    // the memory lookup fails soft and this file silently tests the fallback.
+    for (const m of ['select', 'gte', 'in', 'or', 'order', 'limit', 'is', 'update']) {
       chain[m] = self;
     }
     chain.eq = (_col: string, value: unknown) => {

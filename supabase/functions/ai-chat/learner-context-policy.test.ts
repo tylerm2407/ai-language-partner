@@ -189,7 +189,10 @@ Deno.test('the goal is requested through the tier gate, not the text allowance',
   // school-contract student's entitlement and it is unchanged. The include
   // list must come from the tier gate instead, or a starter student on a
   // contract silently gains a paid feature.
-  const call = INDEX_SRC.slice(INDEX_SRC.indexOf('await fetchLearnerContext('));
+  // Matched without the `await`: the call now rides inside a `Promise.all`
+  // alongside the tutor-memory read, so the two share one round trip on the
+  // critical path of every turn. The gate it is pinned to is unchanged.
+  const call = INDEX_SRC.slice(INDEX_SRC.indexOf('fetchLearnerContext('));
   const args = call.slice(0, call.indexOf('})'));
   assert(
     args.includes('include: learnerContextIncludeFor(tier)'),

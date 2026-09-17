@@ -558,36 +558,36 @@ serve(async (req: Request) => {
     // include array is exactly equivalent to passing none: `fetchLearnerContext`
     // reads `opts.include ?? []`, makes the same two queries, and returns the
     // same three-key object it always did.
-    const learnerContext =
+    //
+    // What Sol remembers rides alongside it — the notes the tutor wrote at the
+    // end of a voice session, the ones seeded from onboarding, and the ones the
+    // learner typed themselves (migrations 108, 141, 142). A DIFFERENT question
+    // from the learner profile: that one is "what is this person getting
+    // wrong", measured; this one is "what do I know about this person", stated.
+    //
+    // Same gate, for the same reason — `dailyTextMessages > 0` is the one that
+    // correctly includes a school-contract student. Not gated on
+    // `isEntitledToLearnerContext`: the live tutor already sends this block to
+    // everyone who reaches it, and a memory the learner can see on their
+    // profile but that Sol demonstrably ignores in chat is worse than none.
+    //
+    // ISSUED IN PARALLEL, and that is not a micro-optimisation. This sits on
+    // the critical path of every single chat turn, so a sequential second round
+    // trip would add its full latency to every turn of every conversation for
+    // every learner. Neither call throws; both degrade to null.
+    const [learnerContext, memoryNotes] =
       limits.dailyTextMessages > 0
-        ? await fetchLearnerContext(supabase, {
-            userId: authenticatedUserId,
-            targetLanguage,
-            include: learnerContextIncludeFor(tier),
-          })
-        : null;
+        ? await Promise.all([
+            fetchLearnerContext(supabase, {
+              userId: authenticatedUserId,
+              targetLanguage,
+              include: learnerContextIncludeFor(tier),
+            }),
+            fetchTutorMemory(supabase, { userId: authenticatedUserId, targetLanguage }),
+          ])
+        : [null, []];
     const learnerBlock = serializeLearnerContext(learnerContext);
-    // What Sol remembers — the notes the tutor wrote at the end of a voice
-    // session, the ones seeded from onboarding, and the ones the learner typed
-    // themselves (migrations 108, 141, 142). A DIFFERENT question from the
-    // learner profile above: that one is "what is this person getting wrong",
-    // measured; this one is "what do I know about this person", stated.
-    //
-    // Read on the same condition as the base context, and for the same reason
-    // — `dailyTextMessages > 0` is the one gate that correctly includes a
-    // school-contract student. Not gated on `isEntitledToLearnerContext`: the
-    // live tutor already sends this block to everyone who reaches it, and a
-    // memory the learner can see on their profile but that Sol demonstrably
-    // ignores in chat is worse than no memory at all.
-    //
-    // fetchTutorMemory never throws; on any failure it returns [] and the turn
-    // generates exactly as it did before.
-    const memoryBlock =
-      limits.dailyTextMessages > 0
-        ? serializeTutorMemory(
-            await fetchTutorMemory(supabase, { userId: authenticatedUserId, targetLanguage }),
-          )
-        : null;
+    const memoryBlock = serializeTutorMemory(memoryNotes);
     // Same shape as `learnerNote`: our steer OUTSIDE the fence, the learner's
     // facts inside it.
     const memoryNote = memoryBlock
