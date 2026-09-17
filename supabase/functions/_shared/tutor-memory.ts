@@ -90,6 +90,52 @@ export const TUTOR_MEMORY_MAX_CHARS = 600;
  */
 export const TUTOR_MEMORY_KEEP = 24;
 
+/**
+ * How many of those notes the learner may have written themselves, enforced by
+ * `upsert_learner_memory` (migration 141). Restated here so the edge function
+ * can say "you have used 8 of 8" without a second count, and so the two cannot
+ * disagree about what the limit is.
+ */
+export const TUTOR_MEMORY_LEARNER_KEEP = 8;
+
+/**
+ * Account-wide notes are read alongside the language's own, so the read has to
+ * ask for more rows than either budget alone.
+ */
+export const TUTOR_MEMORY_WIDE_KEEP = 12;
+
+/**
+ * Which kinds are true in every language the learner studies.
+ *
+ * Migration 141's `tutor_memory_scope_matches_kind` CHECK enforces exactly this
+ * split in the database; this function is the same rule in the language the
+ * writers are written in. Who someone is and how they like to be taught do not
+ * change when they switch from Spanish to Japanese. What they get wrong, what
+ * they are working towards in that language, and what they were talking about
+ * last week all do.
+ */
+export function isAccountWideKind(kind: TutorMemoryKind): boolean {
+  return kind === 'personal_fact' || kind === 'preference';
+}
+
+/**
+ * The `target_language` a note of this kind is stored under — `null` for the
+ * account-wide kinds. Mirrors the `tutor_memory_scope()` SQL function.
+ */
+export function memoryScopeFor(kind: TutorMemoryKind, language: string): string | null {
+  return isAccountWideKind(kind) ? null : language;
+}
+
+/**
+ * Language strings safe to interpolate into a PostgREST `or` filter.
+ *
+ * The filter grammar is comma- and parenthesis-delimited, so a language
+ * containing either would change the shape of the query rather than its value.
+ * Every language reaching this module is already validated upstream; this is
+ * the belt that makes that a local guarantee rather than a remote one.
+ */
+const SAFE_LANGUAGE = /^[A-Za-z][A-Za-z_-]{0,31}$/;
+
 /** The DB's own bounds on `content`, restated so the guard rejects before the
  *  round trip rather than after a 23514 check violation. */
 const MIN_CONTENT_CHARS = 3;
@@ -237,14 +283,24 @@ export async function fetchTutorMemory(
     // tutor session) using the same string the session was opened with, so
     // there is no historical free-text drift to reconcile — and inventing a
     // variant match would risk merging two languages' memories into one tutor.
-    const { data, error } = await supabase
+    //
+    // Two scopes, one read (migration 141): this language's notes, plus the
+    // account-wide ones whose `target_language` is NULL. A learner who adds a
+    // second language should not have to re-introduce themselves, and the
+    // kinds that travel are exactly the kinds that were never about a language.
+    const query = supabase
       .from('tutor_memory')
       .select('kind, content, mention_count')
-      .eq('user_id', userId)
-      .eq('target_language', targetLanguage)
+      .eq('user_id', userId);
+
+    const scoped = SAFE_LANGUAGE.test(targetLanguage)
+      ? query.or(`target_language.eq.${targetLanguage},target_language.is.null`)
+      : query.eq('target_language', targetLanguage);
+
+    const { data, error } = await scoped
       .order('mention_count', { ascending: false })
       .order('last_seen_at', { ascending: false })
-      .limit(TUTOR_MEMORY_KEEP);
+      .limit(TUTOR_MEMORY_KEEP + TUTOR_MEMORY_WIDE_KEEP);
 
     if (error || !Array.isArray(data)) return [];
 

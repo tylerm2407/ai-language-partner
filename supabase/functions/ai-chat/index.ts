@@ -51,6 +51,7 @@ import { cefrToProficiency, resolveCefrLevel } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { fetchLearnerContext, serializeLearnerContext } from '../_shared/learner-context.ts';
+import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
 import { learnerContextIncludeFor } from './learner-context-policy.ts';
 import {
   isValidLanguage,
@@ -566,6 +567,32 @@ serve(async (req: Request) => {
           })
         : null;
     const learnerBlock = serializeLearnerContext(learnerContext);
+    // What Sol remembers — the notes the tutor wrote at the end of a voice
+    // session, the ones seeded from onboarding, and the ones the learner typed
+    // themselves (migrations 108, 141, 142). A DIFFERENT question from the
+    // learner profile above: that one is "what is this person getting wrong",
+    // measured; this one is "what do I know about this person", stated.
+    //
+    // Read on the same condition as the base context, and for the same reason
+    // — `dailyTextMessages > 0` is the one gate that correctly includes a
+    // school-contract student. Not gated on `isEntitledToLearnerContext`: the
+    // live tutor already sends this block to everyone who reaches it, and a
+    // memory the learner can see on their profile but that Sol demonstrably
+    // ignores in chat is worse than no memory at all.
+    //
+    // fetchTutorMemory never throws; on any failure it returns [] and the turn
+    // generates exactly as it did before.
+    const memoryBlock =
+      limits.dailyTextMessages > 0
+        ? serializeTutorMemory(
+            await fetchTutorMemory(supabase, { userId: authenticatedUserId, targetLanguage }),
+          )
+        : null;
+    // Same shape as `learnerNote`: our steer OUTSIDE the fence, the learner's
+    // facts inside it.
+    const memoryNote = memoryBlock
+      ? `${memoryBlock}\nLet this shape what you ask about and the examples you choose. Never recite it back or say that you have notes about them.`
+      : null;
     // The steer sits OUTSIDE the <LEARNER_PROFILE> fence: instructions to the
     // model are ours, everything inside the fence is data about the learner.
     const learnerNote = learnerBlock
@@ -694,6 +721,16 @@ serve(async (req: Request) => {
       system: [
         { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
         ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
+        // What Sol remembers rides out here too, and for a reason worth
+        // stating: it is STABLE per learner, so the tempting move is to put it
+        // in the cached prefix. That would be wrong. The prefix is shared
+        // across every learner on the same scenario and level; anything
+        // per-learner inside it gives each of them a private cache entry, paid
+        // for at the 1.25x cache-write rate and expiring long before a light
+        // learner comes back. ~150 tokens uncached is the cheaper half of that
+        // trade, and it is the same reasoning that keeps the learner profile
+        // at index 1.
+        ...(memoryNote ? [{ type: 'text', text: memoryNote }] : []),
         // The dialogue act belongs out here for the same reason as the
         // other two: it changes every turn, and inside the cached block
         // it would make the shared prefix unshareable. It sits before

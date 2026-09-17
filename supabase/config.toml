@@ -235,3 +235,12 @@ verify_jwt = true
 
 [functions.school-admin]
 verify_jwt = true
+
+# ─── tutor-memory ─────────────────────────────────────────────────────────
+# The learner's own writes into `tutor_memory`. RLS still refuses client
+# INSERT and UPDATE (migration 108); this function sanitises, moderates and
+# then writes under the service role via upsert_learner_memory /
+# edit_learner_memory (migration 141). Auth enforced in the body via
+# getAuthenticatedUser (_shared/auth.ts), same posture as phrase-help.
+[functions.tutor-memory]
+verify_jwt = false

@@ -1,16 +1,35 @@
 /**
- * useTutorMemory — the learner's view of `tutor_memory`, with forgetting.
+ * useTutorMemory — the learner's view of `tutor_memory`, with forgetting and,
+ * since migration 141, with authoring.
  *
  * A memory the learner cannot see and delete is surveillance, not
- * personalisation (migration 108 says the same). So this hook is read +
- * delete only, and a delete is optimistic: the row leaves the screen at once
- * and comes back with an error if the server refused, because "I asked it to
- * forget and it is still there" is the one outcome that must never be silent.
+ * personalisation (migration 108 says the same). A memory they can see but
+ * cannot correct is not much better: the tutor goes on believing something
+ * about them that is wrong, and the only remedy is deletion. So this hook now
+ * adds and edits too — through the `tutor-memory` edge function, never by a
+ * client write, because the row it produces becomes part of a future prompt.
+ *
+ * Deletes stay OPTIMISTIC: the row leaves the screen at once and comes back
+ * with an error if the server refused, because "I asked it to forget and it is
+ * still there" is the one outcome that must never be silent. Writes are NOT
+ * optimistic: the server sanitises, moderates and may refuse or merge the text,
+ * so the row that lands is not always the row that was typed, and showing the
+ * typed version first would be showing a note that does not exist.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { deleteAllTutorMemories, deleteTutorMemory, fetchTutorMemories } from '../lib/supabase-queries';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  addTutorMemory,
+  deleteAllTutorMemories,
+  deleteTutorMemory,
+  editTutorMemory,
+  fetchTutorMemories,
+} from '../lib/supabase-queries';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../lib/error-copy';
-import type { TutorMemory } from '../types';
+import type { TutorMemory, TutorMemoryKind } from '../types';
+
+/** Mirrors the SQL cap in `upsert_learner_memory` (migration 141). Restated so
+ *  the screen can disable "add" before a round trip that would 409. */
+export const TUTOR_MEMORY_LEARNER_KEEP = 8;
 
 export function useTutorMemory(userId: string | undefined, language: string | null | undefined) {
   const [notes, setNotes] = useState<TutorMemory[]>([]);
@@ -72,5 +91,58 @@ export function useTutorMemory(userId: string | undefined, language: string | nu
     }
   }, [userId, language, notes]);
 
-  return { notes, loading, error, forgetError, retry, forget, forgetAll };
+  /**
+   * Add or rewrite a note, then refetch.
+   *
+   * The refetch is the point: `upsert_learner_memory` dedupes on content and
+   * `edit_learner_memory` merges an edit onto an existing note, so the server's
+   * answer to "what notes are there now" is the only trustworthy one.
+   */
+  const write = useCallback(
+    async (run: () => Promise<void>, subject: string) => {
+      setForgetError(null);
+      try {
+        await run();
+      } catch (err) {
+        setForgetError(saveErrorCopy(err, subject));
+        throw err;
+      }
+      retry();
+    },
+    [retry],
+  );
+
+  const add = useCallback(
+    async (kind: TutorMemoryKind, content: string) => {
+      if (!language) return;
+      await write(() => addTutorMemory({ kind, content, targetLanguage: language }), 'that note');
+    },
+    [language, write],
+  );
+
+  const edit = useCallback(
+    async (id: string, content: string) => {
+      await write(() => editTutorMemory(id, content), 'that note');
+    },
+    [write],
+  );
+
+  /** How many of the learner's own notes are already stored. The cap is
+   *  account-wide, matching the SQL, so it counts across languages exactly as
+   *  the server does — every note this screen can see is in that count. */
+  const ownNoteCount = useMemo(() => notes.filter((n) => n.source === 'learner').length, [notes]);
+
+  return {
+    notes,
+    loading,
+    error,
+    forgetError,
+    retry,
+    forget,
+    forgetAll,
+    add,
+    edit,
+    ownNoteCount,
+    canAddNote: ownNoteCount < TUTOR_MEMORY_LEARNER_KEEP,
+  };
 }

@@ -1224,18 +1224,34 @@ export type TutorMemoryKind =
   | 'topic_thread';
 
 /**
- * One note. Owner-readable and owner-DELETABLE via RLS — never writable from
- * the client, because a note is injected verbatim into a future system prompt
- * and a learner who could author one could steer the tutor.
+ * Who wrote a note (migration 141). The screen groups by this, because "you
+ * told Sol this" and "Sol noticed this" are different claims and only one of
+ * them is the learner's own.
+ */
+export type TutorMemorySource = 'tutor' | 'learner' | 'onboarding';
+
+/**
+ * One note. Owner-readable and owner-DELETABLE via RLS. Still never writable
+ * DIRECTLY from the client, because a note is injected verbatim into a future
+ * system prompt and a learner who could insert a row could author their own
+ * instructions — writes go through the `tutor-memory` edge function, which
+ * sanitises and moderates first and then writes under the service role.
  */
 export interface TutorMemory {
   id: string;
-  targetLanguage: string;
+  /**
+   * `null` for the account-wide kinds (`personal_fact`, `preference`), which
+   * are true in every language the learner studies. Migration 141.
+   */
+  targetLanguage: string | null;
   kind: TutorMemoryKind;
   /** The note itself, ≤200 chars, written in the learner's native language. */
   content: string;
   /** How many sessions have surfaced this note. */
   mentionCount: number;
+  source: TutorMemorySource;
   firstSeenAt: string;
   lastSeenAt: string;
+  /** Set only when the learner has rewritten the note. */
+  updatedAt: string | null;
 }

@@ -84,6 +84,7 @@ import type {
   AvatarJob,
   TutorMemory,
   TutorMemoryKind,
+  TutorMemorySource,
 } from '../types';
 
 import { SUPPORTED_LANGUAGES, type NewsTier } from '../config/app';
@@ -4888,43 +4889,117 @@ export async function fetchLearnedCardCount(
 }
 
 // ─── Tutor Memory ───────────────────────────────────────────────
-// `tutor_memory` (migration 108): what the live tutor remembers about a
-// learner between sessions. Read and DELETE belong to the learner; there is
-// deliberately no client insert or update, because a note is injected into a
-// future system prompt and a learner who could author one could steer the
-// tutor. Pruned server-side to 24 notes per language, so the limit below is a
-// ceiling, not a page.
+// `tutor_memory` (migrations 108, 141, 142): what Sol remembers about a
+// learner. Read and DELETE belong to the learner; there is still deliberately
+// no client INSERT or UPDATE, because a note is injected into a future system
+// prompt and a learner who could author a row directly could steer the tutor.
+// Writing goes through the `tutor-memory` edge function instead, which
+// authenticates, sanitises and moderates before a row exists.
+//
+// Two scopes in one list: this language's notes plus the account-wide ones
+// (`target_language IS NULL` — who they are, how they like to be taught), which
+// travel with the learner when they add a second language. Pruned server-side
+// to 24 per language and 12 account-wide, so the limit below is a ceiling, not
+// a page.
 
 const TUTOR_MEMORY_KINDS: ReadonlySet<string> = new Set<TutorMemoryKind>([
   'personal_fact', 'goal', 'recurring_error', 'preference', 'topic_thread',
 ]);
 
+const TUTOR_MEMORY_SOURCES: ReadonlySet<string> = new Set<TutorMemorySource>([
+  'tutor', 'learner', 'onboarding',
+]);
+
 function mapTutorMemory(row: Record<string, unknown>): TutorMemory {
   const kind = row.kind as string;
+  const source = row.source as string;
   return {
     id: row.id as string,
-    targetLanguage: row.target_language as string,
+    targetLanguage: (row.target_language as string | null) ?? null,
     kind: TUTOR_MEMORY_KINDS.has(kind) ? (kind as TutorMemoryKind) : 'topic_thread',
     content: row.content as string,
     mentionCount: (row.mention_count as number) ?? 1,
+    // An unrecognised source reads as the tutor's: it is the weaker claim, and
+    // showing a note under "you told Sol" that the learner did not write is the
+    // one mistake here that would matter.
+    source: TUTOR_MEMORY_SOURCES.has(source) ? (source as TutorMemorySource) : 'tutor',
     firstSeenAt: row.first_seen_at as string,
     lastSeenAt: row.last_seen_at as string,
+    updatedAt: (row.updated_at as string | null) ?? null,
   };
 }
 
-/** Every note the tutor holds for this learner in one language, most-mentioned first. */
+/**
+ * Every note Sol holds for this learner in one language, plus the account-wide
+ * ones, most-mentioned first.
+ *
+ * The `or` covers both scopes in a single round trip. `languageVariants` is
+ * still applied to the languaged half, because `correction_log`-era rows and
+ * the tutor's own writes have historically disagreed about 'es' versus
+ * 'Spanish' and half the history vanishes without it.
+ */
 export async function fetchTutorMemories(userId: string, targetLanguage: string): Promise<TutorMemory[]> {
+  const variants = languageVariants(targetLanguage)
+    .filter((v) => /^[A-Za-z][A-Za-z_-]{0,31}$/.test(v));
+  const scope = [...variants.map((v) => `target_language.eq.${v}`), 'target_language.is.null'].join(',');
+
   const { data, error } = await supabase
     .from('tutor_memory')
-    .select('id, target_language, kind, content, mention_count, first_seen_at, last_seen_at')
+    .select('id, target_language, kind, content, mention_count, source, first_seen_at, last_seen_at, updated_at')
     .eq('user_id', userId)
-    .in('target_language', languageVariants(targetLanguage))
+    .or(scope)
     .order('mention_count', { ascending: false })
     .order('last_seen_at', { ascending: false })
     .limit(50);
 
   if (error) throw error;
   return (data ?? []).map(mapTutorMemory);
+}
+
+/**
+ * Write a note of the learner's own.
+ *
+ * Goes to the `tutor-memory` edge function rather than the table: RLS refuses a
+ * client INSERT on purpose (migration 108), and the function is where the text
+ * is sanitised and moderated before it can reach a prompt. The server resolves
+ * the scope from the kind, so `targetLanguage` is passed for every kind and
+ * ignored for the account-wide ones.
+ */
+export async function addTutorMemory(params: {
+  kind: TutorMemoryKind;
+  content: string;
+  targetLanguage: string;
+}): Promise<void> {
+  await invokeTutorMemory({ action: 'add', ...params });
+}
+
+/** Rewrite one note. Same path, same reasons; the kind never changes. */
+export async function editTutorMemory(id: string, content: string): Promise<void> {
+  await invokeTutorMemory({ action: 'edit', id, content });
+}
+
+/**
+ * The refusal is the interesting part of this call, so it is unwrapped rather
+ * than swallowed: "you can keep 8 notes of your own" and "that note cannot be
+ * saved" are different answers the learner has to be able to act on, and the
+ * SDK's default message for both is "Edge Function returned a non-2xx status".
+ */
+async function invokeTutorMemory(body: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.functions.invoke('tutor-memory', { body });
+  if (!error) return;
+
+  let message = error.message ?? 'Sol could not save that note.';
+  if (error.context instanceof Response) {
+    try {
+      const parsed = await error.context.json();
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      // non-JSON body — keep the SDK default
+    }
+  } else if (error.name === 'FunctionsFetchError') {
+    message = 'Could not reach Sol. Check your connection and try again.';
+  }
+  throw new Error(message);
 }
 
 /** Make the tutor forget one note. The row is derived, so nothing else is lost. */
@@ -4937,12 +5012,20 @@ export async function deleteTutorMemory(userId: string, id: string): Promise<voi
   if (error) throw error;
 }
 
-/** Make the tutor forget everything it holds for this learner in one language. */
+/**
+ * Make Sol forget everything it holds for this learner in one language —
+ * including the account-wide notes, because the learner is looking at a screen
+ * that lists them all and "forget everything" has to mean what it says.
+ */
 export async function deleteAllTutorMemories(userId: string, targetLanguage: string): Promise<void> {
+  const variants = languageVariants(targetLanguage)
+    .filter((v) => /^[A-Za-z][A-Za-z_-]{0,31}$/.test(v));
+  const scope = [...variants.map((v) => `target_language.eq.${v}`), 'target_language.is.null'].join(',');
+
   const { error } = await supabase
     .from('tutor_memory')
     .delete()
     .eq('user_id', userId)
-    .in('target_language', languageVariants(targetLanguage));
+    .or(scope);
   if (error) throw error;
 }

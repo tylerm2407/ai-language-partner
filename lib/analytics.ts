@@ -116,6 +116,12 @@ type EventName =
    *  is used is the measure of whether the memory feels like attention or
    *  like surveillance. Never the note's text. */
   | 'tutor_memory_forgotten'
+  /** The learner wrote or rewrote a note of their own (`action` says which).
+   *  The counterpart to `tutor_memory_forgotten`: together they say whether
+   *  the memory is something people curate or something they only delete.
+   *  Never the note's text — that is the learner's, and it is exactly the kind
+   *  of free text this schema exists to keep out. */
+  | 'tutor_memory_written'
 
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'
