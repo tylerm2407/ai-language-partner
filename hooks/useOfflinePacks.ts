@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore, effectiveTier } from '../stores/useAppStore';
 import {
+  acknowledgeEvictions,
   clearAllPacks,
   downloadBookPack,
   downloadNewsPack,
   downloadUnitPack,
   enforcePackBudget,
   getAutoDownload,
+  listEvictions,
   listPacks,
   offlinePacksEntitled,
   OFFLINE_PACKS_MAX_BYTES,
@@ -15,6 +17,7 @@ import {
   removePack,
   setAutoDownload,
   type BookPackTarget,
+  type EvictedNotice,
   type NewsPackTarget,
   type OfflinePack,
   type PackKind,
@@ -45,6 +48,14 @@ export interface OfflinePacksApi {
   refresh: () => Promise<void>;
   /** Last download failure, for the row that asked. Cleared on the next attempt. */
   lastError: string | null;
+  /**
+   * Packs the budget removed that the learner has not been told about. Most are
+   * evicted inside a background top-up, so this survives in the manifest rather
+   * than in state — see lib/offline-packs.ts.
+   */
+  evictions: EvictedNotice[];
+  /** Dismiss the eviction notice. */
+  acknowledgeEvictions: () => Promise<void>;
 }
 
 /**
@@ -63,6 +74,7 @@ export function useOfflinePacks(): OfflinePacksApi {
   const [autoDownload, setAuto] = useState(true);
   const [progress, setProgress] = useState<Record<string, PackProgress>>({});
   const [lastError, setLastError] = useState<string | null>(null);
+  const [evictions, setEvictions] = useState<EvictedNotice[]>([]);
   const mounted = useRef(true);
 
   const refresh = useCallback(async () => {
@@ -71,10 +83,15 @@ export function useOfflinePacks(): OfflinePacksApi {
       setIsLoading(false);
       return;
     }
-    const [list, auto] = await Promise.all([listPacks(userId), getAutoDownload(userId)]);
+    const [list, auto, evicted] = await Promise.all([
+      listPacks(userId),
+      getAutoDownload(userId),
+      listEvictions(userId),
+    ]);
     if (!mounted.current) return;
     setPacks(list);
     setAuto(auto);
+    setEvictions(evicted);
     setIsLoading(false);
   }, [userId]);
 
@@ -148,6 +165,12 @@ export function useOfflinePacks(): OfflinePacksApi {
     await refresh();
   }, [userId, refresh]);
 
+  const dismissEvictions = useCallback(async () => {
+    if (!userId) return;
+    setEvictions([]);
+    await acknowledgeEvictions(userId);
+  }, [userId]);
+
   const setAutoDownloadPref = useCallback(
     async (on: boolean) => {
       if (!userId) return;
@@ -172,5 +195,7 @@ export function useOfflinePacks(): OfflinePacksApi {
     clearAll,
     refresh,
     lastError,
+    evictions,
+    acknowledgeEvictions: dismissEvictions,
   };
 }

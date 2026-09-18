@@ -92,7 +92,8 @@
           "organization": "novawealth",
           "project": "fluenci"
         }
-      ]
+      ],
+      "./plugins/withAsyncStorageDbSize"
     ],
     "experiments": {
       "typedRoutes": true

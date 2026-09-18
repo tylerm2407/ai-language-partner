@@ -23,9 +23,30 @@
  * the things the cache cannot do — show the learner what is on the device,
  * size it, evict oldest-first under a budget, and remove a pack cleanly.
  *
+ * Pack-owned cache entries are written PINNED (lib/read-cache.ts): they are
+ * exempt from the cache TTL, because a download is a promise about content the
+ * learner asked for, not a copy of something they happened to open. The passive
+ * cache keeps its TTL.
+ *
+ * WHERE THE FILES LIVE
+ * Under `Paths.document`, not `Paths.cache`. Apple's file-system guide is
+ * explicit that the system may delete the Caches directory to free space —
+ * starting with apps that have not run recently, which is exactly the learner
+ * who downloaded a unit before a trip. Caches is also left out of backups and
+ * not counted in the app's Documents & Data, so a paying learner could neither
+ * keep their downloads nor see them in iOS Settings. (Known gap: expo-file-system
+ * exposes no way to set NSURLIsExcludedFromBackupKey, so packs are included in
+ * iCloud backups — bounded by the 200 MB budget, and worth revisiting if Apple
+ * ever pushes back.) The read cache's own overflow files stay in Caches, where
+ * a cache belongs.
+ *
  * BUDGET
- * 200 MB across all packs, 30-day retention, oldest-used evicted first. Text
- * packs are tens of kilobytes; the budget is really about narration audio.
+ * 200 MB across all packs, oldest-used evicted first. Text packs are tens of
+ * kilobytes; the budget is really about narration audio. There is deliberately
+ * NO time-based expiry: Spotify and Netflix expire downloads because their
+ * licences require re-authorisation, and this content is ours. A download stays
+ * until the learner removes it or the budget pushes it out — and when the
+ * budget does, the manifest records it so the app can say so.
  *
  * Entitlement is checked by the callers (hook and screens) with
  * `offlinePacksEntitled`; this module does not refuse a download on its own,
@@ -40,7 +61,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
 import { PLANS } from './plans';
-import { readCacheKey, setCached } from './read-cache';
+import { readCacheKey, removeCached, setCached, utf8Bytes } from './read-cache';
+import { buildReviewQueuePayload, reviewQueueCacheKey, type ReviewQueuePayload } from './review-queue-payload';
 import {
   fetchBookAnnotations,
   fetchBookContent,
@@ -60,6 +82,7 @@ import type {
   BookAnnotation,
   Course,
   DailyNewsArticle,
+  LanguageCode,
   Lesson,
   LessonCompletion,
   NewsAudio,
@@ -71,7 +94,8 @@ import type {
 
 export const OFFLINE_PACKS_SCHEMA_VERSION = 1;
 export const OFFLINE_PACKS_MAX_BYTES = 200 * 1024 * 1024;
-export const OFFLINE_PACKS_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+/** How many evictions the manifest remembers so the learner can be told. */
+export const OFFLINE_PACKS_EVICTION_LOG = 10;
 /** Units downloaded ahead of the learner's current one by the Wi-Fi top-up. */
 export const AUTO_TOPUP_UNITS_AHEAD = 2;
 /** The top-up runs at most this often; connectivity events are noisy. */
@@ -79,6 +103,8 @@ export const AUTO_TOPUP_MIN_INTERVAL_MS = 30 * 60 * 1000;
 
 const MANIFEST_PREFIX = `offline-packs:v${OFFLINE_PACKS_SCHEMA_VERSION}:`;
 const FILES_DIR_SEGMENTS = ['offline-packs', `v${OFFLINE_PACKS_SCHEMA_VERSION}`];
+/** Pack-owned cache entries outlive the TTL; see the module doc. */
+const PINNED = { pinned: true } as const;
 
 export type PackKind = 'unit' | 'book' | 'news';
 
@@ -95,8 +121,21 @@ export interface OfflinePack {
   lastUsedAt: number;
   /** read-cache keys this pack owns. Removed with the pack. */
   keys: string[];
-  /** Absolute file URIs this pack owns (narration). Removed with the pack. */
+  /**
+   * File names this pack owns (narration), relative to the pack directory.
+   * Names, not absolute URIs: the iOS container directory changes between
+   * installs, so a stored absolute path goes stale. Manifests written before
+   * this change hold absolute `file://` URIs — `packFile` reads both.
+   */
   files: string[];
+}
+
+/** A pack the budget pushed out, kept so the app can tell the learner. */
+export interface EvictedNotice {
+  id: string;
+  title: string;
+  kind: PackKind;
+  at: number;
 }
 
 interface Manifest {
@@ -104,6 +143,12 @@ interface Manifest {
   packs: OfflinePack[];
   /** Top up on Wi-Fi without being asked. Default on for entitled learners. */
   autoDownload: boolean;
+  /**
+   * Evictions not yet shown to the learner. Kept in the manifest rather than in
+   * React state because most evictions happen inside a background top-up, long
+   * after any screen that could have reported them was unmounted.
+   */
+  evicted?: EvictedNotice[];
 }
 
 export interface PackProgress {
@@ -127,7 +172,7 @@ function manifestKey(userId: string): string {
 }
 
 function emptyManifest(): Manifest {
-  return { v: OFFLINE_PACKS_SCHEMA_VERSION, packs: [], autoDownload: true };
+  return { v: OFFLINE_PACKS_SCHEMA_VERSION, packs: [], autoDownload: true, evicted: [] };
 }
 
 function isPack(value: unknown): value is OfflinePack {
@@ -144,6 +189,17 @@ function isPack(value: unknown): value is OfflinePack {
     typeof p.lastUsedAt === 'number' &&
     Array.isArray(p.keys) &&
     Array.isArray(p.files)
+  );
+}
+
+function isEvictedNotice(value: unknown): value is EvictedNotice {
+  if (typeof value !== 'object' || value === null) return false;
+  const n = value as Record<string, unknown>;
+  return (
+    typeof n.id === 'string' &&
+    typeof n.title === 'string' &&
+    (n.kind === 'unit' || n.kind === 'book' || n.kind === 'news') &&
+    typeof n.at === 'number'
   );
 }
 
@@ -165,6 +221,7 @@ async function readManifest(userId: string): Promise<Manifest> {
       v: OFFLINE_PACKS_SCHEMA_VERSION,
       packs: m.packs.filter(isPack),
       autoDownload: m.autoDownload !== false,
+      evicted: Array.isArray(m.evicted) ? m.evicted.filter(isEvictedNotice) : [],
     };
   } catch {
     return emptyManifest();
@@ -217,24 +274,26 @@ export async function touchPack(userId: string, kind: PackKind, refId: string, n
 // ─── Storage helpers ─────────────────────────────────────────────────────
 
 function filesDirectory(): Directory {
-  return new Directory(Paths.cache, ...FILES_DIR_SEGMENTS);
+  return new Directory(Paths.document, ...FILES_DIR_SEGMENTS);
+}
+
+/**
+ * A pack's file from what the manifest stored: a bare name resolves under the
+ * current pack directory, an absolute URI (written before packs moved out of
+ * the cache directory) is used as-is so old packs can still be read and removed.
+ */
+function packFile(nameOrUri: string): File {
+  return nameOrUri.includes('/') ? new File(nameOrUri) : new File(filesDirectory(), nameOrUri);
 }
 
 /** UTF-8 size of a JSON payload, for the budget. Approximate is fine. */
 export function jsonBytes(value: unknown): number {
-  const s = JSON.stringify(value) ?? '';
-  let bytes = 0;
-  for (let i = 0; i < s.length; i++) {
-    const code = s.charCodeAt(i);
-    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code >= 0xd800 && code <= 0xdbff ? 4 : 3;
-    if (code >= 0xd800 && code <= 0xdbff) i++;
-  }
-  return bytes;
+  return utf8Bytes(JSON.stringify(value) ?? '');
 }
 
-function removeFileQuietly(uri: string): void {
+function removeFileQuietly(nameOrUri: string): void {
   try {
-    const f = new File(uri);
+    const f = packFile(nameOrUri);
     if (f.exists) f.delete();
   } catch {
     // A stale entry only leaves a dead file behind; eviction sweeps later.
@@ -242,12 +301,10 @@ function removeFileQuietly(uri: string): void {
 }
 
 async function removeKeysQuietly(keys: string[]): Promise<void> {
-  if (keys.length === 0) return;
-  try {
-    await AsyncStorage.multiRemove(keys);
-  } catch (err) {
-    console.warn('[offline-packs] key removal failed:', err);
-  }
+  // Through the cache rather than AsyncStorage directly: an entry over
+  // READ_CACHE_OVERFLOW_BYTES (a book, mostly) keeps its payload in a file, and
+  // dropping only the pointer would leak it.
+  await removeCached(keys);
 }
 
 // ─── Downloading ─────────────────────────────────────────────────────────
@@ -266,6 +323,7 @@ export interface PackDeps {
   fetchInProgressBooks: (userId: string, language: string) => Promise<{ book: ReadingBook }[]>;
   fetchDailyNews: (language: string, tier: NewsTier, date?: string) => Promise<DailyNewsArticle | null>;
   fetchNewsAudio: (articleId: string) => Promise<NewsAudio | null>;
+  buildReviewQueuePayload: (userId: string, language: LanguageCode) => Promise<ReviewQueuePayload>;
   /** Download `url` to `destinationUri`; resolves with the byte size. */
   downloadFile: (url: string, destinationUri: string) => Promise<number>;
 }
@@ -286,6 +344,7 @@ const realDeps: PackDeps = {
   },
   fetchDailyNews,
   fetchNewsAudio,
+  buildReviewQueuePayload,
   downloadFile: async (url, destinationUri) => {
     const dir = filesDirectory();
     if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
@@ -336,7 +395,7 @@ export async function downloadUnitPack(
 
   const lessons = await deps.fetchLessons(target.unitId);
   const lessonsKey = readCacheKey('lessons', target.unitId);
-  await setCached(lessonsKey, lessons);
+  await setCached(lessonsKey, lessons, PINNED);
   keys.push(lessonsKey);
   bytes += jsonBytes(lessons);
 
@@ -348,7 +407,7 @@ export async function downloadUnitPack(
       const full = await deps.fetchLessonWithExercises(lesson.id);
       if (full) {
         const key = readCacheKey('lesson', lesson.id);
-        await setCached(key, full);
+        await setCached(key, full, PINNED);
         keys.push(key);
         bytes += jsonBytes(full);
       }
@@ -419,14 +478,14 @@ export async function downloadBookPack(
     const meta = await deps.fetchBookMeta(target.bookId);
     if (!meta) throw new Error('Book not found');
     const metaKey = readCacheKey('book-meta', target.bookId);
-    await setCached(metaKey, meta);
+    await setCached(metaKey, meta, PINNED);
     keys.push(metaKey);
     bytes += jsonBytes(meta);
     opts?.onProgress?.({ done: 1, total: 3 });
 
     const annotations = await deps.fetchBookAnnotations(target.bookId);
     const annKey = readCacheKey('book-annotations', target.bookId);
-    await setCached(annKey, annotations);
+    await setCached(annKey, annotations, PINNED);
     keys.push(annKey);
     bytes += jsonBytes(annotations);
     opts?.onProgress?.({ done: 2, total: 3 });
@@ -434,7 +493,7 @@ export async function downloadBookPack(
     const content = await deps.fetchBookContent(target.bookId);
     if (content === null) throw new Error('Book has no text');
     const contentKey = readCacheKey('book-content', target.bookId);
-    await setCached(contentKey, content);
+    await setCached(contentKey, content, PINNED);
     keys.push(contentKey);
     bytes += jsonBytes(content);
     opts?.onProgress?.({ done: 3, total: 3 });
@@ -470,8 +529,8 @@ export function newsCacheKey(language: string, tier: NewsTier, date: string): st
   return readCacheKey('news', language, tier, date);
 }
 
-function newsAudioUri(articleId: string): string {
-  return new File(filesDirectory(), `news-${articleId}.mp3`).uri;
+function newsAudioName(articleId: string): string {
+  return `news-${articleId}.mp3`;
 }
 
 /**
@@ -491,7 +550,7 @@ export async function downloadNewsPack(
   const article = await deps.fetchDailyNews(target.language, target.tier, target.date);
   if (!article) throw new Error('No article yet');
   const key = newsCacheKey(target.language, target.tier, article.date);
-  await setCached(key, article);
+  await setCached(key, article, PINNED);
   let bytes = jsonBytes(article);
   opts?.onProgress?.({ done: 1, total: 2 });
 
@@ -499,9 +558,9 @@ export async function downloadNewsPack(
   try {
     const audio = await deps.fetchNewsAudio(article.id);
     if (audio && audio.status === 'ready' && audio.url) {
-      const uri = newsAudioUri(article.id);
-      bytes += await deps.downloadFile(audio.url, uri);
-      files.push(uri);
+      const name = newsAudioName(article.id);
+      bytes += await deps.downloadFile(audio.url, new File(filesDirectory(), name).uri);
+      files.push(name);
     }
   } catch (err) {
     // Narration is the nice-to-have half. The article is on the device; say so.
@@ -528,10 +587,11 @@ export async function downloadNewsPack(
 export async function localNewsAudioUri(userId: string, articleId: string): Promise<string | null> {
   const pack = await findPack(userId, 'news', articleId);
   if (!pack) return null;
-  const uri = pack.files[0];
-  if (!uri) return null;
+  const name = pack.files[0];
+  if (!name) return null;
   try {
-    return new File(uri).exists ? uri : null;
+    const file = packFile(name);
+    return file.exists ? file.uri : null;
   } catch {
     return null;
   }
@@ -544,7 +604,7 @@ export async function removePack(userId: string, id: string): Promise<void> {
   const pack = m.packs.find((p) => p.id === id);
   if (!pack) return;
   await removeKeysQuietly(pack.keys);
-  for (const uri of pack.files) removeFileQuietly(uri);
+  for (const name of pack.files) removeFileQuietly(name);
   await writeManifest(userId, { ...m, packs: m.packs.filter((p) => p.id !== id) });
 }
 
@@ -552,14 +612,16 @@ export async function clearAllPacks(userId: string): Promise<void> {
   const m = await readManifest(userId);
   for (const pack of m.packs) {
     await removeKeysQuietly(pack.keys);
-    for (const uri of pack.files) removeFileQuietly(uri);
+    for (const name of pack.files) removeFileQuietly(name);
   }
-  await writeManifest(userId, { ...m, packs: [] });
+  await writeManifest(userId, { ...m, packs: [], evicted: [] });
 }
 
 /**
- * Drop packs past retention, then the least recently used until the total is
- * under the budget. Returns what went, for the log and the tests.
+ * Drop the least recently used packs until the total is under the budget, and
+ * record what went so the learner can be told — a download that vanishes
+ * silently is discovered on the plane, which is the one place it cannot be
+ * fixed. Nothing is dropped for age: see the module doc on retention.
  */
 export async function enforcePackBudget(
   userId: string,
@@ -568,35 +630,49 @@ export async function enforcePackBudget(
 ): Promise<{ evicted: string[] }> {
   const m = await readManifest(userId);
   const evicted: string[] = [];
-  let keep = m.packs.filter((p) => {
-    const expired = now - p.downloadedAt > OFFLINE_PACKS_RETENTION_MS;
-    if (expired) evicted.push(p.id);
-    return !expired;
-  });
 
-  let total = keep.reduce((sum, p) => sum + p.bytes, 0);
-  const byLru = [...keep].sort((a, b) => a.lastUsedAt - b.lastUsedAt);
+  let total = m.packs.reduce((sum, p) => sum + p.bytes, 0);
+  const byLru = [...m.packs].sort((a, b) => a.lastUsedAt - b.lastUsedAt);
   for (const pack of byLru) {
     if (total <= maxBytes) break;
     evicted.push(pack.id);
     total -= pack.bytes;
   }
-  keep = keep.filter((p) => !evicted.includes(p.id));
+  if (evicted.length === 0) return { evicted };
 
+  const notices: EvictedNotice[] = [];
   for (const id of evicted) {
     const pack = m.packs.find((p) => p.id === id);
     if (!pack) continue;
     await removeKeysQuietly(pack.keys);
-    for (const uri of pack.files) removeFileQuietly(uri);
+    for (const name of pack.files) removeFileQuietly(name);
+    notices.push({ id: pack.id, title: pack.title, kind: pack.kind, at: now });
   }
-  if (evicted.length > 0) await writeManifest(userId, { ...m, packs: keep });
+
+  await writeManifest(userId, {
+    ...m,
+    packs: m.packs.filter((p) => !evicted.includes(p.id)),
+    evicted: [...(m.evicted ?? []), ...notices].slice(-OFFLINE_PACKS_EVICTION_LOG),
+  });
   return { evicted };
+}
+
+/** Evictions the learner has not been shown yet, oldest first. */
+export async function listEvictions(userId: string): Promise<EvictedNotice[]> {
+  return (await readManifest(userId)).evicted ?? [];
+}
+
+/** Forget the eviction notices — called once the learner has seen them. */
+export async function acknowledgeEvictions(userId: string): Promise<void> {
+  const m = await readManifest(userId);
+  if ((m.evicted ?? []).length === 0) return;
+  await writeManifest(userId, { ...m, evicted: [] });
 }
 
 // ─── Auto top-up ─────────────────────────────────────────────────────────
 
 export interface TopUpContext {
-  targetLanguage: string;
+  targetLanguage: LanguageCode;
   /**
    * The learner's current course (`user_profiles.current_course_id`). Only
    * this course's units are warmed; null means no lesson path and no unit
@@ -718,6 +794,22 @@ async function runTopUp(userId: string, ctx: TopUpContext, opts?: DownloadOption
       summary.errors += 1;
       console.warn('[offline-packs] news top-up failed:', message);
     }
+  }
+
+  // The daily loop is the review deck, and it is the one thing a pack never
+  // held: reviews already work offline (this cache entry plus the write queue
+  // in lib/offline-queue.ts), but only for a learner who happened to open them
+  // online recently. Warming the key here closes that gap for the price of one
+  // request. Deliberately NOT pinned and NOT owned by any pack — what is due
+  // changes daily, so this entry should age out like the cache entry it is.
+  try {
+    await setCached(
+      reviewQueueCacheKey(userId, ctx.targetLanguage),
+      await deps.buildReviewQueuePayload(userId, ctx.targetLanguage),
+    );
+  } catch (err) {
+    // Soft: the rest of the top-up is still worth having.
+    console.warn('[offline-packs] review warm failed:', err instanceof Error ? err.message : err);
   }
 
   await enforcePackBudget(userId, opts?.now ?? Date.now());

@@ -86,9 +86,38 @@ export default function OfflineDownloadsScreen() {
             </View>
             <Ui2ProgressBar progress={used} onCard accessibilityLabel={`${Math.round(used * 100)} percent of the offline storage budget used`} />
             <Caption style={{ marginTop: spacing.xs }}>
-              Oldest downloads are removed first when the budget is full, and after 30 days unused.
+              Downloads stay until you remove them. When the budget is full, the ones you have not
+              opened in the longest time make room first.
             </Caption>
           </View>
+
+          {/* What the budget pushed out. Shown once, then acknowledged: a
+              download that disappears silently is discovered on a plane. */}
+          {packs.evictions.length > 0 ? (
+            <View
+              style={{
+                backgroundColor: c.card,
+                borderRadius: 22,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+                borderWidth: 1,
+                borderColor: c.yellowBorder,
+              }}
+            >
+              <Body weight="semibold">Removed to make room</Body>
+              <Caption style={{ marginTop: spacing.xs }}>
+                {`${packs.evictions.map((e) => e.title).join(', ')} — the storage budget was full. Download again any time.`}
+              </Caption>
+              <Pressable
+                onPress={() => void packs.acknowledgeEvictions()}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss the removed downloads notice"
+                style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }}
+              >
+                <Text style={{ color: c.primary, fontSize: 15, fontWeight: '600' }}>Got it</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* Auto-download */}
           <Pressable

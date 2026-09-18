@@ -18,7 +18,8 @@ import {
   localNewsAudioUri,
   newsCacheKey,
   offlinePacksEntitled,
-  OFFLINE_PACKS_RETENTION_MS,
+  acknowledgeEvictions,
+  listEvictions,
   removePack,
   setAutoDownload,
   touchPack,
@@ -96,7 +97,13 @@ jest.mock('expo-file-system', () => {
     }
     create(): void {}
   }
-  return { File: MockFile, Directory: MockDirectory, Paths: { cache: 'file:///cache' } };
+  return {
+    File: MockFile,
+    Directory: MockDirectory,
+    // `document` is where packs live (the system may clear `cache`); both are
+    // present so a mistaken write to the cache directory still shows up here.
+    Paths: { cache: 'file:///cache', document: 'file:///documents' },
+  };
 });
 
 const USER = 'user-1';
@@ -124,6 +131,7 @@ function deps(over: Partial<PackDeps> = {}): { deps: PackDeps; calls: Record<str
     fetchInProgressBooks: async () => { count('inProgress'); return [{ book: { id: 'book-9', title: 'Niebla', language: 'es' } as never }]; },
     fetchDailyNews: async (language, tier, date) => { count('news'); return { id: 'art-1', date: date ?? '2026-09-09', language, tier, title: 'Hoy' } as never; },
     fetchNewsAudio: async () => { count('newsAudio'); return { status: 'ready', url: 'https://cdn/x.mp3', durationMs: 1000 } as never; },
+    buildReviewQueuePayload: async () => { count('reviewQueue'); return { items: [], cards: {}, pool: [] }; },
     downloadFile: async (_url, uri) => { count('download'); mockFiles.set(uri, 512_000); return 512_000; },
   };
   return { deps: { ...base, ...over }, calls };
@@ -224,7 +232,8 @@ describe('book and news packs', () => {
     expect(pack.keys).toEqual([newsCacheKey('es', 'easy', '2026-09-09')]);
     expect(pack.files).toHaveLength(1);
     expect(pack.bytes).toBeGreaterThan(512_000);
-    expect(await localNewsAudioUri(USER, 'art-1')).toBe(pack.files[0]);
+    expect(pack.files[0]).toBe('news-art-1.mp3'); // a name, not a stale absolute URI
+    expect(await localNewsAudioUri(USER, 'art-1')).toContain('news-art-1.mp3');
   });
 
   it('a narration that is not ready leaves a text-only pack rather than failing', async () => {
@@ -240,26 +249,75 @@ describe('book and news packs', () => {
   });
 });
 
+describe('pinning', () => {
+  it('pins what a pack owns and leaves the shared taught-keys entry on the TTL', async () => {
+    const { deps: d } = deps();
+    await downloadUnitPack(USER, { courseId: 'course-1', unitId: 'u1', title: 'Unit 1', language: 'es' }, { deps: d, now: NOW });
+
+    const owned = JSON.parse((await AsyncStorage.getItem(readCacheKey('lesson', 'u1-l1'))) as string);
+    expect(owned.pinned).toBe(true);
+    const shared = JSON.parse((await AsyncStorage.getItem(readCacheKey('taught-keys', 'es'))) as string);
+    expect(shared.pinned).toBeUndefined();
+  });
+
+  it('pins a book and an article', async () => {
+    const { deps: d } = deps();
+    await downloadBookPack(USER, { bookId: 'book-9', title: 'Niebla', language: 'es' }, { deps: d, now: NOW });
+    await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+
+    for (const key of [readCacheKey('book-content', 'book-9'), newsCacheKey('es', 'easy', '2026-09-09')]) {
+      expect(JSON.parse((await AsyncStorage.getItem(key)) as string).pinned).toBe(true);
+    }
+  });
+
+  it('a warmed review queue is NOT pinned — what is due changes daily', async () => {
+    const { deps: d } = deps();
+    await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+
+    const entry = JSON.parse((await AsyncStorage.getItem(readCacheKey('review-queue', USER, 'es'))) as string);
+    expect(entry.pinned).toBeUndefined();
+  });
+});
+
 describe('removal and budget', () => {
   it('removing a pack drops its keys and files', async () => {
     const { deps: d } = deps();
     const pack = await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
     await removePack(USER, pack.id);
     expect(await getCached(pack.keys[0])).toBeNull();
-    expect(mockFiles.has(pack.files[0])).toBe(false);
+    expect([...mockFiles.keys()].some((uri) => uri.endsWith(pack.files[0]))).toBe(false);
     expect(await listPacks(USER)).toEqual([]);
   });
 
-  it('evicts past retention first, then least recently used until under budget', async () => {
+  it('evicts least recently used until under budget, and never for age alone', async () => {
     const { deps: d } = deps();
-    const old = await downloadUnitPack(USER, { courseId: 'course-1', unitId: 'u1', title: 'Unit 1', language: 'es' }, { deps: d, now: NOW - OFFLINE_PACKS_RETENTION_MS - 1 });
+    // A year old and still downloaded: packs expire for space, not for time.
+    const ancient = await downloadUnitPack(USER, { courseId: 'course-1', unitId: 'u1', title: 'Unit 1', language: 'es' }, { deps: d, now: NOW - 365 * 24 * 3600_000 });
     const a = await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-08' }, { deps: { ...d, fetchDailyNews: async () => ({ id: 'art-a', date: '2026-09-08', title: 'A' } as never) }, now: NOW - 2000 });
     const b = await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-09' }, { deps: { ...d, fetchDailyNews: async () => ({ id: 'art-b', date: '2026-09-09', title: 'B' } as never) }, now: NOW - 1000 });
     await touchPack(USER, 'news', 'art-a', NOW); // a is now the most recently used
 
+    expect(await enforcePackBudget(USER, NOW, 10_000_000)).toEqual({ evicted: [] });
+    expect((await listPacks(USER)).map((p) => p.id)).toContain(ancient.id);
+
     const { evicted } = await enforcePackBudget(USER, NOW, 600_000);
-    expect(evicted).toEqual([old.id, b.id]);
+    expect(evicted).toEqual([ancient.id, b.id]);
     expect((await listPacks(USER)).map((p) => p.id)).toEqual([a.id]);
+  });
+
+  it('records what the budget removed so the learner can be told, until acknowledged', async () => {
+    const { deps: d } = deps();
+    await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-08' }, { deps: { ...d, fetchDailyNews: async () => ({ id: 'art-a', date: '2026-09-08', title: 'Lunes' } as never) }, now: NOW - 2000 });
+    await downloadNewsPack(USER, { language: 'es', tier: 'easy', date: '2026-09-09' }, { deps: { ...d, fetchDailyNews: async () => ({ id: 'art-b', date: '2026-09-09', title: 'Martes' } as never) }, now: NOW - 1000 });
+
+    await enforcePackBudget(USER, NOW, 600_000);
+
+    const notices = await listEvictions(USER);
+    expect(notices.map((n) => n.title)).toEqual(['Lunes']);
+    expect(notices[0]).toMatchObject({ kind: 'news', at: NOW });
+
+    await acknowledgeEvictions(USER);
+    expect(await listEvictions(USER)).toEqual([]);
   });
 
   it('clearAll leaves nothing behind', async () => {
@@ -299,6 +357,22 @@ describe('auto top-up', () => {
     expect(again).toMatchObject({ units: 0, books: 0, news: 0 });
     expect(calls.lesson).toBe(before.lesson);
     expect(await findPack(USER, 'unit', 'u2')).not.toBeNull();
+  });
+
+  it('warms the review queue so the daily loop works offline', async () => {
+    const { deps: d, calls } = deps();
+    await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+
+    expect(calls.reviewQueue).toBe(1);
+    expect(await getCached(readCacheKey('review-queue', USER, 'es'))).toEqual({ items: [], cards: {}, pool: [] });
+  });
+
+  it('a review warm that fails does not fail the top-up', async () => {
+    const { deps: d } = deps({ buildReviewQueuePayload: async () => { throw new Error('offline'); } });
+    const summary = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+
+    expect(summary.units).toBeGreaterThan(0);
+    expect(summary.errors).toBe(0);
   });
 
   it('warms nothing for a learner with no current course, and only that course otherwise', async () => {
