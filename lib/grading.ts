@@ -6,6 +6,7 @@
 import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating, LanguageCode } from '../types';
 import { accentOnlyPartner, isConfusablePair } from './confusable-pairs';
 import { simplifyChinese } from './zh-simplify';
+import { hasKanji, isAuthoredReading, isKanaOnly } from './japanese-readings';
 
 export interface GradeResult {
   isCorrect: boolean;
@@ -391,14 +392,123 @@ export function gradeAnswer(
     };
   }
 
-  // Strict mode: no fuzzy or accent tolerance. Explicitly requested, or
-  // implied for any grammar exercise — a near-miss on a grammar form is a
-  // different (wrong) form, not a typo ("hablo" vs "habló" is a different
-  // tense), so neither typo nor accent tolerance may accept it.
   // A tapped option cannot contain a learner typing error. Fuzzy matching
   // otherwise turns authored distractors such as “To hire” / “To fire” into
   // correct answers and disagrees with the option's red/green display.
   const isChoice = hints?.exerciseType === 'multiple_choice' || hints?.exerciseType === 'listening_choice';
+
+  /**
+   * A KANA READING IS THE ANSWER, not a near-miss of it.
+   *
+   * The orthography ruling of 2026-09-16 accepted the reading on every
+   * written-production row whose cue is an English gloss: asked to write
+   * "Nurse", a learner who types かんごし has written Japanese and is right.
+   * 385 rows carry a kana alternative saying so. 485 do not, and on those the
+   * grader was refusing a correct answer — the defect Duolingo's Japanese
+   * course is best known for, where 働きます is marked wrong because only
+   * はたらきます is on the row's list. Whether a right answer is accepted must
+   * not depend on whether somebody remembered to author an alternative.
+   *
+   * THIS IS AN ACCEPTANCE, NOT A TOLERANCE, so it sits above the strict gate
+   * beside the exact match rather than down in the typo path. Nothing here is
+   * forgiven: the reading either is the one the curriculum authored for that
+   * word or it is not, and a near-miss reading — かんごう for 看護師 — falls
+   * through to ordinary grading and is refused, because a learner who cannot
+   * say the word has not learned it and must not be spaced out on an SM-2
+   * schedule as though they had.
+   *
+   * IT RUNS ON GRAMMAR-SHAPED ROWS TOO, and that is deliberate rather than an
+   * oversight of the strict gate below. 157 of the rows this fixes are
+   * `cloze_deletion` and `error_correction` — `skill_type` vocabulary, no
+   * `targetGrammar`, caught by the gate on their exercise TYPE alone — and 12
+   * more do carry a grammar target.
+   *
+   * Letting them through is safe for a reason specific to Japanese: INFLECTION
+   * IS WRITTEN IN KANA ALREADY, so a reading preserves every grammatical
+   * contrast its kanji form has. 食べます reads たべます and 食べました reads
+   * たべました; 料理する reads りょうりする and 料理します りょうりします. The
+   * wrong form has the wrong reading and is refused by the same exact match
+   * that accepts the right one. Nothing about the grammar test is weakened,
+   * because none of these contrasts lives in the kanji.
+   *
+   * The one contrast that DOES live only in the kanji is a homophone, and that
+   * is what the refusal below is for — with `readingCollisions()` asserted
+   * empty in japanese-readings.test.ts so the day the curriculum authors one,
+   * a test says which pair.
+   *
+   * `options.strict` is still honoured: an explicit caller request is not the
+   * gate's own heuristic. Tapped choices are excluded because an option is not
+   * typing.
+   *
+   * See lib/japanese-readings.ts for why the readings are authored and never
+   * composed out of per-character ones.
+   */
+  const acceptsReading =
+    hints?.language === 'ja' &&
+    !options?.strict &&
+    !isChoice &&
+    isKanaOnly(normalized);
+  if (acceptsReading) {
+    /**
+     * Fill-blank rows are matched as the completed word, the way every other
+     * word-level rule here is: the row stores 護師 and the learner types the
+     * reading of 看護師, because a fragment has no reading of its own.
+     */
+    const writtenForms = [correctAnswer, completeWord(correctAnswer), ...acceptedAnswers]
+      .flatMap((form) => [form, completeWord(form)])
+      .filter((form) => hasKanji(form));
+
+    /**
+     * A reading that also spells a DIFFERENT taught word is neither word.
+     *
+     * 雨 and 飴 are both あめ; 橋 and 箸 are both はし. Where a lesson teaches
+     * both, accepting the bare reading would mark the same three characters
+     * correct on both rows and make the contrast the lesson is drawing
+     * untestable by typing — the same reasoning `isTaughtElsewhere` applies to
+     * spellings, applied to sounds. The learner is told what is missing rather
+     * than just refused, because "incorrect" on correct kana is the message
+     * this whole branch exists to stop sending.
+     */
+    const homophone = (hints?.siblingKeys ?? []).find(
+      (sibling) =>
+        isAuthoredReading(normalized, sibling) &&
+        !writtenForms.includes(sibling) &&
+        !allAccepted.includes(normalize(sibling, hints?.language)),
+    );
+
+    const written = writtenForms.find((form) => isAuthoredReading(normalized, form));
+    if (written !== undefined && homophone === undefined) {
+      return {
+        isCorrect: true,
+        accuracy: 1,
+        // Names the kanji, which is the whole point of accepting the kana: the
+        // learner is right, AND there is something left to learn.
+        feedback: `Correct! (Written: ${written})`,
+        explanation: `Correct — in kanji this is written ${written}.`,
+        normalizedUserAnswer: normalized,
+        normalizedCorrectAnswer: normalizedCorrect,
+        errorType: null,
+      };
+    }
+    if (written !== undefined && homophone !== undefined) {
+      return {
+        isCorrect: false,
+        accuracy: 0,
+        feedback:
+          `That reading also spells "${homophone}", which this lesson teaches too — ` +
+          `write it in kanji. The correct answer is: ${correctAnswer}`,
+        explanation: `${normalized} is the reading of both "${written}" and "${homophone}".`,
+        normalizedUserAnswer: normalized,
+        normalizedCorrectAnswer: normalizedCorrect,
+        errorType: 'lexical',
+      };
+    }
+  }
+
+  // Strict mode: no fuzzy or accent tolerance. Explicitly requested, or
+  // implied for any grammar exercise — a near-miss on a grammar form is a
+  // different (wrong) form, not a typo ("hablo" vs "habló" is a different
+  // tense), so neither typo nor accent tolerance may accept it.
   if (options?.strict || isChoice || isGrammarExercise(hints)) {
     return {
       isCorrect: false,

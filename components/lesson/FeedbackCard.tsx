@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -128,9 +129,29 @@ export function FeedbackCard({
   // the note out from under a learner mid-sentence.
 
   // ─── Correct branch ────────────────────────────────────────────
-  // Nothing to add: the footer note already reads "CORRECT — <explanation>",
-  // and repeating it here put two success panels on one screen.
-  if (result.isCorrect) return null;
+  // Normally nothing to add: the footer note already reads
+  // "CORRECT — <explanation>", and repeating it here put two success panels on
+  // one screen. That note is the EXERCISE's authored explanation, though, and
+  // the grader can know something the exercise does not — that the learner
+  // wrote a Japanese word in kana and it is right, and here is the kanji. The
+  // footer has no way to say that, so this is the one thing the correct branch
+  // renders, and only when the grader put it there.
+  if (result.isCorrect) {
+    const spelling = revealAnswer ? result.explanation?.trim() : '';
+    if (!spelling) return null;
+    return (
+      <View
+        className="mt-3 p-3 rounded-[14px] border flex-row items-center"
+        style={{ backgroundColor: c.greenTint, borderColor: c.greenBorder }}
+        accessibilityRole="text"
+      >
+        <Ionicons name="language-outline" size={16} color={c.green} />
+        <Text className="ml-2 flex-1 text-[15px]" style={{ color: c.ink }}>
+          {spelling}
+        </Text>
+      </View>
+    );
+  }
 
   const errorType = result.errorType ?? null;
 

@@ -135,6 +135,22 @@ describe('ScriptInput', () => {
     expect(labels.some((l) => l.startsWith('看護師'))).toBe(false);
   });
 
+  it('types a Japanese answer that the grader then marks correct', () => {
+    // The whole journey in one assertion: an English keyboard, romaji, the
+    // converter, the field, the grader. Both halves are tested apart from each
+    // other; this is the seam between them, and the seam is where a learner
+    // who did everything right gets told they were wrong.
+    const f = mount('ja', ['魚']);
+    f.type('sakana');
+    expect(f.latest()).toBe('さかな');
+
+    const grade = gradeAnswer(f.latest(), '魚', [], {
+      exerciseHints: { language: 'ja', skillType: 'vocabulary', exerciseType: 'translate_to_target' },
+    });
+    expect(grade.isCorrect).toBe(true);
+    expect(grade.explanation).toContain('魚');
+  });
+
   it('types a Russian answer that the grader then marks correct', () => {
     const f = mount('ru');
     f.type('privet');

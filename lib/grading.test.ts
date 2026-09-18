@@ -751,3 +751,199 @@ describe('the same rule reaches the Japanese endings the kanji gate cannot', () 
     ).toBe(true);
   });
 });
+
+/**
+ * Japanese kana readings — the 2026-09-16 orthography ruling, applied by data.
+ *
+ * A learner asked to write "Nurse" who types かんごし has written Japanese and
+ * is right. 485 rows were refusing that because nobody had authored a kana
+ * alternative on them. These tests are about what is now ACCEPTED, and — more
+ * importantly — about what still is not, because an acceptance rule that is
+ * too eager teaches the wrong word and then spaces it out on an SM-2 schedule.
+ */
+describe('gradeAnswer — Japanese kana readings', () => {
+  const vocab = { language: 'ja' as const, skillType: 'vocabulary' as const };
+
+  describe('accepts a reading the curriculum authored', () => {
+    it('accepts the kana a learner types for a kanji key', () => {
+      const result = gradeAnswer('かんごし', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(true);
+      expect(result.accuracy).toBe(1);
+      expect(result.errorType).toBeNull();
+    });
+
+    it('names the kanji, so being right still teaches something', () => {
+      const result = gradeAnswer('さかな', '魚', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(true);
+      expect(result.explanation).toContain('魚');
+      expect(result.feedback).toContain('魚');
+    });
+
+    it('accepts katakana as readily as hiragana', () => {
+      // The keypad has a katakana page; the reading is the same reading.
+      const result = gradeAnswer('カンゴシ', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('accepts the whole word’s reading on a fill-blank fragment', () => {
+      // The row stores 護師 — the tail of 看護師, which is not a word and has
+      // no reading of its own. The learner types the whole word's reading.
+      const result = gradeAnswer('かんごし', '護師', [], {
+        exerciseHints: {
+          ...vocab,
+          exerciseType: 'fill_blank',
+          blankContext: { prefix: '看', suffix: '' },
+        },
+      });
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('accepts on a cloze row, whose type alone used to force strict grading', () => {
+      // 100 cloze_deletion rows are skill_type vocabulary with no grammar
+      // target; the strict gate was catching them on their exercise type.
+      const result = gradeAnswer('ぎゅうにゅう', '牛乳', [], {
+        exerciseHints: { ...vocab, exerciseType: 'cloze_deletion' },
+      });
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('accepts on an error-correction row', () => {
+      const result = gradeAnswer('みず', '水', [], {
+        exerciseHints: { ...vocab, exerciseType: 'error_correction' },
+      });
+      expect(result.isCorrect).toBe(true);
+    });
+  });
+
+  describe('does not blur the contrast a grammar row is drawing', () => {
+    it('refuses the wrong inflection, because the reading carries it', () => {
+      // This is the property that makes running on grammar-shaped rows safe:
+      // Japanese writes inflection in kana already, so the wrong form has the
+      // wrong reading and the same exact match that accepts たべました refuses
+      // たべます.
+      const wrong = gradeAnswer('たべます', '食べました', [], {
+        exerciseHints: { ...vocab, exerciseType: 'cloze_deletion' },
+      });
+      expect(wrong.isCorrect).toBe(false);
+
+      const right = gradeAnswer('たべました', '食べました', [], {
+        exerciseHints: { ...vocab, exerciseType: 'cloze_deletion' },
+      });
+      expect(right.isCorrect).toBe(true);
+    });
+
+    it('refuses a past form typed for a present key', () => {
+      const result = gradeAnswer('いきました', '行きます', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target', targetGrammar: 'present' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+  });
+
+  describe('refuses everything it was not given', () => {
+    it('refuses a near-miss reading', () => {
+      // A learner who says かんごう has not learned the word.
+      const result = gradeAnswer('かんごう', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('refuses a reading composed from the characters instead of authored', () => {
+      // 明日 is あす / あした. めいにち is what per-character composition would
+      // produce and is not a word.
+      const result = gradeAnswer('めいにち', '明日', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('refuses the reading of a DIFFERENT word the lesson teaches', () => {
+      const result = gradeAnswer('みず', '魚', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target', siblingKeys: ['水', '牛乳'] },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('refuses a half-converted answer', () => {
+      // 看ごし is a composition the learner abandoned, not a reading.
+      const result = gradeAnswer('看ごし', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('refuses romaji the converter never ran on', () => {
+      const result = gradeAnswer('kangoshi', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('refuses a tapped option, which cannot be a typed reading', () => {
+      const result = gradeAnswer('さかな', '魚', ['水', 'さかな'], {
+        exerciseHints: { ...vocab, exerciseType: 'multiple_choice' },
+      });
+      // Not via the reading branch — and the row does accept さかな outright,
+      // so this asserts the branch is skipped, not that the answer is wrong.
+      expect(result.feedback).not.toContain('Written:');
+    });
+
+    it('honours an explicit strict request', () => {
+      const result = gradeAnswer('さかな', '魚', [], {
+        strict: true,
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('does nothing without a language hint', () => {
+      const result = gradeAnswer('さかな', '魚', [], {
+        exerciseHints: { skillType: 'vocabulary', exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('does nothing for another language', () => {
+      const result = gradeAnswer('さかな', '魚', [], {
+        exerciseHints: { language: 'zh', skillType: 'vocabulary', exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+  });
+
+  describe('leaves the rest of the grader alone', () => {
+    it('still exact-matches an authored kana alternative', () => {
+      // The 385 rows that already carried one must behave exactly as before,
+      // including saying plain "Correct!" rather than naming a spelling.
+      const result = gradeAnswer('さかな', '魚', ['さかな'], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(true);
+      expect(result.feedback).toBe('Correct!');
+      expect(result.explanation).toBeUndefined();
+    });
+
+    it('still marks a wrong kana answer wrong on an all-kana key', () => {
+      // No kanji to be read, so the branch must not touch the row.
+      const result = gradeAnswer('さかな', 'ねこ', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('still accepts the kanji itself', () => {
+      const result = gradeAnswer('看護師', '看護師', [], {
+        exerciseHints: { ...vocab, exerciseType: 'translate_to_target' },
+      });
+      expect(result.isCorrect).toBe(true);
+      expect(result.feedback).toBe('Correct!');
+    });
+  });
+});
