@@ -75,7 +75,6 @@ Deno.test('classifyEvent: every active event type grants access', () => {
     'PRODUCT_CHANGE',
     'UNCANCELLATION',
     'SUBSCRIPTION_EXTENDED',
-    'NON_RENEWING_PURCHASE',
   ]) {
     assertEquals(
       classifyEvent(type, ['vip'], null),
@@ -83,6 +82,17 @@ Deno.test('classifyEvent: every active event type grants access', () => {
       `${type} should grant access`,
     );
   }
+});
+
+Deno.test('classifyEvent: NON_RENEWING_PURCHASE grants no tier at all', () => {
+  // The only non-renewing products are consumable minute packs, which are
+  // intercepted by packs.ts before they reach here. This is the backstop: if
+  // that branch is ever bypassed, the event must change nothing rather than
+  // resolve a tier out of a product id that has none. `resolveTier` matches by
+  // SUBSTRING, so a pack that happened to be named with a tier word would
+  // otherwise hand out a subscription for the price of a pack.
+  assertEquals(classifyEvent('NON_RENEWING_PURCHASE', [], 'fluenci_tutor_pack_50'), null);
+  assertEquals(classifyEvent('NON_RENEWING_PURCHASE', ['vip'], 'anything'), null);
 });
 
 Deno.test('classifyEvent: CANCELLATION keeps access until the period end', () => {

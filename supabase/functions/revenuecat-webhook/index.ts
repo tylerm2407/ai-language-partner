@@ -22,6 +22,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
 import { classifyEvent, isRevocation, INACTIVE_EVENTS } from './tier.ts';
+import { applyPackEvent, classifyPackEvent } from './packs.ts';
 import { fetchRevenueCatSubscription, transferUserIds } from './reconcile.ts';
 import { captureRevenueCatAnalytics } from './analytics.ts';
 import { referralStoreEventArgs } from './referral.ts';
@@ -147,6 +148,17 @@ serve(async (req: Request) => {
       console.log(`[revenuecat-webhook] ignoring SANDBOX ${type} for ${userId}`);
       return new Response(JSON.stringify({ ok: true, sandbox: true }), { status: 200 });
     }
+  }
+
+  // ── Consumable minute packs ────────────────────────────────────────────
+  // Taken on the PRODUCT ID, before classification, and always returning. A
+  // pack grants tutor seconds and nothing else — it must never reach tier
+  // resolution, which matches tiers by substring and would either hand out a
+  // subscription for the price of a pack or answer 500 forever. See packs.ts.
+  const packAction = classifyPackEvent(type, productId);
+  if (packAction) {
+    const result = await applyPackEvent(supabase, userId, event, packAction);
+    return new Response(JSON.stringify(result.body), { status: result.status });
   }
 
   // TEST and any unrecognised event type: acknowledge, change nothing.

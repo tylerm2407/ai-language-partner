@@ -40,14 +40,28 @@ export function resolveTier(entitlementIds: string[], productId: string | null):
   return 'starter';
 }
 
-/** Events that mean "the user currently has access". */
+/**
+ * Events that mean "the user currently has access".
+ *
+ * NON_RENEWING_PURCHASE IS DELIBERATELY NOT IN THIS SET. It used to be, and it
+ * was a loaded gun: the only non-renewing products we sell are consumable
+ * minute packs, and `resolveTier` would have substring-matched their product
+ * ids. A pack named with a tier word would have granted a subscription for the
+ * price of a pack; a pack named without one would have resolved to `starter`
+ * and been answered 500 forever. Packs are intercepted by ./packs.ts before
+ * classification, and leaving this event out means that even if that branch is
+ * ever bypassed the fallback is "acknowledge, change nothing" rather than
+ * "resolve a tier from a product id that has none".
+ *
+ * Restore it only alongside a non-renewing product that genuinely grants a
+ * tier, and give that product its own branch rather than a substring.
+ */
 export const ACTIVE_EVENTS = new Set([
   'INITIAL_PURCHASE',
   'RENEWAL',
   'PRODUCT_CHANGE',
   'UNCANCELLATION',
   'SUBSCRIPTION_EXTENDED',
-  'NON_RENEWING_PURCHASE',
 ]);
 
 /** Events that prove access has ended. RevenueCat emits EXPIRATION when a
