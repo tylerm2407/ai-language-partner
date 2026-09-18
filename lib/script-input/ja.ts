@@ -265,7 +265,9 @@ const KATAKANA_ROWS: readonly (readonly string[])[] = [
 export const japaneseInput: ScriptInputEngine = {
   language: 'ja',
   romanization: 'romaji',
-  hint: 'Type in romaji — konnichiwa becomes こんにちは. Tap a suggestion for kanji.',
+  hint: 'Type romaji: konnichiwa becomes こんにちは',
+  // Latin AND kana: kana is what a kanji candidate is chosen from.
+  composing: /[A-Za-z'’ü\u3041-\u309f\u30a0-\u30ff-]+$/,
   convert: (buffer) => romajiToKana(buffer),
   settle: (buffer) => romajiToKana(buffer, true).text,
   candidates: kanjiCandidates,

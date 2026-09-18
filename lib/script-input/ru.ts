@@ -99,7 +99,8 @@ const ROWS: readonly (readonly string[])[] = [
 export const russianInput: ScriptInputEngine = {
   language: 'ru',
   romanization: 'Latin letters',
-  hint: 'Type it the way it sounds — privet becomes привет, zhena becomes жена.',
+  hint: 'Type it as it sounds: privet becomes привет',
+  composing: /[A-Za-z'’ü-]+$/,
   convert: (buffer) => latinToCyrillic(buffer),
   settle: (buffer) => latinToCyrillic(buffer, true).text,
   candidates: () => [],

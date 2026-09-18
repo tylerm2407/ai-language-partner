@@ -46,7 +46,15 @@ export interface ScriptInputEngine {
    * "romaji", "pinyin", "romaja", "Latin letters".
    */
   romanization: string;
-  /** One-line instruction shown the first time the bar appears. */
+  /**
+   * The instruction under the field, before anything is typed.
+   *
+   * ONE SHORT LINE. It sits between the prompt and the Check button inside an
+   * exercise card, so a second line pushes Check down and a third crowds the
+   * question out — which is what the first draft did on a fill-blank, seen on
+   * a simulator. One example is the whole lesson; the candidate bar and the
+   * keypad explain themselves once they are on screen.
+   */
   hint: string;
   /**
    * Convert a buffer of Latin keystrokes. Pure: the same buffer always gives
@@ -80,6 +88,21 @@ export interface ScriptInputEngine {
    * (Chinese has no finite key set).
    */
   keypad: readonly (readonly string[])[];
+  /**
+   * What counts as still-being-composed at the END of the field.
+   *
+   * Everything before it is settled and untouchable; the match is what gets
+   * converted and what the candidate bar works from. It is a pattern rather
+   * than remembered state on purpose — see the note in ScriptInput — so the
+   * component can re-read the field from scratch after any race.
+   *
+   * Latin letters everywhere, because that is what a learner types. Japanese
+   * adds KANA, because kana is not the end of the journey there: it is what a
+   * kanji candidate is chosen from, exactly as it sits under the line in a
+   * system IME. Cyrillic and Hangul are final the moment they appear, so they
+   * are not included and a learner cannot accidentally re-convert them.
+   */
+  composing: RegExp;
   /** Labels for the pad's pages, parallel to `keypadPages`. */
   keypadPages?: readonly { label: string; rows: readonly (readonly string[])[] }[];
   /**

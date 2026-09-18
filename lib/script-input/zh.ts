@@ -110,7 +110,8 @@ export function pinyinComposition(buffer: string): Conversion {
 export const chineseInput: ScriptInputEngine = {
   language: 'zh',
   romanization: 'pinyin',
-  hint: 'Type pinyin without tones — nihao — then tap the characters you mean.',
+  hint: 'Type pinyin without tones, then tap a character',
+  composing: /[A-Za-z'’ü-]+$/,
   convert: pinyinComposition,
   // Pinyin nobody converted stays pinyin. It will be graded wrong, which is
   // the truth: the learner did not write Chinese. Silently deleting it would
