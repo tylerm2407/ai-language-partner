@@ -11,7 +11,7 @@
  * `c.onPrimary` (see `BandTile` in onboarding).
  */
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -104,7 +104,11 @@ export function OptionRow({
           onSelect();
         }}
         disabled={disabled}
-        accessibilityRole={role}
+        // iOS has no radio or checkbox trait: React Native maps those roles to
+        // no trait at all, so VoiceOver would drop "button" and the row would
+        // read as static text. On iOS a choice row stays a button and says
+        // "checked"/"unchecked" through its state; Android keeps the real role.
+        accessibilityRole={role !== 'button' && Platform.OS === 'ios' ? 'button' : role}
         accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}: ${subtitle}` : title)}
         accessibilityState={role === 'button' ? { selected, disabled } : { checked: selected, disabled }}
         style={disabled ? styles.disabled : undefined}
