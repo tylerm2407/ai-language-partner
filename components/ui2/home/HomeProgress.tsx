@@ -1,6 +1,6 @@
 /**
- * Home, UI 2.0 — the lower page: continue-learning unit rows, the daily
- * three, the week strip, and the talk / hands-free action rows.
+ * Home, UI 2.0 — the lower page: continue-learning unit rows, the week
+ * strip, and the talk / hands-free action rows.
  *
  * Every card here is `clay` (2026-09-16): raised volumes, sunken grooves for
  * the bars, raised solid tiles for the icons — see HomeSections and `useClay`.
@@ -130,83 +130,6 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
   );
 }
 
-// ─── Daily three ───────────────────────────────────────────────────────────
-export interface DailyThreeItem {
-  type: string;
-  title: string;
-  current: number;
-  target: number;
-}
-
-interface DailyThreeProps {
-  items: DailyThreeItem[];
-  /** Non-null when `useDailyChallenges` failed to load today's three. */
-  error?: string | null;
-  onRetry?: () => void;
-}
-
-export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
-  const { c, type } = useUi2Theme();
-  const clay = useClay();
-  const enter = useHomeEnter();
-
-  // A failed load and "nothing to show today" used to render identically —
-  // both returned null, so a broken fetch vanished the whole section with no
-  // sign anything went wrong (CLAUDE.md §5). Only skip rendering on a true
-  // empty state now; a load failure always gets a visible retry card.
-  if (items.length === 0 && !error) return null;
-
-  if (error) {
-    return (
-      <Animated.View entering={enter(5)} style={styles.section}>
-        <SectionTitle title="Your daily three" />
-        <SlabCard clay style={{ gap: 8 }}>
-          <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>
-            Couldn&apos;t load today&apos;s challenges.
-          </Text>
-          {onRetry && (
-            <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Retry loading today's challenges" style={styles.retry}>
-              <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: c.primary }}>Try again</Text>
-            </Pressable>
-          )}
-        </SlabCard>
-      </Animated.View>
-    );
-  }
-
-  return (
-    <Animated.View entering={enter(5)} style={styles.section}>
-      <SectionTitle title="Your daily three" />
-      <SlabCard clay style={{ gap: 14 }}>
-        {items.map((it) => {
-          const done = it.target > 0 && it.current >= it.target;
-          const pct = it.target > 0 ? Math.min(it.current / it.target, 1) * 100 : 0;
-          return (
-            <View key={it.type} style={styles.dailyRow} accessibilityLabel={`${it.title}: ${it.current} of ${it.target}${done ? ', done' : ''}`}>
-              <View style={[styles.dot, done ? clay.raised(c.green) : [{ backgroundColor: c.trackOnCard }, clay.well]]}>
-                {done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-              </View>
-              <View style={{ flex: 1, gap: 6 }}>
-                <View style={styles.unitTop}>
-                  <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: done ? c.muted : c.ink, flex: 1 }} numberOfLines={1}>
-                    {it.title}
-                  </Text>
-                  <Text style={{ fontFamily: type.uiHeavy, fontSize: 12, color: c.muted }}>
-                    {Math.min(it.current, it.target)} / {it.target}
-                  </Text>
-                </View>
-                <View style={[styles.bar, { backgroundColor: c.trackOnCard, height: 6 }, clay.well]}>
-                  <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: c.green }]} />
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </SlabCard>
-    </Animated.View>
-  );
-}
-
 // ─── Week strip ────────────────────────────────────────────────────────────
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -332,8 +255,6 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', borderRadius: 4 },
   skeleton: { height: 12, borderRadius: 6 },
   retry: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  dailyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   week: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   dayCol: { flex: 1, alignItems: 'center', gap: 6 },
   dayTrack: { width: '100%', height: 56, borderRadius: 6, overflow: 'hidden', justifyContent: 'flex-end' },

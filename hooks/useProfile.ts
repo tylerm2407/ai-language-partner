@@ -26,7 +26,7 @@ function invalidateTimezoneSync(): void {
  *
  * The server derives "today" for daily challenges / quotas from
  * this column (public.fluenci_user_today, migration 044), and the client
- * keys daily_stats / daily_challenges by the device-local date
+ * keys daily_stats by the device-local date
  * (lib/dates.ts localToday) — so the profile column must track where the
  * device actually is. Skips silently when Intl is unavailable (retries
  * next session).

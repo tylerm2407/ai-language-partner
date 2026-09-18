@@ -45,7 +45,6 @@ import type {
   DailyStats,
   DailyUsage,
   Subscription,
-  DailyChallengesRecord,
   ReadingPassage,
   ReadingQuestion,
   WritingPrompt,
@@ -2071,54 +2070,6 @@ function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
   };
 }
 
-
-// ─── Daily Challenges ────────────────────────────────────────────
-
-export async function fetchDailyChallenges(
-  userId: string,
-  date: string
-): Promise<DailyChallengesRecord | null> {
-  const { data, error } = await supabase
-    .from('daily_challenges')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data ? mapDailyChallengesRecord(data) : null;
-}
-
-export async function upsertDailyChallenges(
-  userId: string,
-  date: string,
-  challenges: unknown[],
-  allCompleted: boolean
-): Promise<DailyChallengesRecord> {
-  const { data, error } = await supabase
-    .from('daily_challenges')
-    .upsert({
-      user_id: userId,
-      date,
-      challenges,
-      all_completed: allCompleted,
-    }, { onConflict: 'user_id,date' })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return mapDailyChallengesRecord(data);
-}
-
-function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallengesRecord {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    date: row.date as string,
-    challenges: row.challenges as DailyChallengesRecord['challenges'],
-    allCompleted: (row.all_completed as boolean) ?? false,
-  };
-}
 
 // ─── Reading ──────────────────────────────────────────────────
 

@@ -17,8 +17,7 @@ export function useAchievements() {
   const [reloadNonce, setReloadNonce] = useState(0);
   const newInSession = useRef(new Set<string>());
 
-  // Same retry shape as `useDailyChallenges`: bump the nonce to re-run the
-  // load effect below.
+  // Bump the nonce to re-run the load effect below.
   const retry = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   useEffect(() => {

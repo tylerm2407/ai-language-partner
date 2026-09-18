@@ -629,28 +629,6 @@ export interface DailyUsage {
   pronunciationScores: number;
 }
 
-// ─── Daily Challenges ──────────────────────────────────────────
-
-export interface DailyChallenge {
-  type: string;
-  title: string;
-  icon: string;
-  color: string;
-  target: number;
-  unit: string;
-  statKey: string;
-  current: number;
-  completed: boolean;
-}
-
-export interface DailyChallengesRecord {
-  id: string;
-  userId: string;
-  date: string;
-  challenges: DailyChallenge[];
-  allCompleted: boolean;
-}
-
 // ─── Reading ──────────────────────────────────────────────────
 
 export interface ReadingPassage {

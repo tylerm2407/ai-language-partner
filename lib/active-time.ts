@@ -4,9 +4,9 @@
  * `daily_stats.minutes_practiced` has read zero since it shipped: the only
  * writer was the chat screen's per-turn `speaking_minutes`, and nothing ever
  * wrote the wall-clock column the week strip charts and the daily goal is
- * measured against. `lib/challenges.ts` records the consequence — the
- * time-based challenges were deleted in Aug 2026 because they could never be
- * satisfied. This module is the missing half.
+ * measured against — the time-based daily challenges were deleted in Aug 2026
+ * because they could never be satisfied, and the whole daily-three surface
+ * followed in Sep 2026. This module is the missing half.
  *
  * WHY A CLOCK AND NOT `Date.now()` AT BOTH ENDS
  *

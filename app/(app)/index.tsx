@@ -22,7 +22,6 @@ import { PrePermissionSheet } from '../../components/gamification/PrePermissionS
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
 import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
-import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
 import { CefrExplainerSheet, useCefrExplainer } from '../../components/ui2/CefrExplainerSheet';
 import { LanguageSwitcherSheet } from '../../components/ui2/LanguageSwitcherSheet';
@@ -33,7 +32,7 @@ import { heroSubtitle } from '../../lib/insights';
 import { DEFAULT_DAILY_GOAL_MINUTES } from '../../lib/active-time';
 import { estimatedReadMinutes } from '../../lib/reading-speed';
 import { trackEvent } from '../../lib/analytics';
-import { UnitRows, DailyThree, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
+import { UnitRows, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
 import type { DailyStats } from '../../types';
@@ -102,7 +101,6 @@ export default function HomeScreen() {
   const activeLanguage = getTargetLanguage(profile);
   const [showPrePermission, setShowPrePermission] = useState(false);
   const { c, scheme } = useUi2Theme();
-  const { challenges, error: challengesError, retry: retryChallenges } = useDailyChallenges();
   // The level card shows the MEASURED band once the proficiency report can
   // assess one; before that it stands in the band the learner's lessons start
   // at (their placement, which is one below the declared level when they chose
@@ -308,8 +306,6 @@ export default function HomeScreen() {
               router.push({ pathname: '/learn/review', params: { mode: 'struggling' } } as any);
             }}
           />
-
-          <DailyThree items={challenges} error={challengesError} onRetry={retryChallenges} />
 
           <WeekStrip
             stats={weeklyStats}
