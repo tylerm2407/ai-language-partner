@@ -1226,7 +1226,7 @@ export type TutorMemoryKind =
 
 /**
  * Who wrote a note (migration 141). The screen groups by this, because "you
- * told Sol this" and "Sol noticed this" are different claims and only one of
+ * told your tutor this" and "your tutor noticed this" are different claims and only one of
  * them is the learner's own.
  */
 export type TutorMemorySource = 'tutor' | 'learner' | 'onboarding';

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import { SlabButton } from '../ui2/SlabButton';
 import { StepHero, type StepHeroTone } from '../ui2/StepHero';
-import type { MascotMood } from '../ui2/MascotSol';
+import type { MascotMood } from '../ui2/Ui2Mascot';
 import { Body } from '../ui2/Ui2Text';
 import { ExerciseNote, type ExerciseNoteState } from './ExerciseNote';
 import { ExerciseChromeContext } from './exercise-chrome-context';
@@ -125,7 +125,7 @@ function heroFor(state: ExerciseNoteState, instruction: string): HeroCopy {
  * Tint blocks, lesson variant B "Hero card": ONE block on top (StepHero, the
  * same one onboarding uses) carries the exit ×, the lesson title and counter,
  * a segmented track, and the title — the type's instruction while the
- * learner is answering, the verdict and its explanation once they have. Sol
+ * learner is answering, the verdict and its explanation once they have. The mascot
  * peeks over its edge and reacts. Below it the scrolling exercise body, and a
  * PINNED footer holding the note row, SKIP, and Previous / Next.
  *
@@ -228,7 +228,7 @@ export function ExerciseChrome({
           style={{ flex: 1, minHeight: 0 }}
           contentContainerStyle={{
             paddingHorizontal: spacing.lg - 2,
-            // Sol overlaps the hero's bottom edge by 14pt; the body starts
+            // The mascot overlaps the hero's bottom edge by 14pt; the body starts
             // under him rather than beside him.
             paddingTop: spacing.md + 6,
             // Clears the footer when the exercise is scrolled to the end, so

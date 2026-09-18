@@ -1,13 +1,13 @@
 /**
- * What Sol remembers — the learner's view of `tutor_memory`, and their pen.
+ * What your tutor remembers — the learner's view of `tutor_memory`, and their pen.
  *
  * Three things live on this screen, and they are three different claims:
  *
  *  1. **Notes.** Written by the live tutor after a session (migration 108),
  *     seeded from the sign-up answers (142), or typed here by the learner
- *     (141). Each says who wrote it, because "you told Sol this" and "Sol
- *     noticed this" are not the same statement and only one of them is the
- *     learner's own.
+ *     (141). Each says who wrote it, because "you told your tutor this" and
+ *     "your tutor noticed this" are not the same statement and only one of
+ *     them is the learner's own.
  *  2. **From your practice.** NOT notes, and deliberately not stored as notes:
  *     recurring mistakes and struggling words are computed live from
  *     `correction_log` and `review_items` by `useLearnerInsights`, which reads
@@ -47,7 +47,7 @@ import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { Ui2Sheet } from '../../../components/ui2/Ui2Sheet';
 import { Ui2Input } from '../../../components/ui2/Ui2Input';
 import { Body, Caption } from '../../../components/ui2/Ui2Text';
-import { MascotSol } from '../../../components/ui2/MascotSol';
+import { Ui2Mascot } from '../../../components/ui2/Ui2Mascot';
 import { getTargetLanguage } from '../../../lib/language';
 import { formatRelativeDay } from '../../../lib/dates';
 import { trackEvent } from '../../../lib/analytics';
@@ -60,7 +60,7 @@ const KIND_ORDER: TutorMemoryKind[] = ['personal_fact', 'goal', 'recurring_error
 const KIND_COPY: Record<TutorMemoryKind, { title: string; icon: keyof typeof Ionicons.glyphMap }> = {
   personal_fact: { title: 'About you', icon: 'person-outline' },
   goal: { title: 'What you are working toward', icon: 'flag-outline' },
-  recurring_error: { title: 'Mistakes Sol listens for', icon: 'ear-outline' },
+  recurring_error: { title: 'Mistakes your tutor listens for', icon: 'ear-outline' },
   preference: { title: 'How you like to be taught', icon: 'options-outline' },
   topic_thread: { title: 'Things you have talked about', icon: 'chatbubble-ellipses-outline' },
 };
@@ -96,7 +96,7 @@ const MIN_NOTE_CHARS = 3;
 const SOURCE_LABEL: Record<TutorMemory['source'], string> = {
   learner: 'You wrote this',
   onboarding: 'From your sign-up answers',
-  tutor: 'Sol noticed this',
+  tutor: 'Your tutor noticed this',
 };
 
 export default function TutorMemoryScreen() {
@@ -119,7 +119,7 @@ export default function TutorMemoryScreen() {
   const confirmForget = (note: TutorMemory) => {
     Alert.alert(
       'Forget this note?',
-      `Sol will stop remembering: “${note.content}”. Your progress is not affected.`,
+      `Your tutor will stop remembering: “${note.content}”. Your progress is not affected.`,
       [
         { text: 'Keep', style: 'cancel' },
         {
@@ -142,7 +142,7 @@ export default function TutorMemoryScreen() {
   const confirmForgetAll = () => {
     Alert.alert(
       'Forget everything?',
-      `Sol will start the next session knowing nothing about you beyond your level and language. ${notes.length} ${notes.length === 1 ? 'note' : 'notes'} will be deleted. Your progress is not affected.`,
+      `Your tutor will start the next session knowing nothing about you beyond your level and language. ${notes.length} ${notes.length === 1 ? 'note' : 'notes'} will be deleted. Your progress is not affected.`,
       [
         { text: 'Keep', style: 'cancel' },
         {
@@ -197,12 +197,12 @@ export default function TutorMemoryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <Ui2Header title="What Sol remembers" subtitle="What your tutor knows about you" onBack={() => goBack()} />
+        <Ui2Header title="What your tutor remembers" subtitle="Everything it knows about you" onBack={() => goBack()} />
 
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={c.primary} />
-            <Body size="sm" tone="tertiary" style={{ marginTop: 12 }}>Asking Sol…</Body>
+            <Body size="sm" tone="tertiary" style={{ marginTop: 12 }}>Asking your tutor…</Body>
           </View>
         ) : error ? (
           <Ui2InlineError copy={error} onRetry={retry} />
@@ -211,17 +211,17 @@ export default function TutorMemoryScreen() {
             {notes.length === 0 ? (
               <Ui2EmptyState
                 icon="moon-outline"
-                title="Sol has no notes yet"
-                description="Tell Sol something about you, or have a session — what it learns about your goals, the mistakes to listen for and what you like talking about shows up here, and you can change or delete any of it."
-                actionLabel="Tell Sol something"
+                title="No notes yet"
+                description="Tell your tutor something about you, or have a session — what it learns about your goals, the mistakes to listen for and what you like talking about shows up here, and you can change or delete any of it."
+                actionLabel="Tell your tutor something"
                 onAction={() => setEditor({ mode: 'add', kind: 'personal_fact' })}
               />
             ) : (
               <SlabCard tint="primary" style={styles.intro}>
-                <MascotSol size={56} mood="idle" />
+                <Ui2Mascot size={56} mood="idle" />
                 <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
                   <Text style={{ fontFamily: type.heading, fontSize: 16, lineHeight: 20, color: c.ink }}>
-                    {notes.length} {notes.length === 1 ? 'thing' : 'things'} Sol carries into your next conversation
+                    {notes.length} {notes.length === 1 ? 'thing' : 'things'} your tutor carries into your next conversation
                   </Text>
                   <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>
                     Used in your chats and live sessions. Edit any note, or forget it for good.
@@ -260,11 +260,11 @@ export default function TutorMemoryScreen() {
             ))}
 
             {/* Add sits under the notes rather than in the header: the point of
-                the screen is what Sol already knows, and an "add" affordance
+                the screen is what the tutor already knows, and an "add" affordance
                 above that would read as a form to fill in. */}
             <View style={styles.section}>
               <SlabButton
-                label="Tell Sol something"
+                label="Tell your tutor something"
                 variant="tint"
                 arrow={false}
                 disabled={!canAddNote || busy}
@@ -313,14 +313,14 @@ export default function TutorMemoryScreen() {
                 <Ui2ListRow
                   icon="trash-outline"
                   title="Forget everything"
-                  subtitle="Sol starts the next session with a blank page"
+                  subtitle="Your tutor starts the next session with a blank page"
                   destructive
                   disabled={busy}
                   onPress={confirmForgetAll}
-                  accessibilityLabel="Forget everything Sol remembers"
+                  accessibilityLabel="Forget everything your tutor remembers"
                 />
                 <Caption tone="tertiary" style={{ lineHeight: 18 }}>
-                  Notes Sol wrote are kept for at most 180 days; yours are kept until you delete them. Your name and how
+                  Notes your tutor wrote are kept for at most 180 days; yours are kept until you delete them. Your name and how
                   you like to be taught follow you into every language you study; goals and mistakes stay with the
                   language they came from. Your lessons, reviews and level are separate records and are not changed by
                   anything here.
@@ -388,10 +388,10 @@ function NoteEditorSheet({
     <Ui2Sheet visible={state !== null} onDismiss={onDismiss} dismissOnBackdrop={!busy} avoidKeyboard>
       <View style={styles.sheet}>
         <Text accessibilityRole="header" style={{ fontFamily: type.heading, fontSize: 18, color: c.ink }}>
-          {state?.mode === 'edit' ? 'Rewrite this note' : 'Tell Sol something'}
+          {state?.mode === 'edit' ? 'Rewrite this note' : 'Tell your tutor something'}
         </Text>
         <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>
-          Write it the way you would say it to a person. Sol reads these before your conversations; it will never read
+          Write it the way you would say it to a person. Your tutor reads these before your conversations; it will never read
           them back to you.
         </Text>
 
@@ -493,7 +493,7 @@ function NoteRow({
   const { c, type } = useUi2Theme();
   const when = formatRelativeDay(note.lastSeenAt).toLowerCase();
   const mentions = note.mentionCount === 1 ? 'Came up once' : `Came up ${note.mentionCount} times`;
-  // Provenance first, because it qualifies everything after it: a note Sol
+  // Provenance first, because it qualifies everything after it: a note the tutor
   // inferred and a note the learner typed deserve different amounts of trust.
   // A count of one from the learner's own pen is not "came up once" — they
   // said it, so the sighting count is noise on their rows.

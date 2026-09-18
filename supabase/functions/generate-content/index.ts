@@ -300,7 +300,7 @@ serve(async (req: Request) => {
       : [null, []];
     const learnerBlock = personalised ? serializeLearnerContext(learnerContext) : '';
 
-    // ── What Sol remembers ────────────────────────────────────────────────
+    // ── What the tutor remembers ──────────────────────────────────────────
     //
     // The second half of the same idea, from the other kind of source: the
     // profile above is measured (what they keep getting wrong), this is stated

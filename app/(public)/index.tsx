@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ui2Screen } from '../../components/ui2/Ui2Screen';
 import { SlabButton } from '../../components/ui2/SlabButton';
-import { MascotSol } from '../../components/ui2/MascotSol';
+import { Ui2Mascot } from '../../components/ui2/Ui2Mascot';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 /**
- * Welcome — the first screen of UI 2.0. Sol plays his bedtime (circles,
+ * Welcome — the first screen of UI 2.0. The mascot plays its bedtime (circles,
  * fire, curls up) and settles into the sleep loop; the sequence starts over
  * on every launch and every return to the foreground. The headline and
  * subline fade up in sequence, then the two actions. No progress bar:
@@ -40,7 +40,7 @@ export default function WelcomeScreen() {
       }
     >
       <View style={styles.body}>
-        <MascotSol size={150} mood="bedtime" />
+        <Ui2Mascot size={150} mood="bedtime" />
         <Animated.View entering={enter(0)} style={styles.block}>
           <Text
             accessibilityRole="header"

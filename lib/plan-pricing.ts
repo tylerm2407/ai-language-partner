@@ -145,7 +145,7 @@ export const PLAN_PROOF: readonly PlanProofRow[] = [
     detail: 'Built from your moment. Opens on any paid plan.',
   },
   {
-    title: 'Sol remembers your moment',
+    title: 'Your tutor remembers your moment',
     detail: 'Every chat and call starts from it.',
   },
   {
@@ -166,7 +166,7 @@ export const PLAN_PROOF: readonly PlanProofRow[] = [
  */
 export const FREE_EXIT_LINE =
   'Free keeps lessons, reviews, reading and 5 new words a day. ' +
-  'Your plan and Sol\u2019s memory need a paid plan.';
+  'Your plan and your tutor\u2019s memory need a paid plan.';
 
 /**
  * Longest ideal-self answer the paywall headline will render.
@@ -175,7 +175,7 @@ export const FREE_EXIT_LINE =
  * is set in the 30pt display face, so the full column would push the rungs and
  * the CTA off the first screen. 120 is the same gist-length the server already
  * takes for this field (`MAX_GOAL_CHARS` in
- * `supabase/functions/_shared/learner-context.ts`), so the sentence Sol works
+ * `supabase/functions/_shared/learner-context.ts`), so the sentence the tutor works
  * from and the sentence the learner is shown are cut at the same place.
  */
 export const MOMENT_MAX_CHARS = 120;

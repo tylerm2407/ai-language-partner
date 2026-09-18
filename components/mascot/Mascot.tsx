@@ -1,5 +1,9 @@
 /**
- * Mascot — Sol, the dragon.
+ * Mascot — the dragon.
+ *
+ * Deliberately unnamed: the character is the app's face, not a personality
+ * with a name of its own, and every surface that talks ABOUT the tutor says
+ * "your tutor" instead.
  *
  * Plays the interim clips in assets/mascot/video: five moods generated from
  * the master still with the same frame at both ends (so they return to the
@@ -7,7 +11,7 @@
  * whose first and last frames are the bedtime clip's final frame, so bedtime
  * runs straight into it with no cut. Each clip is an animated WebP with a
  * real alpha channel, decoded by expo-image (SDWebImage on iOS, Glide on
- * Android), so Sol sits on any card, tint or text without a square behind
+ * Android), so the mascot sits on any card, tint or text without a square behind
  * him — on a device, in the iOS Simulator, and on Android alike.
  *
  * ── WHY WEBP AND NOT THE HEVC .MOV (2026-09-09) ──
@@ -15,7 +19,7 @@
  * The first cut played HEVC-with-alpha .mov files through expo-av. Those
  * files are correct (a Mac decode returns a transparent corner pixel) and a
  * device composites them, but the iOS Simulator decodes only the base layer,
- * so Sol appeared in a white square everywhere the simulator was used —
+ * so the mascot appeared in a white square everywhere the simulator was used —
  * glaring in dark mode. A "show the still on the simulator" workaround
  * followed, and Tyler rightly did not want a still. One asset that animates
  * with alpha everywhere beats two paths, and the WebPs were already shipped
@@ -27,7 +31,7 @@
  *     flips back to `idle` mid-clip is ignored until the clip finishes, so a
  *     700ms "cheer" tick from a picker still shows the whole nod.
  *   - `sleepy` is the exception: bedtime plays once and then hands over to
- *     the sleep loop, and Sol stays asleep until the parent asks for
+ *     the sleep loop, and it stays asleep until the parent asks for
  *     something else. `asleep` skips the bedtime and starts in the loop.
  *   - Every time the app comes back to the foreground the current state's
  *     clip starts over from its first frame (a mount does the same), so a
@@ -43,10 +47,11 @@
  * ── CLIPS THAT SHIP BUT ARE NOT WIRED (2026-09-14) ──
  *
  * assets/mascot/video also holds ten clips no state maps to yet, generated in
- * the same pass and keyed the same way: five of Sol moving around his frame
- * (sol-walk, sol-hop, sol-pace, sol-spin, sol-peek, sol-circle — ten seconds
- * each, 10126 ms) and five of him at a task (sol-reading, sol-writing,
- * sol-headphones, sol-mic — five seconds, 5146 ms). Nothing `require`s them,
+ * the same pass and keyed the same way: five of the mascot moving around its
+ * frame (mascot-walk, mascot-hop, mascot-pace, mascot-spin, mascot-peek,
+ * mascot-circle — ten seconds each, 10126 ms) and five of it at a task
+ * (mascot-reading, mascot-writing, mascot-headphones, mascot-mic — five
+ * seconds, 5146 ms). Nothing `require`s them,
  * so they cost repository space and not binary space. To use one: add it to
  * `Clip`, `CLIPS` and `CLIP_MS` with the length above, give it a state in
  * `CLIP_FOR`, and re-measure with `webpmux -info` if it is ever regenerated.
@@ -107,7 +112,7 @@ const LOOPS: ReadonlySet<Clip> = new Set<Clip>(['idle', 'sleep']);
  * feeling: `happy` is the small nod a correct answer or a good tap earns,
  * `cheering` is the rear-up-and-breathe-fire one that belongs to finishing
  * something. Sad and disappointed used to borrow the listening clip, which
- * read as Sol waiting rather than Sol feeling it with you; they now play the
+ * read as the mascot waiting rather than feeling it with you; they now play the
  * wince.
  */
 const CLIP_FOR: Record<MascotState, Clip> = {
@@ -134,24 +139,24 @@ const CLIP_FOR: Record<MascotState, Clip> = {
  * Keep that when a clip is regenerated.
  */
 const CLIPS: Record<Clip, number> = {
-  idle: require('../../assets/mascot/video/sol-idle.webp'),
-  listening: require('../../assets/mascot/video/sol-listening.webp'),
-  thinking: require('../../assets/mascot/video/sol-thinking.webp'),
-  approving: require('../../assets/mascot/video/sol-approving.webp'),
-  surprised: require('../../assets/mascot/video/sol-surprised.webp'),
-  bedtime: require('../../assets/mascot/video/sol-bedtime.webp'),
-  sleep: require('../../assets/mascot/video/sol-sleep.webp'),
-  wince: require('../../assets/mascot/video/sol-wince.webp'),
-  confused: require('../../assets/mascot/video/sol-confused.webp'),
-  celebrate: require('../../assets/mascot/video/sol-celebrate.webp'),
-  amazed: require('../../assets/mascot/video/sol-amazed.webp'),
-  wave: require('../../assets/mascot/video/sol-wave.webp'),
+  idle: require('../../assets/mascot/video/mascot-idle.webp'),
+  listening: require('../../assets/mascot/video/mascot-listening.webp'),
+  thinking: require('../../assets/mascot/video/mascot-thinking.webp'),
+  approving: require('../../assets/mascot/video/mascot-approving.webp'),
+  surprised: require('../../assets/mascot/video/mascot-surprised.webp'),
+  bedtime: require('../../assets/mascot/video/mascot-bedtime.webp'),
+  sleep: require('../../assets/mascot/video/mascot-sleep.webp'),
+  wince: require('../../assets/mascot/video/mascot-wince.webp'),
+  confused: require('../../assets/mascot/video/mascot-confused.webp'),
+  celebrate: require('../../assets/mascot/video/mascot-celebrate.webp'),
+  amazed: require('../../assets/mascot/video/mascot-amazed.webp'),
+  wave: require('../../assets/mascot/video/mascot-wave.webp'),
 };
 
 /**
  * Clip lengths in ms, read from the files with `webpmux -info` (frame delays
- * summed). Re-measure if a clip is regenerated: too short and Sol snaps back
- * to idle mid-nod, too long and he holds the last frame.
+ * summed). Re-measure if a clip is regenerated: too short and the mascot snaps
+ * back to idle mid-nod, too long and it holds the last frame.
  */
 export const CLIP_MS: Record<Clip, number> = {
   idle: 16375,
@@ -174,9 +179,9 @@ export function afterClip(clip: Clip): Clip {
   return clip === 'bedtime' ? 'sleep' : 'idle';
 }
 
-const STILL = require('../../assets/mascot/sol-still.png');
-/** First frame of the sleep loop (== last frame of bedtime), so a clip that starts asleep never shows him standing first. */
-const ASLEEP_STILL = require('../../assets/mascot/sol-asleep-still.png');
+const STILL = require('../../assets/mascot/mascot-still.png');
+/** First frame of the sleep loop (== last frame of bedtime), so a clip that starts asleep never shows it standing first. */
+const ASLEEP_STILL = require('../../assets/mascot/mascot-asleep-still.png');
 
 function stillFor(clip: Clip): number {
   return clip === 'sleep' ? ASLEEP_STILL : STILL;
@@ -203,7 +208,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
   // over to, mounted underneath at opacity 0 with autoplay off, so its first
   // frame is already decoded when the front finishes. The old approach
   // remounted a single Image on the hand-over, and for ~100-300 ms the
-  // placeholder still (Sol standing) showed while the sleep loop decoded —
+  // placeholder still (the mascot standing) showed while the sleep loop decoded —
   // a visible flash on the welcome screen at the end of bedtime.
   const [front, setFront] = useState<Slot>(() => ({ clip: wanted, run: nextRun() }));
   const [back, setBackState] = useState<Slot | null>(() =>
@@ -263,7 +268,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
 
   // Latch: a one-shot runs to its end even if the parent has already gone
   // back to idle. A new request replaces whatever is playing. Loops never
-  // latch, so a parent can always move Sol out of idle or sleep.
+  // latch, so a parent can always move the mascot out of idle or sleep.
   useEffect(() => {
     if (!mountedRef.current) {
       // The initial state was mounted by useState; do not remount it.
@@ -295,7 +300,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
   const a11y = {
     accessibilityElementsHidden: !accessibilityVisible,
     importantForAccessibility: (accessibilityVisible ? 'yes' : 'no') as 'yes' | 'no',
-    accessibilityLabel: accessibilityVisible ? `Sol, ${state}` : undefined,
+    accessibilityLabel: accessibilityVisible ? `Mascot, ${state}` : undefined,
   };
 
   const renderSlot = (slot: Slot, isFront: boolean) => (

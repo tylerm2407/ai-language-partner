@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { ui2Dark, ui2Light } from '../config/theme';
-import { PEEK, SOL_SIZE, TILE_SIZE, launchSplashPlan, launchSplashTotalMs } from './launch-splash';
+import { PEEK, MASCOT_SIZE, TILE_SIZE, launchSplashPlan, launchSplashTotalMs } from './launch-splash';
 
 const ROOT = path.join(__dirname, '..');
 
@@ -59,15 +59,15 @@ describe('native launch frame (app.json)', () => {
 });
 
 describe('launchSplashPlan', () => {
-  it('keeps the full stage under two seconds and Sol inside the tile', () => {
+  it('keeps the full stage under two seconds and the mascot inside the tile', () => {
     const plan = launchSplashPlan(false);
     expect(plan.sol).toBe(true);
     expect(launchSplashTotalMs(plan)).toBeLessThanOrEqual(2400);
     expect(plan.fadeDelay).toBeGreaterThan(plan.solDelay + plan.peekOut + plan.twitch + plan.peekBack);
     expect(plan.holdUntil).toBeGreaterThan(plan.solDelay + plan.peekOut);
-    expect(SOL_SIZE).toBeLessThan(TILE_SIZE);
+    expect(MASCOT_SIZE).toBeLessThan(TILE_SIZE);
     // He has to actually clear the tile edge to be seen.
-    expect(Math.abs(PEEK.y)).toBeGreaterThan(TILE_SIZE - SOL_SIZE);
+    expect(Math.abs(PEEK.y)).toBeGreaterThan(TILE_SIZE - MASCOT_SIZE);
   });
 
   it('with reduced motion nothing travels and the stage is shorter', () => {

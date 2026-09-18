@@ -50,7 +50,7 @@ export function useTutorMemory(userId: string | undefined, language: string | nu
         if (!cancelled) setNotes(rows);
       })
       .catch((err) => {
-        if (!cancelled) setError(loadErrorCopy(err, 'what Sol remembers'));
+        if (!cancelled) setError(loadErrorCopy(err, 'what your tutor remembers'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -1,6 +1,6 @@
 /**
  * Launch splash — the contract between the native launch screen and the
- * in-app animated stage (canvas "Fluenci UI 2.0", page "Splash · A with Sol",
+ * in-app animated stage (canvas "Fluenci UI 2.0", page "Splash · A with the mascot",
  * board A3 · Peek, picked 2026-09-09).
  *
  * iOS shows a static storyboard until the JS bundle paints; nothing on it can
@@ -12,7 +12,7 @@
  *      from `app.json` (`imageWidth`, `backgroundColor`, `dark`).
  *   2. `components/splash/LaunchSplash.tsx`: mounts over the app drawing that
  *      same frame, hides the storyboard, then plays — the tile breathes, the
- *      wordmark rises, Sol peeks out from behind the tile and ducks back — and
+ *      wordmark rises, the mascot peeks out from behind the tile and ducks back — and
  *      crossfades into whatever the router has rendered underneath.
  *
  * `launch-splash.test.ts` holds `app.json` to these numbers so the two halves
@@ -27,8 +27,8 @@
 /** Width and height of the app-icon tile, in points, in BOTH halves. */
 export const TILE_SIZE = 132;
 
-/** Sol behind the tile: hidden until he moves, so he must fit inside it. */
-export const SOL_SIZE = 120;
+/** The mascot behind the tile: hidden until it moves, so it must fit inside it. */
+export const MASCOT_SIZE = 120;
 
 /** Distance from the tile's bottom edge to the wordmark's top. */
 export const WORDMARK_GAP = 22;
@@ -41,7 +41,7 @@ export const WORDMARK_LETTER_SPACING = -1.2;
 /** The navy of the app icon; the tile's own fill, not a theme colour. */
 export const TILE_FILL = '#00021B';
 
-/** Where Sol's head comes to rest when he peeks (tile-relative points, deg). */
+/** Where the mascot's head comes to rest when it peeks (tile-relative points, deg). */
 export const PEEK = { x: -58, y: -76, rotate: -14 } as const;
 /** The small second look before he ducks back. */
 export const TWITCH = { x: -62, y: -70, rotate: -8 } as const;
@@ -53,7 +53,7 @@ export interface LaunchSplashPlan {
   /** Wordmark: wait, then fade/rise. */
   wordDelay: number;
   wordIn: number;
-  /** Sol: appear after this, peek out over `peekOut`, hold until `holdUntil`,
+  /** The mascot: appear after this, peek out over `peekOut`, hold until `holdUntil`,
    *  twitch for `twitch`, duck back over `peekBack`. All ms from stage start. */
   solDelay: number;
   peekOut: number;
@@ -63,13 +63,13 @@ export interface LaunchSplashPlan {
   /** Crossfade into the app: starts at `fadeDelay`, lasts `fade`. */
   fadeDelay: number;
   fade: number;
-  /** Whether Sol is drawn at all. */
+  /** Whether the mascot is drawn at all. */
   sol: boolean;
 }
 
 /**
  * The stage's timings. With reduced motion on, nothing travels: the wordmark
- * fades in, the stage fades out, Sol stays home.
+ * fades in, the stage fades out, the mascot stays home.
  */
 export function launchSplashPlan(reduceMotion: boolean): LaunchSplashPlan {
   if (reduceMotion) {

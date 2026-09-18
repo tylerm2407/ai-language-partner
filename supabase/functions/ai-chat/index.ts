@@ -559,7 +559,7 @@ serve(async (req: Request) => {
     // reads `opts.include ?? []`, makes the same two queries, and returns the
     // same three-key object it always did.
     //
-    // What Sol remembers rides alongside it — the notes the tutor wrote at the
+    // What the tutor remembers rides alongside it — the notes it wrote at the
     // end of a voice session, the ones seeded from onboarding, and the ones the
     // learner typed themselves (migrations 108, 141, 142). A DIFFERENT question
     // from the learner profile: that one is "what is this person getting
@@ -569,7 +569,7 @@ serve(async (req: Request) => {
     // correctly includes a school-contract student. Not gated on
     // `isEntitledToLearnerContext`: the live tutor already sends this block to
     // everyone who reaches it, and a memory the learner can see on their
-    // profile but that Sol demonstrably ignores in chat is worse than none.
+    // profile but that the tutor demonstrably ignores in chat is worse than none.
     //
     // ISSUED IN PARALLEL, and that is not a micro-optimisation. This sits on
     // the critical path of every single chat turn, so a sequential second round
@@ -721,7 +721,7 @@ serve(async (req: Request) => {
       system: [
         { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
         ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
-        // What Sol remembers rides out here too, and for a reason worth
+        // What the tutor remembers rides out here too, and for a reason worth
         // stating: it is STABLE per learner, so the tempting move is to put it
         // in the cached prefix. That would be wrong. The prefix is shared
         // across every learner on the same scenario and level; anything

@@ -102,7 +102,7 @@ function statusForPgError(code: string | undefined): { status: number; code: str
     case '22023':
       return { status: 400, code: 'INVALID_REQUEST', error: 'That note cannot be saved as written.' };
     default:
-      return { status: 500, code: 'SAVE_FAILED', error: 'Sol could not save that note. Try again.' };
+      return { status: 500, code: 'SAVE_FAILED', error: 'Your tutor could not save that note. Try again.' };
   }
 }
 

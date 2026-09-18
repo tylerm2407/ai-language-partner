@@ -72,7 +72,7 @@ export interface TopicPack {
   exercises: Exercise[];
   /** Exactly 6 lesson outlines for the plan-reveal screen. */
   plan: { title: string; words: string[] }[];
-  /** One short English line Sol says after the chip is picked. */
+  /** One short English line the tutor says after the chip is picked. */
   solLine: string;
 }
 

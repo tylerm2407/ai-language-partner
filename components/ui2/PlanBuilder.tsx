@@ -1,7 +1,7 @@
 /**
  * PlanBuilder — the payoff loader between the trial lesson and the save ask.
  *
- * A bar grows over ~2.4s while three stages tick off; Sol thinks, then cheers
+ * A bar grows over ~2.4s while three stages tick off; the mascot thinks, then cheers
  * as the last one lands. The real work (profile write, first-lesson pick)
  * already happened or happens on the flush; this screen exists so the level
  * result arrives as something built rather than something looked up. If the
@@ -19,7 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { MascotSol } from './MascotSol';
+import { Ui2Mascot } from './Ui2Mascot';
 import { haptic } from '../../lib/haptics';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -68,7 +68,7 @@ export function PlanBuilder({ stages, onDone, durationMs = PLAN_BUILDER_MS }: Pl
 
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
-      <MascotSol size={130} mood={allDone ? 'cheer' : 'think'} />
+      <Ui2Mascot size={130} mood={allDone ? 'cheer' : 'think'} />
       <Text style={{ fontFamily: type.heading, fontSize: 28, lineHeight: 34, color: c.ink, textAlign: 'center' }}>
         Building your plan
       </Text>

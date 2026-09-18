@@ -7,7 +7,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { Ui2Screen } from '../../components/ui2/Ui2Screen';
 import { SlabButton } from '../../components/ui2/SlabButton';
 import { StepHero, type StepHeroEntrance } from '../../components/ui2/StepHero';
-import type { MascotMood } from '../../components/ui2/MascotSol';
+import type { MascotMood } from '../../components/ui2/Ui2Mascot';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useMotion } from '../../hooks/useMotion';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
@@ -331,7 +331,7 @@ export default function OnboardingScreen() {
     else router.replace('/(public)');
   };
   const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
-  // The step's header block: back, "Step n of 6", segments, the question, Sol.
+  // The step's header block: back, "Step n of 6", segments, the question, the mascot.
   const hero = (text: string, entrance: StepHeroEntrance, heroMood: MascotMood = mood) => (
     <StepHero
       step={stepIndex + 1}

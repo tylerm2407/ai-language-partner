@@ -4,7 +4,7 @@
  * The learner types what they want to say in their OWN language and gets one
  * target-language phrase back with a gloss. It goes through `getPhraseHelp`
  * (the `phrase-help` function), not `ai-chat`, so the tutor never sees the
- * question and Sol stays in character. Metered on the daily hints budget.
+ * question and the tutor stays in character. Metered on the daily hints budget.
  *
  * Two modes, one sheet. In the text composer the answer is inserted into the
  * draft ("Insert"); in hold-to-talk there is no draft to insert into, so the

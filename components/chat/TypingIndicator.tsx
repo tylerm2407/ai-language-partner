@@ -7,10 +7,10 @@ import { useMotion } from '../../hooks/useMotion';
  * Three-dot animated typing indicator styled to match assistant bubbles.
  *
  * The bounce is an infinite loop that starts on its own and runs for as long as
- * Sol is composing, which is exactly the shape WCAG 2.2 SC 2.2.2 asks for a
+ * the tutor is composing, which is exactly the shape WCAG 2.2 SC 2.2.2 asks for a
  * stop mechanism for — so it is gated on `useMotion().shouldReduce`. Reduced
  * motion keeps the three dots and the bubble, and simply holds them still: the
- * "Sol is answering" signal survives, the movement does not.
+ * "the tutor is answering" signal survives, the movement does not.
  */
 export function TypingIndicator() {
   const { c } = useUi2Theme();

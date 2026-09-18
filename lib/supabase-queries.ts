@@ -4876,7 +4876,7 @@ export async function fetchLearnedCardCount(
 }
 
 // ─── Tutor Memory ───────────────────────────────────────────────
-// `tutor_memory` (migrations 108, 141, 142): what Sol remembers about a
+// `tutor_memory` (migrations 108, 141, 142): what the tutor remembers about a
 // learner. Read and DELETE belong to the learner; there is still deliberately
 // no client INSERT or UPDATE, because a note is injected into a future system
 // prompt and a learner who could author a row directly could steer the tutor.
@@ -4907,7 +4907,7 @@ function mapTutorMemory(row: Record<string, unknown>): TutorMemory {
     content: row.content as string,
     mentionCount: (row.mention_count as number) ?? 1,
     // An unrecognised source reads as the tutor's: it is the weaker claim, and
-    // showing a note under "you told Sol" that the learner did not write is the
+    // showing a note under "you told your tutor" that the learner did not write is the
     // one mistake here that would matter.
     source: TUTOR_MEMORY_SOURCES.has(source) ? (source as TutorMemorySource) : 'tutor',
     firstSeenAt: row.first_seen_at as string,
@@ -4917,7 +4917,7 @@ function mapTutorMemory(row: Record<string, unknown>): TutorMemory {
 }
 
 /**
- * Every note Sol holds for this learner in one language, plus the account-wide
+ * Every note the tutor holds for this learner in one language, plus the account-wide
  * ones, most-mentioned first.
  *
  * The `or` covers both scopes in a single round trip. `languageVariants` is
@@ -4975,7 +4975,7 @@ async function invokeTutorMemory(body: Record<string, unknown>): Promise<void> {
   const { error } = await supabase.functions.invoke('tutor-memory', { body });
   if (!error) return;
 
-  let message = error.message ?? 'Sol could not save that note.';
+  let message = error.message ?? 'Your tutor could not save that note.';
   if (error.context instanceof Response) {
     try {
       const parsed = await error.context.json();
@@ -4984,7 +4984,7 @@ async function invokeTutorMemory(body: Record<string, unknown>): Promise<void> {
       // non-JSON body — keep the SDK default
     }
   } else if (error.name === 'FunctionsFetchError') {
-    message = 'Could not reach Sol. Check your connection and try again.';
+    message = 'Could not reach your tutor. Check your connection and try again.';
   }
   throw new Error(message);
 }
@@ -5000,7 +5000,7 @@ export async function deleteTutorMemory(userId: string, id: string): Promise<voi
 }
 
 /**
- * Make Sol forget everything it holds for this learner in one language —
+ * Make the tutor forget everything it holds for this learner in one language —
  * including the account-wide notes, because the learner is looking at a screen
  * that lists them all and "forget everything" has to mean what it says.
  */

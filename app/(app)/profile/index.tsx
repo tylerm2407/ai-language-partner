@@ -22,7 +22,6 @@ import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicker';
 import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
 import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarImage';
-import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
 import { localDayKey } from '../../../lib/dates';
 import { CompletedLessonsSection, type CompletedLessonsSummary } from '../../../components/profile/CompletedLessonsSection';
@@ -62,11 +61,11 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
-  // Four Strands reads the current week, not just today — matching the
-  // card's own "This week's balance" heading, and Home's week-strip fetch
-  // pattern (`app/(app)/index.tsx`'s loadWeeklyStats). `dailyStats` from the
-  // store is only ever today's row, which is why this used to always show
-  // a mostly-empty bar chart labelled "week".
+  // The week tile reads the current week, not just today — matching its own
+  // "this week" label, and Home's week-strip fetch pattern
+  // (`app/(app)/index.tsx`'s loadWeeklyStats). `dailyStats` from the store is
+  // only ever today's row, which is why this used to always show a mostly-
+  // empty split labelled "week".
   const [weekStats, setWeekStats] = useState<DailyStats[] | null>(null);
   const [weekStatsError, setWeekStatsError] = useState(false);
   const loadWeekStats = useCallback(async (userId: string) => {
@@ -246,8 +245,8 @@ export default function ProfileScreen() {
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Identity row with the settings affordance, then the four stat
             tiles. Each tile summarises a section further down the page (level
-            → the report, week → the strands card, achievements → the grid,
-            lessons → the completed-lessons row); see ProfileTiles.tsx. */}
+            → the report, achievements → the grid, lessons → the
+            completed-lessons row); see ProfileTiles.tsx. */}
         <View style={styles.blockSpacing}>
           <IdentityRow
             name={profile?.displayName ?? user?.email ?? 'Learner'}
@@ -310,17 +309,19 @@ export default function ProfileScreen() {
         <Ui2ListRow
           style={{ marginBottom: spacing.md }}
           icon="sparkles-outline"
-          title="What Sol remembers"
+          title="What your tutor remembers"
           subtitle="Notes from your live tutor sessions — see and delete them"
           onPress={() => router.push('/profile/memory' as any)}
-          accessibilityLabel="What Sol remembers"
+          accessibilityLabel="What your tutor remembers"
           accessibilityHint="Lists what the live tutor remembers about you between sessions, and lets you delete any of it"
         />
 
-        {/* Four Strands — this week's listening/reading/speaking/writing balance */}
-        <View className="mb-4">
-          <FourStrandsCard totals={strandTotals} />
-          {weekStatsError && (
+        {/* The Four Strands card used to sit here. The week tile in StatTiles
+            already carries the same split, so the card was duplicate surface.
+            The week fetch stays — the tile reads it — and so does its retry,
+            which is the only place a failed week load can surface. */}
+        {weekStatsError && (
+          <View className="mb-4">
             <Pressable
               onPress={() => user?.id && loadWeekStats(user.id)}
               accessibilityRole="button"
@@ -332,8 +333,8 @@ export default function ProfileScreen() {
                 <Text style={{ color: c.primary, fontWeight: '700' }}>Try again</Text>
               </Text>
             </Pressable>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Achievements */}
         <AchievementGridView {...achievements} />

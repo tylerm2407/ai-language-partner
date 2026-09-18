@@ -713,7 +713,7 @@ function InteractionBlock({
         {opened ? ` · ${Math.min(replies + 1, turns)} of ${turns}` : ''}
       </Caption>
       <Body weight="semibold" style={styles.spaced}>
-        {done ? 'Conversation finished.' : 'Speak with Sol for a few turns.'}
+        {done ? 'Conversation finished.' : 'Speak with your tutor for a few turns.'}
       </Body>
       {/* Said before the mic is ever tapped. Conversation is the heaviest
           strand, and a learner deciding whether to bother is entitled to know
@@ -729,7 +729,7 @@ function InteractionBlock({
 
       {history.map((turn, index) => (
         <View key={`${turn.role}-${index}`} style={styles.spaced}>
-          <Caption tone="tertiary">{turn.role === 'assistant' ? 'Sol' : 'You'}</Caption>
+          <Caption tone="tertiary">{turn.role === 'assistant' ? 'Tutor' : 'You'}</Caption>
           <Body size="sm" tone={turn.role === 'assistant' ? 'primary' : 'secondary'}>
             {turn.content}
           </Body>

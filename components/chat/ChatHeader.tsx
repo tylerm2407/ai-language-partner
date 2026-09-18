@@ -53,7 +53,7 @@ export function ChatHeader({
         <Ionicons name="chevron-back" size={22} color={c.idle} />
       </Pressable>
 
-      {/* Sol sits in the header as the tutor's face: thinking while a reply
+      {/* The mascot sits in the header as the tutor's face: thinking while a reply
           is on its way, listening while the mic is open, idle otherwise. */}
       <Mascot state={mascotState} size={44} />
 

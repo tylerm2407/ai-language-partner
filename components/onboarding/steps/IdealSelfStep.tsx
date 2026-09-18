@@ -9,7 +9,7 @@ import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { LanguageCode } from '../../../types';
 import { SlabCard } from '../../ui2/SlabCard';
 import { Chip } from '../../ui2/Chip';
-import { MascotSol } from '../../ui2/MascotSol';
+import { Ui2Mascot } from '../../ui2/Ui2Mascot';
 import { TOPIC_CHIPS, type TopicKey } from '../topic-packs';
 import { stepStyles, type StepFrame } from './bits';
 import { IDEAL_SELF_MAX_CHARS, IDEAL_SELF_PLACEHOLDER } from './config';
@@ -35,7 +35,7 @@ export function IdealSelfStep({
   onPickChip: (key: TopicKey, sentence: string) => void;
   /** Leaving the box: guess the topic from the free text if no chip was tapped. */
   onCommitTopic: () => void;
-  /** Sol's reaction to a recognised topic, or null when there is none to react to. */
+  /** The mascot's reaction to a recognised topic, or null when there is none to react to. */
   solLine: string | null | undefined;
 }) {
   const { c, type } = useUi2Theme();
@@ -79,12 +79,12 @@ export function IdealSelfStep({
           />
         ))}
       </Animated.View>
-      {/* Sol reacting to the topic by name is the only proof, at this point
+      {/* The mascot reacting to the topic by name is the only proof, at this point
           in the flow, that the sentence went anywhere. */}
       {solLine ? (
         <Animated.View entering={frame.enter(3)}>
           <SlabCard tint="primary" style={stepStyles.solCard}>
-            <MascotSol size={40} mood="cheer" />
+            <Ui2Mascot size={40} mood="cheer" />
             <Text style={{ flex: 1, fontFamily: type.ui, fontSize: 13, lineHeight: 19, color: c.ink }}>
               {solLine}
             </Text>

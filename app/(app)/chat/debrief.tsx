@@ -12,7 +12,7 @@
  * a second visit — and `fetchMissionResult` reads the stored
  * `chat_mission_attempts.result` behind it.
  *
- * Two languages on one screen: Sol's send-off and the You said / Better
+ * Two languages on one screen: the tutor's send-off and the You said / Better
  * pairs are in the TARGET language and set in the mono face; everything
  * around them is the learner's own. Never colour alone — the caption and
  * the face carry the distinction.
@@ -194,7 +194,7 @@ function DebriefBody({ result }: { result: MissionResult }) {
           {cefrLabel(result.band)}
         </Caption>
         {result.sendoff ? (
-          <Body style={styles.quote} accessibilityLabel={`Sol says: ${result.sendoff}`}>
+          <Body style={styles.quote} accessibilityLabel={`Your tutor says: ${result.sendoff}`}>
             “{result.sendoff}”
           </Body>
         ) : null}

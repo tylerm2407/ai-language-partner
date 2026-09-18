@@ -10,7 +10,7 @@
 //
 // A SEPARATE FUNCTION FROM ai-chat, ON PURPOSE. The question never reaches
 // the tutor: the conversation's system prompt, its history and its
-// dialogue-act controller are untouched, so Sol stays in character and the
+// dialogue-act controller are untouched, so the tutor stays in character and the
 // scene does not learn that the learner needed help. This is a phrasebook
 // the learner consults beside the conversation, not a turn in it. Nothing
 // here writes to chat_sessions, correction_log or conversation_evidence.

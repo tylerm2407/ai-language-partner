@@ -23,7 +23,7 @@ jest.mock('../hooks/useAvatarImage', () => ({
   useAvatarImage: (path: string | null) => (path ? `signed:${path}` : null),
   invalidateAvatarImage: jest.fn(),
 }));
-jest.mock('../components/ui2/MascotSol', () => ({ MascotSol: 'MascotSol' }));
+jest.mock('../components/ui2/Ui2Mascot', () => ({ Ui2Mascot: 'Ui2Mascot' }));
 jest.mock('../components/avatar/Avatar', () => ({ Avatar: 'Avatar' }));
 jest.mock('../components/avatar/AvatarPresetPicker', () => ({ AvatarPresetPicker: 'AvatarPresetPicker' }));
 // The sheet is the photo's source; the test drives it through its

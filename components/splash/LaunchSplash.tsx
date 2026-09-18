@@ -26,7 +26,7 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useMotion } from '../../hooks/useMotion';
 import {
   PEEK,
-  SOL_SIZE,
+  MASCOT_SIZE,
   TILE_FILL,
   TILE_SIZE,
   TWITCH,
@@ -40,9 +40,9 @@ import {
 // The same files the storyboard shows, so the seam is the same pixels.
 const TILE_LIGHT = require('../../assets/splash-icon.png');
 const TILE_DARK = require('../../assets/splash-icon-dark.png');
-const SOL = require('../../assets/mascot/sol-still.png');
+const MASCOT = require('../../assets/mascot/mascot-still.png');
 
-const SOL_INSET = (TILE_SIZE - SOL_SIZE) / 2;
+const MASCOT_INSET = (TILE_SIZE - MASCOT_SIZE) / 2;
 const EASE_OUT = Easing.bezier(0.2, 0.8, 0.2, 1);
 const EASE_IN = Easing.bezier(0.6, 0, 0.8, 0.4);
 
@@ -150,7 +150,7 @@ export function LaunchSplash({ onDone }: LaunchSplashProps) {
         <View style={styles.tileBox}>
           {!shouldReduce && (
             <Animated.View style={[styles.sol, solStyle]}>
-              <Image source={SOL} style={styles.fillImage} contentFit="contain" />
+              <Image source={MASCOT} style={styles.fillImage} contentFit="contain" />
             </Animated.View>
           )}
           <Animated.View style={[styles.tile, tileStyle]}>
@@ -198,10 +198,10 @@ const styles = StyleSheet.create({
   },
   sol: {
     position: 'absolute',
-    left: SOL_INSET,
-    top: SOL_INSET,
-    width: SOL_SIZE,
-    height: SOL_SIZE,
+    left: MASCOT_INSET,
+    top: MASCOT_INSET,
+    width: MASCOT_SIZE,
+    height: MASCOT_SIZE,
     zIndex: 0,
   },
   wordBox: {

@@ -17,7 +17,7 @@ import { formatPrefTime } from '../NotificationBuilder';
 import { Ui2Screen } from '../../ui2/Ui2Screen';
 import { SlabButton } from '../../ui2/SlabButton';
 import { SlabCard } from '../../ui2/SlabCard';
-import { MascotSol } from '../../ui2/MascotSol';
+import { Ui2Mascot } from '../../ui2/Ui2Mascot';
 import type { TopicPack } from '../topic-packs';
 import { planHeadline } from '../PlanReveal';
 import type { StepFrame } from './bits';
@@ -133,7 +133,7 @@ export function SaveStep({
       }
     >
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(360)} style={styles.centerCol}>
-        <MascotSol size={110} mood="celebrate" />
+        <Ui2Mascot size={110} mood="celebrate" />
         <Text
           accessibilityRole="header"
           style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 36, color: c.ink, textAlign: 'center' }}

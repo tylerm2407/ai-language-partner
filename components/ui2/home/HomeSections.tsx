@@ -13,7 +13,7 @@
  *
  * Clay (canvas "Fluenci Home · Depth", board 4, picked 2026-09-16): every
  * card on Home is a soft clay volume on the lilac `clayGround` (`SlabCard
- * clay`, `useClay`). The masthead is a lilac gradient shelf with Sol sitting
+ * clay`, `useClay`). The masthead is a lilac gradient shelf with the mascot sitting
  * on its bottom edge; level and due are two equal clay cards; the hero keeps
  * its mesh — `primary` with a highlight stop top-right, a shade stop
  * bottom-left, a soft white disc and an amber glow, all SVG — under a clay
@@ -33,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ClayOverlay, SlabCard, useClay } from '../SlabCard';
 import { SlabButton } from '../SlabButton';
-import { MascotSol } from '../MascotSol';
+import { Ui2Mascot } from '../Ui2Mascot';
 import { haptic } from '../../../lib/haptics';
 import { cefrCanDo } from '../../../lib/cefr-labels';
 import { displayMinutes, goalProgress } from '../../../lib/active-time';
@@ -111,7 +111,7 @@ export function HomeHeader({
           </Pressable>
         ) : null}
       </View>
-      {/* Held clear of Sol, who stands in the shelf's bottom-right corner. */}
+      {/* Held clear of the mascot, which stands in the shelf's bottom-right corner. */}
       <Text
         accessibilityRole="header"
         style={{ fontFamily: type.heading, fontSize: 36, lineHeight: 40, letterSpacing: -1, color: c.ink, maxWidth: '64%' }}
@@ -125,7 +125,7 @@ export function HomeHeader({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <MascotSol size={SOL_SIZE} />
+        <Ui2Mascot size={MASCOT_SIZE} />
       </View>
     </Animated.View>
   );
@@ -515,14 +515,14 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
   );
 }
 
-/** Sol's size on the shelf, and the shelf's corner. */
-const SOL_SIZE = 132;
+/** The mascot's size on the shelf, and the shelf's corner. */
+const MASCOT_SIZE = 132;
 const SHELF_RADIUS = 36;
 const HERO_RADIUS = 34;
 
 const styles = StyleSheet.create({
   // Wider than the page column by 8pt a side, so the shelf reads as the
-  // screen's masthead rather than one more card. Sol hangs 30pt below its
+  // screen's masthead rather than one more card. The mascot hangs 30pt below its
   // bottom edge and must paint over the level row, hence the zIndex.
   header: { gap: 10, marginHorizontal: -8, borderRadius: SHELF_RADIUS, padding: 20, paddingBottom: 44, zIndex: 2 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },

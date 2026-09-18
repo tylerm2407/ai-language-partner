@@ -1,5 +1,5 @@
 /**
- * Small pieces the onboarding step components share: Sol's mood hook, the two
+ * Small pieces the onboarding step components share: the mascot's mood hook, the two
  * row leads (signal bars, flag tile), the step frame contract, and the style
  * sheet every step draws from.
  */
@@ -9,23 +9,23 @@ import type Animated from 'react-native-reanimated';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { CefrBand } from '../../../lib/cefr-proficiency';
 import { cefrChipVariant } from '../../ui2/CefrExplainerSheet';
-import type { MascotMood } from '../../ui2/MascotSol';
+import type { MascotMood } from '../../ui2/Ui2Mascot';
 import type { StepHeroEntrance } from '../../ui2/StepHero';
 
 /**
  * What the screen hands every form step: the hero block (back, "Step n of 6",
- * the question, Sol) and the staggered entrance for the rows beneath it. Both
+ * the question, the mascot) and the staggered entrance for the rows beneath it. Both
  * depend on screen-level state — step index, back target, reduce-motion — that
  * the steps themselves have no business knowing.
  */
 export interface StepFrame {
   hero: (text: string, entrance: StepHeroEntrance, mood?: MascotMood) => ReactNode;
   enter: (i: number) => ComponentProps<typeof Animated.View>['entering'];
-  /** One-shot cheer from Sol on a good tap. */
+  /** One-shot cheer from the mascot on a good tap. */
   cheer: () => void;
 }
 
-/** Sol's mood: a base mood per step, with a one-shot cheer on a good tap. */
+/** The mascot's mood: a base mood per step, with a one-shot cheer on a good tap. */
 export function useMascotMood(base: MascotMood): [MascotMood, () => void] {
   const [cheering, setCheering] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -261,7 +261,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     warmupTimerRef.current = setTimeout(() => setWarmup({ scenarioKey, stage }), 400);
   }, []);
 
-  // "How do I say…" — asked outside the tutor's earshot, so Sol stays in
+  // "How do I say…" — asked outside the tutor's earshot, so the tutor stays in
   // character. Never while hands-free is on (the loop owns the mic).
   const [helpOpen, setHelpOpen] = useState(false);
 

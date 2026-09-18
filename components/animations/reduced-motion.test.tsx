@@ -4,7 +4,7 @@
  * The in-app switch was honored by the UI 2.0 chrome — home entrances, the
  * mascot, the progress bar, the tutor visualisers — but three surfaces never
  * read it: the sparkle and shake that fire on every graded answer, and the chat
- * typing dots, which loop for as long as Sol is composing. A learner who turned
+ * typing dots, which loop for as long as the tutor is composing. A learner who turned
  * the setting on still got all three, which is the same as the setting not
  * working: they are the animations a lesson actually shows you.
  *

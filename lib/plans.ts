@@ -273,7 +273,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
   basic: [
     '20 new words a day',
     'Unlimited review — always',
-    'Sol remembers your moment',
+    'Your tutor remembers your moment',
     '20 tutor messages per day',
     '6 minutes of voice practice per day',
     '3 writing grades per day',

@@ -1,5 +1,5 @@
 /**
- * MascotSol — the UI 2.0 screens' handle on the mascot.
+ * Ui2Mascot — the UI 2.0 screens' handle on the mascot.
  *
  * Kept as a thin wrapper so the onboarding, welcome and plan-builder screens
  * keep their `mood` prop while the real character lives in
@@ -25,7 +25,7 @@ export type MascotMood =
 
 /**
  * `cheer` is the small nod a good tap earns — the onboarding steps fire it on
- * a 700 ms tick, so it must stay small. `celebrate` is the big one (Sol rears
+ * a 700 ms tick, so it must stay small. `celebrate` is the big one (the mascot rears
  * up and puffs a flame) and belongs to a moment that actually finished.
  */
 const STATE_FOR: Record<MascotMood, MascotState> = {
@@ -45,13 +45,13 @@ const STATE_FOR: Record<MascotMood, MascotState> = {
   asleep: 'asleep',
 };
 
-interface MascotSolProps {
+interface Ui2MascotProps {
   size?: number;
   mood?: MascotMood;
   /** Accepted for API compatibility; the clips carry their own colour. */
   tint?: string;
 }
 
-export function MascotSol({ size = 96, mood = 'idle' }: MascotSolProps) {
+export function Ui2Mascot({ size = 96, mood = 'idle' }: Ui2MascotProps) {
   return <Mascot state={STATE_FOR[mood]} size={size} />;
 }

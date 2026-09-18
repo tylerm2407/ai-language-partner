@@ -36,7 +36,7 @@ export function LanguageStep({
 }) {
   return (
     <>
-      {/* First question of the whole app: Sol says hello rather than sitting. */}
+      {/* First question of the whole app: the mascot says hello rather than sitting. */}
       {frame.hero('What language do you want to learn?', 'slide', 'wave')}
       <Animated.View entering={frame.enter(0)}>
         <Lede>You can add another later.</Lede>
@@ -230,7 +230,7 @@ export function NotificationsStep({
 }) {
   return (
     <>
-      {frame.hero('When should Sol nudge you?', 'meet')}
+      {frame.hero('When should we nudge you?', 'meet')}
       <Animated.View entering={frame.enter(0)}>
         <Lede>
           Switch on only what you want. Each one has its own time. Change any of it later in

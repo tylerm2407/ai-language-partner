@@ -7,7 +7,7 @@
  * rows: the leading control (back chevron, or a close × for a lesson), a
  * kicker ("STEP n OF total", or "GREETINGS & BASICS · QUESTION 03"), a
  * segmented progress strip, and the title itself — the question in
- * onboarding, the instruction or the verdict in a lesson. Sol peeks over the
+ * onboarding, the instruction or the verdict in a lesson. The mascot peeks over the
  * block's bottom-right edge, playing his clips (idle loop, a nod on `cheer`).
  *
  * `tone` recolours the whole block: `primary` while a step is open, `green`
@@ -19,7 +19,7 @@
  *     bubble had, so each step still feels like its own moment);
  *   - the segments for the steps done so far light up one after another;
  *   - the title fades up a beat after the block lands;
- *   - Sol pops in last and then bobs on a slow loop.
+ *   - The mascot pops in last and then bobs on a slow loop.
  * Every piece gates on Reduce Motion and settles to its final state at once.
  */
 import { useEffect } from 'react';
@@ -45,14 +45,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
-import { MascotSol, type MascotMood } from './MascotSol';
+import { Ui2Mascot, type MascotMood } from './Ui2Mascot';
 
 /**
- * - `slide`: the block springs in from the right, Sol pops up after it.
- * - `rise`: the block floats up, Sol fades in — for a reflective ask.
- * - `pop`: block and Sol both pop to size — a quick, confident question.
- * - `meet`: the block drifts in from the left, Sol from the right.
- * - `drop`: the block settles down from above, Sol drops in after.
+ * - `slide`: the block springs in from the right, the mascot pops up after it.
+ * - `rise`: the block floats up, the mascot fades in — for a reflective ask.
+ * - `pop`: block and mascot both pop to size — a quick, confident question.
+ * - `meet`: the block drifts in from the left, the mascot from the right.
+ * - `drop`: the block settles down from above, the mascot drops in after.
  * - `none`: no entrance — for a block that stays mounted and only changes
  *   state, like the lesson hero between exercises.
  */
@@ -122,7 +122,7 @@ function buildEntrance(entrance: StepHeroEntrance): EntranceSet {
   }
 }
 
-const SOL_SIZE = 72;
+const MASCOT_SIZE = 72;
 const SEGMENT_STAGGER_MS = 70;
 const TONE_FADE_MS = 260;
 
@@ -184,7 +184,7 @@ export function StepHero({
   }, [fill.bg, shouldReduce, bg]);
   const bgStyle = useAnimatedStyle(() => ({ backgroundColor: bg.value }));
 
-  // Sol's slow bob: 4px, 3.2s round trip. The clips animate his face; this
+  // The mascot's slow bob: 4px, 3.2s round trip. The clips animate its face; this
   // moves his whole body against the block, which is what reads as depth.
   const bob = useSharedValue(0);
   useEffect(() => {
@@ -276,7 +276,7 @@ export function StepHero({
           bottom-right edge. The clips are alpha video, so he sits on the
           violet and on the ground below without a box. */}
       <Animated.View entering={anim.sol} style={[styles.sol, bobStyle]} pointerEvents="none">
-        <MascotSol size={SOL_SIZE} mood={mood} />
+        <Ui2Mascot size={MASCOT_SIZE} mood={mood} />
       </Animated.View>
     </Animated.View>
   );
@@ -294,8 +294,8 @@ const styles = StyleSheet.create({
   controlRight: { marginRight: -14 },
   segments: { flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 4, borderRadius: 2 },
-  copy: { gap: 8, paddingRight: SOL_SIZE - 8 },
+  copy: { gap: 8, paddingRight: MASCOT_SIZE - 8 },
   title: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
   subtitle: { fontSize: 15, lineHeight: 21 },
-  sol: { position: 'absolute', right: 10, bottom: -14, width: SOL_SIZE, height: SOL_SIZE },
+  sol: { position: 'absolute', right: 10, bottom: -14, width: MASCOT_SIZE, height: MASCOT_SIZE },
 });

@@ -24,7 +24,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '../ui2/Chip';
-import { MascotSol } from '../ui2/MascotSol';
+import { Ui2Mascot } from '../ui2/Ui2Mascot';
 import { SlabButton } from '../ui2/SlabButton';
 import { SlabCard } from '../ui2/SlabCard';
 import { Ui2Screen } from '../ui2/Ui2Screen';
@@ -125,7 +125,7 @@ export function PlanReveal({
 
       <Animated.View entering={enter(1)}>
         <SlabCard tint="green" style={styles.solCard}>
-          <MascotSol size={44} mood="cheer" />
+          <Ui2Mascot size={44} mood="cheer" />
           <View style={styles.solText}>
             {taught ? (
               <>
@@ -134,8 +134,8 @@ export function PlanReveal({
                 </Text>
                 <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>
                   {/* The pack sentence carries its own full stop; strip it so
-                      the line does not read "centre-ville.. Sol". */}
-                  {taught.sentence.target.replace(/[.!?。]+$/, '')}. Sol keeps building from here.
+                      the line does not read "centre-ville.. Your tutor". */}
+                  {taught.sentence.target.replace(/[.!?。]+$/, '')}. Your tutor keeps building from here.
                 </Text>
               </>
             ) : (

@@ -14,7 +14,7 @@
  * decides whether a learner may generate; it only offers it. A client that
  * grants entitlement is the migration-057 class of bug (CLAUDE.md §1.2).
  *
- * The wait is honest and unskippable: a full screen with Sol and copy that
+ * The wait is honest and unskippable: a full screen with the mascot and copy that
  * says minutes, not seconds. A failed render drops back to the form with the
  * reason and the preset library still available, so nobody is stranded.
  */
@@ -28,7 +28,7 @@ import { Avatar } from '../../components/avatar/Avatar';
 import { Ui2Screen } from '../../components/ui2/Ui2Screen';
 import { SlabButton } from '../../components/ui2/SlabButton';
 import { SlabCard } from '../../components/ui2/SlabCard';
-import { MascotSol } from '../../components/ui2/MascotSol';
+import { Ui2Mascot } from '../../components/ui2/Ui2Mascot';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useScreenView } from '../../hooks/useScreenView';
 import { useAvatarImage, invalidateAvatarImage } from '../../hooks/useAvatarImage';
@@ -164,7 +164,7 @@ export default function IdentitySetupScreen() {
     return (
       <Ui2Screen fixed>
         <View style={[styles.center, { gap: 20, paddingHorizontal: 32 }]} accessibilityLiveRegion="polite">
-          <MascotSol size={140} mood="think" />
+          <Ui2Mascot size={140} mood="think" />
           <Text
             accessibilityRole="header"
             style={{ fontFamily: type.heading, fontSize: 28, lineHeight: 34, color: c.ink, textAlign: 'center' }}
@@ -199,7 +199,7 @@ export default function IdentitySetupScreen() {
           Make it yours
         </Text>
         <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
-          Pick a name and a look. This is who you&apos;ll be in your lessons and with Sol.
+          Pick a name and a look. This is who you&apos;ll be in your lessons and with your tutor.
         </Text>
 
         <SlabCard style={[styles.inputCard, { borderColor: c.primary }]}>

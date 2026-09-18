@@ -39,7 +39,7 @@ export function PrePermissionSheet({
           tone="secondary"
           style={{ textAlign: 'center', marginTop: spacing.xs, maxWidth: 320 }}
         >
-Lumi will tap you once in the evening if you haven't practised yet. One nudge a day, max — no spam, and nothing to lose if you skip it.
+We will tap you once in the evening if you haven't practised yet. One nudge a day, max — no spam, and nothing to lose if you skip it.
         </Body>
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.lg }}>

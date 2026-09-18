@@ -44,7 +44,7 @@ jest.mock('../../lib/supabase-queries', () => ({
   fetchGrammarRule: jest.fn(() => Promise.resolve(null)),
 }));
 jest.mock('expo-speech', () => ({ speak: jest.fn() }));
-// The hero block mounts Sol, whose clips play through expo-av's native
+// The hero block mounts the mascot, whose clips play through expo-av's native
 // player; under jest he is a box that renders nothing.
 jest.mock('../mascot/Mascot', () => ({ Mascot: () => null }));
 jest.mock('../../hooks/useAudioPlayer', () => ({

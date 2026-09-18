@@ -169,7 +169,7 @@ export interface MissionResult {
   /** Words that became review cards during the attempt. */
   savedWords: string[];
   corrections: MissionCorrectionGroup[];
-  /** Sol's goodbye line, in the target language. */
+  /** The tutor's goodbye line, in the target language. */
   sendoff: string;
 }
 
@@ -828,7 +828,7 @@ export interface PhraseHelp {
  * and gets one target-language phrase back, pitched at their level and the
  * scene's register. Metered on the daily hints budget (`HINT_QUOTA_REACHED`).
  * A separate function from `ai-chat` on purpose: the tutor never sees the
- * question, so Sol stays in character.
+ * question, so the tutor stays in character.
  */
 export async function getPhraseHelp(params: {
   ask: string;

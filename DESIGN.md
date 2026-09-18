@@ -1014,7 +1014,7 @@ order and copy are unchanged; the treatment is soft clay volumes.
   `clayShelfFrom → clayShelfTo` gradient with `ClayOverlay` carrying its light
   and shade (a gradient child would paint over the view's own inset shadows).
   Date in `onTint`, language chip as a small clay pill, 36pt greeting held
-  to 64% width so it clears Sol, who stands (132pt, animated idle) in the
+  to 64% width so it clears the mascot, which stands (132pt, animated idle) in the
   bottom-right corner and hangs 30pt over the level row.
 - **Level + due** — two equal clay cards. Level: ring in a `primaryTint`
   bowl, eyebrow beside it, can-do and basis below. Due: 34pt count, raised
@@ -1103,7 +1103,7 @@ with a trash icon on the right. Nothing new was added to the token set.
 - **Onboarding composition** (2026-09-08, canvas page "Onboarding ·
   composition", variant C "Hero block"): each step opens with ONE violet block
   (`components/ui2/StepHero.tsx`) carrying back, "Step n of 5", a segmented
-  progress strip and the question in white; Sol peeks over its bottom-right
+  progress strip and the question in white; the mascot peeks over its bottom-right
   edge playing his clips. The old mascot-left / speech-bubble-right / fat
   progress bar stack was Duolingo's onboarding part for part and is gone
   (`StepHeader` and `SpeechBubble` deleted). Short-label pickers (language)
@@ -1114,7 +1114,7 @@ with a trash icon on the right. Nothing new was added to the token set.
   track, and the exercise type's instruction as the title (the card under it
   skips its own label via `exercise-chrome-context`). On an answer the block
   cross-fades to green or error and its title becomes the verdict with the
-  explanation under it; Sol reacts. The pinned footer keeps every state it
+  explanation under it; the mascot reacts. The pinned footer keeps every state it
   had — note row (placeholder, second try + Show answer, skipped, correct,
   recovered, wrong with the answer), SKIP, Previous / Next / Finish — as tint
   pills with no rules; the row says only what the block does not.
@@ -1188,11 +1188,11 @@ with a trash icon on the right. Nothing new was added to the token set.
     never blanks the picker — the order simply stays as it was.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
-  drop), the done segments light up 70ms apart, the question fades up, Sol
+  drop), the done segments light up 70ms apart, the question fades up, the mascot
   pops in last and bobs 4px on a 3.2s loop; rows cascade 40ms apart
   (`FadeInDown`); the plan-building loader runs ~2.4s.
-- **Mascot**: `components/ui2/MascotSol.tsx` wraps `components/mascot/Mascot`,
-  which plays Sol's alpha-video clips (`assets/mascot/video`) with a `mood`
+- **Mascot**: `components/ui2/Ui2Mascot.tsx` wraps `components/mascot/Mascot`,
+  which plays the mascot's alpha-video clips (`assets/mascot/video`) with a `mood`
   API (`idle` / `think` / `cheer` / …). A Rive rig would replace the video
   behind the same props.
 

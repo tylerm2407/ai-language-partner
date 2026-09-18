@@ -27,7 +27,7 @@ interface AvatarGeneratorSheetProps {
   /**
    * DEFERRED mode. When set, the sheet stops after the photo and style are
    * chosen and hands them back instead of generating, so the CALLER owns the
-   * wait — `app/(app)/identity-setup.tsx` draws full-screen with Sol rather
+   * wait — `app/(app)/identity-setup.tsx` draws full-screen with the mascot rather
    * than inside this sheet. Consent is unchanged: the photo still goes to the
    * provider, from the caller.
    */
