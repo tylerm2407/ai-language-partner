@@ -1265,3 +1265,50 @@ export interface TutorMemory {
   /** Set only when the learner has rewritten the note. */
   updatedAt: string | null;
 }
+
+// ─── Referrals (migration 148) ───────────────────────────────────────────
+
+/** Where one earned reward stands. `holding` = inside the 7-day refund hold. */
+export type ReferralRewardStatus =
+  | 'holding'
+  | 'ready'
+  | 'delivering'
+  | 'delivered'
+  | 'void'
+  | 'needs_attention';
+
+/** One earned reward, from `get_my_referral_summary`. No referee identity. */
+export interface ReferralReward {
+  id: string;
+  status: ReferralRewardStatus;
+  availableAt: string;
+  deliveredAt: string | null;
+  /** How it was handed out, once it was. */
+  method: 'apple_extension' | 'revenuecat_promo' | null;
+  days: number | null;
+}
+
+/** The invite screen's whole state, in one server read. */
+export interface ReferralSummary {
+  code: string;
+  /** Friends who entered the code (excluding voided ones). */
+  joined: number;
+  /** Entered the code, not yet paid. */
+  waiting: number;
+  /** Paid — each one earned (or is earning) a reward. */
+  subscribed: number;
+  /** This learner already entered someone else's code. */
+  hasReferrer: boolean;
+  /** This learner may still enter a code (new, never paid, none entered). */
+  canRedeem: boolean;
+  annualCap: number;
+  rewards: ReferralReward[];
+}
+
+export type ReferralRedeemError =
+  | 'INVALID_CODE'
+  | 'OWN_CODE'
+  | 'ALREADY_REFERRED'
+  | 'ALREADY_SUBSCRIBED'
+  | 'TOO_LATE'
+  | 'RATE_LIMITED';

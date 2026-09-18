@@ -85,6 +85,10 @@ import type {
   TutorMemory,
   TutorMemoryKind,
   TutorMemorySource,
+  ReferralReward,
+  ReferralRewardStatus,
+  ReferralSummary,
+  ReferralRedeemError,
 } from '../types';
 
 import { SUPPORTED_LANGUAGES, type NewsTier } from '../config/app';
@@ -5051,4 +5055,52 @@ export async function deleteAllTutorMemories(userId: string, targetLanguage: str
     .eq('user_id', userId)
     .or(scope);
   if (error) throw error;
+}
+
+// ─── Referrals ──────────────────────────────────────────────────────────
+// All three are SECURITY DEFINER RPCs (migration 148); the tables behind them
+// are deny-all to clients. Qualification and rewards are server-only — the
+// RevenueCat webhook and the referral-rewards worker.
+
+function asReferralReward(raw: Record<string, unknown>): ReferralReward {
+  return {
+    id: String(raw.id),
+    status: raw.status as ReferralRewardStatus,
+    availableAt: String(raw.available_at),
+    deliveredAt: typeof raw.delivered_at === 'string' ? raw.delivered_at : null,
+    method: raw.method === 'apple_extension' || raw.method === 'revenuecat_promo' ? raw.method : null,
+    days: typeof raw.days === 'number' ? raw.days : null,
+  };
+}
+
+/** The invite screen's state. Creates the learner's code on first call. */
+export async function getReferralSummary(): Promise<ReferralSummary> {
+  const { data, error } = await supabase.rpc('get_my_referral_summary');
+  if (error) throw error;
+  const raw = (data ?? {}) as Record<string, unknown>;
+  return {
+    code: String(raw.code ?? ''),
+    joined: Number(raw.joined ?? 0),
+    waiting: Number(raw.waiting ?? 0),
+    subscribed: Number(raw.subscribed ?? 0),
+    hasReferrer: raw.has_referrer === true,
+    canRedeem: raw.can_redeem === true,
+    annualCap: Number(raw.annual_cap ?? 0),
+    rewards: Array.isArray(raw.rewards)
+      ? (raw.rewards as Record<string, unknown>[]).map(asReferralReward)
+      : [],
+  };
+}
+
+/**
+ * Enter someone's invite code. Resolves with the refusal code rather than
+ * throwing for the expected refusals (bad code, own code, …); throws only when
+ * the call itself failed.
+ */
+export async function redeemReferralCode(code: string): Promise<{ ok: true } | { ok: false; error: ReferralRedeemError }> {
+  const { data, error } = await supabase.rpc('redeem_referral_code', { p_code: code });
+  if (error) throw error;
+  const raw = (data ?? {}) as { ok?: boolean; error?: string };
+  if (raw.ok === true) return { ok: true };
+  return { ok: false, error: (raw.error ?? 'INVALID_CODE') as ReferralRedeemError };
 }

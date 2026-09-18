@@ -91,3 +91,7 @@ export function levelToNewsTier(level: ProficiencyLevel): NewsTier {
 // review follows them.
 export const TERMS_URL = 'https://fluenciapp.com/terms';
 export const PRIVACY_URL = 'https://fluenciapp.com/privacy';
+
+// ─── App Store listing ───────────────────────────────────────────────────
+// Where an invite link sends a friend. App ID from App Store Connect.
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6761507250';

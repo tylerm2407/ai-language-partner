@@ -417,6 +417,15 @@ export default function ProfileScreen() {
 
         <Ui2ListRow
           style={{ marginBottom: spacing.sm }}
+          icon="gift"
+          title="Invite friends"
+          subtitle="Earn free months when they subscribe"
+          onPress={() => router.push('/profile/invite' as any)}
+          accessibilityLabel="Invite friends"
+        />
+
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
           icon="settings"
           title="Edit Settings"
           subtitle="Language, level, daily goal, name"

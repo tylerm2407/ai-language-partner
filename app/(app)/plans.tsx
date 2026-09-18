@@ -58,6 +58,8 @@ import { SlabCard } from '../../components/ui2/SlabCard';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { radii, spacing } from '../../config/theme';
 import { TERMS_URL, PRIVACY_URL } from '../../config/app';
+import { Ui2Sheet } from '../../components/ui2/Ui2Sheet';
+import { InviteCodeForm } from '../../components/referrals/InviteCodeForm';
 import { useScreenView } from '../../hooks/useScreenView';
 
 type BillingTerm = 'monthly' | 'annual';
@@ -83,6 +85,10 @@ export default function PlansScreen() {
   const [tier, setTier] = useState<Exclude<PlanId, 'starter'>>(DEFAULT_TIER);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  // A friend's invite code must be on the account before the first purchase,
+  // or the purchase credits nobody — so the field lives here, where a new
+  // learner is at that moment.
+  const [inviteOpen, setInviteOpen] = useState(false);
   // Refs, not the state above: state cannot close a same-React-batch double
   // tap, and both of these start a payment flow.
   const purchaseInFlight = useRef(false);
@@ -535,8 +541,9 @@ export default function PlansScreen() {
             <View
               style={{
                 flexDirection: 'row',
+                flexWrap: 'wrap',
                 justifyContent: 'center',
-                gap: spacing.md - 2,
+                columnGap: spacing.md - 2,
                 marginTop: spacing.sm,
               }}
             >
@@ -564,6 +571,15 @@ export default function PlansScreen() {
                 style={{ minHeight: 44, justifyContent: 'center' }}
               >
                 <Text style={legalStyle}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setInviteOpen(true)}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Enter an invite code"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={legalStyle}>Invite code</Text>
               </Pressable>
             </View>
 
@@ -607,6 +623,15 @@ export default function PlansScreen() {
           </>
         )}
       </ScrollView>
+
+      <Ui2Sheet visible={inviteOpen} onDismiss={() => setInviteOpen(false)} avoidKeyboard>
+        <InviteCodeForm
+          onRedeemed={() => {
+            setInviteOpen(false);
+            Alert.alert('Code applied', 'Your friend gets their reward once your subscription starts.');
+          }}
+        />
+      </Ui2Sheet>
     </SafeAreaView>
   );
 }

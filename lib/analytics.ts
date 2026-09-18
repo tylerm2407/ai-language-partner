@@ -136,6 +136,14 @@ type EventName =
    *  the language started, never anything the learner wrote. */
   | 'language_limit_resolved'
 
+  // ── Referrals (migration 148). Never the code itself, never who invited whom.
+  /** The learner opened the share sheet (`source` = 'share') or copied
+   *  their code (`source` = 'copy'). */
+  | 'referral_code_shared'
+  /** The learner entered someone's invite code. `ok` = attached, `code` = the
+   *  refusal (INVALID_CODE, OWN_CODE, ALREADY_REFERRED, …) when not. */
+  | 'referral_code_redeemed'
+
   /**
    * A screen was shown.
    *
