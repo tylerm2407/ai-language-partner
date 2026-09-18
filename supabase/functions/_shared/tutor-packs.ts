@@ -39,20 +39,45 @@ export interface TutorPack {
 }
 
 /**
- * Priced 2026-09-17 against a booked cost of 12 cents/minute and a take rate of
- * 84.15% (Apple Small Business 15%, then RevenueCat 1%). Breakeven is 14.3
- * cents/minute; the ceiling is ~25.9, which is $29.99 divided by the ~116
- * minutes a VIP month already includes — above that a pack looks worse than the
- * plan the learner is already paying for.
+ * Priced 2026-09-18 against a booked cost of 9 cents/minute and a take rate of
+ * 84.15% (Apple Small Business 15%, then RevenueCat 1%).
  *
- * The ladder is shallow on purpose. Our cost is linear pass-through, so a
- * volume discount is margin given away with no cost saving behind it; 20% at
- * the top rung is what fits between the floor and the ceiling, not a preference.
+ * THE BAND, AND WHY IT IS NARROW
+ *
+ *   Floor   10.7 c/min — breakeven, 9 / 0.8415.
+ *   Ceiling 19.3 c/min — $29.99 divided by the 155 minutes a VIP month already
+ *                        includes. Above it a pack costs more per minute than
+ *                        the plan it supplements, which reads as a punishment
+ *                        for wanting more.
+ *
+ * Both moved when TUTOR_CENTS_PER_MINUTE fell from 12 to 9: the floor dropped
+ * with cost, but the ceiling dropped FASTER, because more included minutes mean
+ * a lower implied rate on the plan. The band narrowed from ~11.6 cents wide to
+ * ~8.6. Raising plan minutes squeezes pack pricing from both ends — expect this
+ * to tighten again at the next rate cut, and re-derive rather than re-scaling.
+ *
+ * The ladder is shallow (10% at the top rung) because our cost is linear
+ * pass-through: every discount point is margin given away with no cost saving
+ * behind it. Games run 50% ladders because their marginal cost is near zero.
+ *
+ * THE RISK, STATED PLAINLY
+ *
+ * Credit-funded sessions skip `monthly_usage.tutor_cents` entirely (migration
+ * 149), so a purchased minute's margin is set by ACTUAL vendor cost, not by the
+ * booked rate. At the 14.6 c/min top of the last production measurement, a
+ * 30-minute pack at $4.99 nets $4.20 against $4.38 of cost — a LOSS. These
+ * prices assume the context truncation in `tutor-pricing.ts` delivers what it
+ * models (~2.85 c/min), and that is unverified.
+ *
+ * DO NOT TREAT THESE AS FINAL until an invoice covering a post-truncation
+ * window has been divided by SUM(observed_seconds)/60 over the same period.
+ * App Store prices are editable at any time, so creating the products does not
+ * commit us to these numbers.
  */
 export const TUTOR_PACKS: readonly TutorPack[] = [
-  { productId: 'fluenci_tutor_pack_20', minutes: 20, seconds: 20 * 60 },
-  { productId: 'fluenci_tutor_pack_50', minutes: 50, seconds: 50 * 60 },
-  { productId: 'fluenci_tutor_pack_100', minutes: 100, seconds: 100 * 60 },
+  { productId: 'fluenci_tutor_pack_30', minutes: 30, seconds: 30 * 60 },
+  { productId: 'fluenci_tutor_pack_75', minutes: 75, seconds: 75 * 60 },
+  { productId: 'fluenci_tutor_pack_120', minutes: 120, seconds: 120 * 60 },
 ];
 
 /** The words `resolveTier` substring-matches on. A pack id containing any of

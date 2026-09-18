@@ -7,9 +7,21 @@ const PACK = TUTOR_PACKS[1]; // fluenci_tutor_pack_50
 
 interface RpcCall { name: string; params: Record<string, unknown> }
 
-function stub(result: { data?: unknown; error?: { message: string } } = {}) {
+function stub(result: { data?: unknown; error?: { message: string }; tier?: string | null } = {}) {
   const calls: RpcCall[] = [];
+  const tier = result.tier === undefined ? 'vip' : result.tier;
   const supabase = {
+    // resolveTier reads `subscriptions` directly, not through an RPC.
+    from: (_table: string) => {
+      const chain: Record<string, unknown> = {};
+      const self = () => chain;
+      for (const m of ['select', 'eq']) chain[m] = self;
+      chain.maybeSingle = () => Promise.resolve({
+        data: tier ? { tier, is_active: true, current_period_end: null } : null,
+        error: null,
+      });
+      return chain;
+    },
     rpc: (name: string, params: Record<string, unknown>) => {
       calls.push({ name, params });
       return Promise.resolve({
@@ -112,4 +124,34 @@ Deno.test('a clawback calls the refund RPC and never the subscription path', asy
   assertEquals(calls.length, 1);
   assertEquals(calls[0].name, 'refund_tutor_credit_lot');
   assert(!calls.some((c) => c.name === 'apply_revenuecat_entitlement_event'));
+});
+
+Deno.test('a non-vip purchase is still delivered, and still shouts', async () => {
+  // Apple has already taken the money. Refusing to deliver is a refund request
+  // AND an App Review failure; a tier leak is merely a bug. The offering is
+  // what restricts packs to vip, not this code path.
+  for (const tier of ['basic', 'premium', 'starter', null]) {
+    const { supabase, calls } = stub({ tier });
+    const action = classifyPackEvent('NON_RENEWING_PURCHASE', PACK.productId)!;
+    const res = await applyPackEvent(supabase, 'user-1', { transaction_id: `txn_${tier}` }, action);
+    assertEquals(res.status, 200, `tier ${tier} must still be granted`);
+    assertEquals(calls.length, 1);
+    assertEquals(calls[0].name, 'grant_tutor_credit_lot');
+    assertEquals(calls[0].params.p_seconds, PACK.seconds);
+  }
+});
+
+Deno.test('a vip purchase grants without complaint', async () => {
+  const { supabase, calls } = stub({ tier: 'vip' });
+  const action = classifyPackEvent('NON_RENEWING_PURCHASE', PACK.productId)!;
+  assertEquals((await applyPackEvent(supabase, 'user-1', { transaction_id: 'txn_1' }, action)).status, 200);
+  assertEquals(calls.length, 1);
+});
+
+Deno.test('a clawback never reads the tier: the money goes back either way', async () => {
+  // A refund must work for a lapsed vip too, whose tier now reads `starter`.
+  const { supabase, calls } = stub({ tier: 'starter', data: { status: 'refunded', deficitAdded: 0 } });
+  const action = classifyPackEvent('CANCELLATION', PACK.productId)!;
+  assertEquals((await applyPackEvent(supabase, 'user-1', { transaction_id: 'txn_1' }, action)).status, 200);
+  assertEquals(calls[0].name, 'refund_tutor_credit_lot');
 });

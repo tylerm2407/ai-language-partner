@@ -32,9 +32,9 @@ Deno.test('the tier words are the ones tier.ts actually matches on', () => {
 });
 
 Deno.test('packs are looked up by exact id, never by prefix', () => {
-  assertEquals(packForProductId('fluenci_tutor_pack_50')?.seconds, 3000);
-  assertEquals(packForProductId('fluenci_tutor_pack_5'), null);
-  assertEquals(packForProductId('fluenci_tutor_pack_50_extra'), null);
+  assertEquals(packForProductId('fluenci_tutor_pack_75')?.seconds, 4500);
+  assertEquals(packForProductId('fluenci_tutor_pack_7'), null);
+  assertEquals(packForProductId('fluenci_tutor_pack_75_extra'), null);
   assertEquals(packForProductId(null), null);
   assertEquals(packForProductId(''), null);
 });
@@ -43,4 +43,22 @@ Deno.test('minutes and seconds never disagree', () => {
   for (const pack of TUTOR_PACKS) {
     assertEquals(pack.seconds, pack.minutes * 60, `${pack.productId} is inconsistent`);
   }
+});
+
+Deno.test('the largest pack stays under a VIP month, so it reads as a top-up', () => {
+  // A pack at or above the monthly entitlement is a shadow plan, not a
+  // supplement. 155 is tutorMinutesPerMonth('vip') at the current booked rate —
+  // if that rises again, re-check this rather than assuming headroom.
+  const VIP_MINUTES_PER_MONTH = 155;
+  const largest = Math.max(...TUTOR_PACKS.map((p) => p.minutes));
+  assert(
+    largest < VIP_MINUTES_PER_MONTH,
+    `largest pack (${largest} min) must stay under the ${VIP_MINUTES_PER_MONTH}-minute VIP month`,
+  );
+});
+
+Deno.test('the ladder only ever gets bigger, so a pack id cannot be misread', () => {
+  const minutes = TUTOR_PACKS.map((p) => p.minutes);
+  assertEquals([...minutes].sort((a, b) => a - b), minutes);
+  assertEquals(new Set(minutes).size, minutes.length);
 });

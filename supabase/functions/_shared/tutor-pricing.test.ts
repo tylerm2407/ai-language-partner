@@ -11,8 +11,8 @@ import {
 } from './tutor-pricing.ts';
 
 Deno.test('a reservation always rounds up, so the ceiling never leaks a fraction', () => {
-  // 10 minutes at 12c/min is 120c, plus the one-off analysis cent.
-  assertEquals(centsForSeconds(600), 121);
+  // 10 minutes at 9c/min is 90c, plus the one-off analysis cent.
+  assertEquals(centsForSeconds(600), 91);
   // One second past a whole minute must cost a whole extra cent, not 0.2 of one.
   assert(centsForSeconds(601) > centsForSeconds(600));
 });
@@ -128,11 +128,15 @@ Deno.test('settlement can never charge more than was reserved', () => {
 Deno.test('the published plan ceilings resolve to the minutes the plans are sold on', () => {
   // These are the numbers on the pricing page. If this test fails, either the
   // rate changed or migration 109's tier literals did, and the two must agree.
+  //
+  // They are NOT cents/rate: the one-off analysis cent comes off first, which
+  // is why basic is 33 rather than 33.3 and why it used to be 24 rather than
+  // the 25 two comments in the repo claimed.
   const monthlyMinutes = (cents: number) => Math.floor(secondsAffordable(cents) / 60);
-  assertEquals(monthlyMinutes(300), 24);   // basic
-  assertEquals(monthlyMinutes(800), 66);   // premium
-  assertEquals(monthlyMinutes(1400), 116); // vip
-  assertEquals(TUTOR_CENTS_PER_MINUTE, 12);
+  assertEquals(monthlyMinutes(300), 33);   // basic
+  assertEquals(monthlyMinutes(800), 88);   // premium
+  assertEquals(monthlyMinutes(1400), 155); // vip
+  assertEquals(TUTOR_CENTS_PER_MINUTE, 9);
   assertEquals(TUTOR_MIN_SESSION_SECONDS, 60);
 });
 

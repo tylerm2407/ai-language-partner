@@ -361,17 +361,24 @@ export function getPlanLimits(planId: PlanId | string): {
 /**
  * The live-tutor number a learner should actually be shown.
  *
- * The daily cap reads like the headline figure and is not: at 12 cents a
+ * The daily cap reads like the headline figure and is not: at 9 cents a
  * minute the monthly ceiling binds long before it does, so quoting "15 minutes
- * a day" would promise 450 minutes and deliver 24. Keep this the only place
+ * a day" would promise 450 minutes and deliver 33. Keep this the only place
  * the two ceilings get turned into a user-facing quantity.
  *
- * Kept in sync by hand with TUTOR_CENTS_PER_MINUTE in
- * supabase/functions/_shared/tutor-pricing.ts. That constant is expected to
- * fall once real invoices are reconciled, which will RAISE these minutes at
- * identical margin — so re-check it here when it moves.
+ * MUST EQUAL TUTOR_CENTS_PER_MINUTE in
+ * supabase/functions/_shared/tutor-pricing.ts, which is the authority — that is
+ * the copy the server divides the real ceiling by. This one only decides what
+ * the learner is TOLD, so a drift between them quotes one number on the paywall
+ * and grants another in the session. `lib/plan-rate-parity.test.ts` reads the
+ * edge module as text and fails if they disagree; it exists because this pair
+ * is a fourth split-brain beside the three the project README already warns
+ * about, and it went unguarded until the 12 -> 9 cut.
+ *
+ * Expected to fall again once invoices after the context-truncation change are
+ * reconciled, which RAISES these minutes at identical booked spend.
  */
-export const TUTOR_CENTS_PER_MINUTE = 12;
+export const TUTOR_CENTS_PER_MINUTE = 9;
 export const TUTOR_SESSION_FIXED_CENTS = 1;
 
 export function tutorMinutesPerMonth(planId: PlanId | string): number {

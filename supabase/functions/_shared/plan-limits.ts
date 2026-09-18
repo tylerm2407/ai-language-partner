@@ -100,7 +100,8 @@ export interface PlanLimits {
    * Denominated in cents INTERNALLY and minutes EXTERNALLY. A learner must
    * never be shown a dollar figure for their remaining AI. Divide by
    * `_shared/tutor-pricing.ts` TUTOR_CENTS_PER_MINUTE to get the minutes the
-   * plan is actually sold on — roughly 24 / 66 / 116 per month.
+   * plan is actually sold on — roughly 33 / 88 / 155 per month (migration 149
+   * cut the rate from 12 to 9; the cent ceilings themselves are unchanged).
    */
   monthlyTutorCents: number;
   dailyNewCards: number;

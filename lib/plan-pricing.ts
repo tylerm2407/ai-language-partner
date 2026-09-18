@@ -56,7 +56,7 @@ export function billedLine(pkg: PurchasesPackage): string {
 /**
  * Capacity meter fill, out of METER_BLOCKS, per tier. Not a computed ratio —
  * the meter communicates "how much talking time", and the tiers' live-tutor
- * ladder is what it tracks: 24 / 66 / 116 minutes a month
+ * ladder is what it tracks: 33 / 88 / 155 minutes a month
  * (`tutorMinutesPerMonth`). The old comment here said 10 / 20 / 30, which was
  * `dailyVoiceMinutes` from before migration 106 and matched nothing in
  * `lib/plans.ts` any more; the fills themselves were and are right, because
@@ -110,9 +110,9 @@ export const GOAL_TRACK_LESSONS = 6;
  * today, so saying so would be a claim the app does not honour.
  */
 export const STEP_ADDS: Record<Exclude<PlanId, 'starter'>, string> = {
-  basic: 'Your 6-lesson plan · 20 new words a day · 20 messages · 24 tutor minutes a month',
-  premium: 'Unlimited new words · lessons and books offline · 50 messages · 66 tutor minutes a month',
-  vip: 'Audiobook narration · 150 hints a day · 75 messages · 116 tutor minutes a month',
+  basic: 'Your 6-lesson plan · 20 new words a day · 20 messages · 33 tutor minutes a month',
+  premium: 'Unlimited new words · lessons and books offline · 50 messages · 88 tutor minutes a month',
+  vip: 'Audiobook narration · 150 hints a day · 75 messages · 155 tutor minutes a month',
 };
 
 /**

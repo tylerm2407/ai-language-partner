@@ -8,45 +8,65 @@
  * meter, and there is no connection we can close. Everything else in the
  * metering design is downstream of this one number.
  *
- * WHERE 12 COMES FROM
+ * WHAT THE MEASUREMENTS SAY
  *
  * gpt-realtime-mini audio is $10.00 per 1M input tokens, $0.30 per 1M CACHED
  * input tokens, and $20.00 per 1M output tokens. A minute of speech is roughly
- * 600 tokens heard and roughly 1,200 tokens generated. Modelling a balanced
- * conversation minute — the learner talking half the time, the tutor the other
- * half, and the accumulated conversation re-billed against the cached rate on
- * every model turn — lands somewhere near 2.6 cents per minute.
+ * 600 tokens heard and roughly 1,200 tokens generated.
  *
- * Independently measured production figures for this model land far higher:
- * roughly 6.3 to 14.6 cents per minute, because prompt caching is not always
- * effective and real sessions carry more context than the model above assumes.
+ * Production measured 6.3 to 14.6 cents per minute. That was BEFORE the session
+ * bounded its own input context: the Realtime API re-sends the whole
+ * conversation on every response, OpenAI document prompt caching as best-effort
+ * with no guaranteed hit rate, and uncached that makes cost per minute GROW as
+ * a session runs. The spread in that band is mostly cache luck.
  *
- * 12 is deliberately set near the TOP of that measured band. A ceiling that
- * under-estimates cost is not a ceiling, and the failure mode of guessing low
- * is invisible until an invoice arrives a month later.
+ * WHY 9, AND WHY NOT LOWER YET
  *
- * THE COST OF BEING CONSERVATIVE, STATED HONESTLY
+ * `TUTOR_CONTEXT_TOKEN_LIMIT` (below) now caps the input context, which models
+ * at ~2.85 cents per minute and, more importantly, FLAT rather than climbing.
+ * If that model held, 9 would be three times too conservative.
  *
- * This number does not just bound spend — it divides the monthly cent ceiling
- * into the minutes a learner is granted. If the true cost turns out to be 6
- * cents, then every learner is being given HALF the tutor time their plan
- * actually pays for. So this is not a free safety margin: it is minutes taken
+ * It is set at 9 anyway, because the model above this one said 2.6 and
+ * production then measured 6.3 to 14.6 — under-predicting by two to five times.
+ * 9 sits inside the old measured band while being well clear of the new model,
+ * so it stays a real ceiling if truncation under-delivers, and it is a 25% cut
+ * rather than a 50% one: a bounded bet, reversible next cycle.
+ *
+ * THIS IS NOT A FREE SAFETY MARGIN
+ *
+ * The number does not just bound spend. It divides the monthly cent ceiling
+ * into the minutes a learner is granted — at 9 that is 33 / 88 / 155 a month
+ * for basic / premium / vip. Every cent of conservatism here is minutes taken
  * from paying learners in exchange for certainty.
  *
- * RECONCILE IT AGAINST THE FIRST REAL OPENAI INVOICE, then lower it. Compare
- * billed spend against SUM(observed_seconds) from public.tutor_sessions over
- * the same window. Lowering this constant increases delivered minutes at
- * IDENTICAL margin, which is the cheapest product win available here.
+ * RECONCILE AGAINST THE FIRST OPENAI INVOICE AFTER TRUNCATION SHIPPED, then
+ * lower it again. Divide billed spend for the realtime model by
+ * SUM(observed_seconds)/60 from public.tutor_sessions over the same window.
+ * Lowering this constant raises delivered minutes at IDENTICAL booked spend,
+ * which is the cheapest product win available here.
+ *
+ * IT DOES NOT BOUND PACK SPEND. Credit-funded sessions (migration 149) skip
+ * `monthly_usage.tutor_cents` entirely, so a purchased minute's margin is set
+ * by ACTUAL vendor cost, not by this number. Do not read a comfortable figure
+ * here as cover for the pack ladder — see `_shared/tutor-packs.ts`.
  */
 
 /**
  * Cents per minute of live tutor session. See the derivation above.
  *
  * Changing this silently changes how many minutes every plan grants, because
- * the monthly ceiling is denominated in cents and divided by this. Do not tune
- * it without re-reading the plan table in the migration 109 header.
+ * the monthly ceiling is denominated in cents and divided by this.
+ *
+ * THREE THINGS MUST MOVE WITH IT, and only the third is caught by a test:
+ *   1. `lib/plans.ts` TUTOR_CENTS_PER_MINUTE — the client's hand-synced copy.
+ *      Leave it behind and the paywall quotes one number while the server
+ *      grants another. `lib/plan-rate-parity.test.ts` now pins the two.
+ *   2. `lib/plan-pricing.ts` STEP_ADDS — the minute counts are typed into the
+ *      paywall copy as literals.
+ *   3. The plan table in the migration 109 header, and the prose in
+ *      `_shared/plan-limits.ts`.
  */
-export const TUTOR_CENTS_PER_MINUTE = 12;
+export const TUTOR_CENTS_PER_MINUTE = 9;
 
 /**
  * Charged once per session regardless of length.

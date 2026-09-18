@@ -89,10 +89,19 @@ $function$;
 --    The TypeScript PlanTier calls it 'starter'. They are the same tier.
 --
 -- dailyTutorMinutes stops one bad day; monthlyTutorCents is the margin floor.
--- At TUTOR_CENTS_PER_MINUTE = 12 the monthly ceilings resolve to roughly
--- 25 / 66 / 116 minutes per month for basic / premium / vip. THE MONTHLY
--- CEILING IS THE REAL LIMIT — the daily cap only shapes how it is spent, so
--- the number the plans are sold on is the monthly one.
+-- THE MONTHLY CEILING IS THE REAL LIMIT — the daily cap only shapes how it is
+-- spent, so the number the plans are sold on is the monthly one.
+--
+-- SUPERSEDED, rate only: this header originally read "at
+-- TUTOR_CENTS_PER_MINUTE = 12 ... roughly 25 / 66 / 116 minutes per month",
+-- which was wrong twice over. Basic was 24, not 25 — the one-off analysis cent
+-- (TUTOR_SESSION_FIXED_CENTS) knocks it under the boundary. And the rate is 9
+-- as of 2026-09-18, once the Realtime session began bounding its own input
+-- context, so the ceilings below now resolve to 33 / 88 / 155.
+--
+-- The cent ceilings in this migration are UNCHANGED and remain correct. Only
+-- the divisor moved, and it lives in TypeScript
+-- (_shared/tutor-pricing.ts, mirrored in lib/plans.ts) — never in SQL.
 
 CREATE OR REPLACE FUNCTION public.get_effective_limits(p_user_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'

@@ -38,6 +38,7 @@ import {
   TUTOR_HEARTBEAT_SECONDS,
   TUTOR_CONTEXT_TOKEN_LIMIT,
   TUTOR_CONTEXT_RETENTION_RATIO,
+  TUTOR_MIN_SESSION_SECONDS,
   resolveGrant,
 } from '../_shared/tutor-pricing.ts';
 import { buildTutorInstructions, turnDetectionForLevel, type CorrectionMode } from './instructions.ts';
@@ -193,7 +194,23 @@ export async function handleStart(
   // to dailyTutorMinutes: 0.
   const { tier, limits }: { tier: string; limits: PlanLimits } = await resolveEntitlement(supabase, userId);
 
-  if (!limits.dailyTutorMinutes || limits.dailyTutorMinutes <= 0) {
+  // Read the meters BEFORE the entitlement gate, because purchased minutes can
+  // outlive the plan that was allowed to buy them.
+  //
+  // App Store guideline 3.1.1: purchased credits may not expire. A learner who
+  // buys a minute pack and then cancels resolves to `starter`, whose
+  // dailyTutorMinutes is 0 — so gating on the plan alone would refuse them
+  // access to minutes they already own, which is an expiring credit wearing a
+  // different hat. Migration 149's header claims this works; this ordering is
+  // what makes that true rather than aspirational.
+  //
+  // It is not a tier hole. Only a vip can BUY a pack, so only someone who was
+  // vip can hold a balance — the tier restriction lives at the till
+  // (revenuecat-webhook/packs.ts), not here.
+  const meters = await readMeters(supabase, userId);
+  const hasSpendableCredit = meters.creditSeconds >= TUTOR_MIN_SESSION_SECONDS;
+
+  if ((!limits.dailyTutorMinutes || limits.dailyTutorMinutes <= 0) && !hasSpendableCredit) {
     return {
       status: 403,
       body: {
@@ -204,7 +221,6 @@ export async function handleStart(
   }
 
   // ── how long may this session run ───────────────────────────────────
-  const meters = await readMeters(supabase, userId);
   const grant = resolveGrant({
     dailySecondsRemaining: limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday,
     monthlyCentsRemaining: limits.monthlyTutorCents - meters.tutorCentsThisMonth,

@@ -22,6 +22,18 @@
 // replay cannot grant twice even if the claim is ever bypassed or reset.
 
 import { packForProductId, type TutorPack } from '../_shared/tutor-packs.ts';
+import { resolveTier } from '../_shared/entitlement.ts';
+
+/**
+ * The only tier packs are sold to.
+ *
+ * Enforced at the till rather than at the ledger, and the asymmetry is
+ * deliberate: SPENDING a balance is open to whoever holds one, because a
+ * cancelled vip must still be able to use minutes they already bought (App
+ * Store 3.1.1 — see tutor-session/start.ts). Since only a vip can reach this
+ * grant, "holds a balance" already implies "was vip when they paid".
+ */
+const PACK_TIER = 'vip';
 
 export type PackAction =
   | { kind: 'grant'; pack: TutorPack }
@@ -100,6 +112,24 @@ export async function applyPackEvent(
   }
 
   if (action.kind === 'grant') {
+    // A non-vip purchase should be unreachable: the pack offering is shown only
+    // to vip. If one lands anyway, GRANT IT AND SHOUT — Apple has already taken
+    // the learner's money, and refusing to deliver what they paid for is both a
+    // refund request and an App Review failure ("in-app purchase does not
+    // work"). A tier leak is a bug to fix; withheld goods is a broken product.
+    //
+    // Failure to resolve the tier is NOT allowed to block the grant either.
+    // resolveTier fails closed to `starter`, which is correct for gating a
+    // feature and wrong for delivering a purchase.
+    const tier = await resolveTier(supabase, userId).catch(() => null);
+    if (tier !== PACK_TIER) {
+      console.error(
+        `[revenuecat-webhook] pack ${action.pack.productId} bought by ${userId} on tier ` +
+          `${tier ?? 'unknown'}, not ${PACK_TIER} — granting anyway (money already taken). ` +
+          'Check which RevenueCat offering exposes the pack products.',
+      );
+    }
+
     const { data, error } = await supabase.rpc('grant_tutor_credit_lot', {
       p_user_id: userId,
       p_store_transaction_id: transactionId,
