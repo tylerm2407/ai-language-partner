@@ -39,6 +39,17 @@ describe('PLAN_FEATURES quotes PLANS, not memory', () => {
     }
   });
 
+  it('claims several languages only where the plan allows more than one', () => {
+    // Migration 147: free keeps one open language; any paid plan is unlimited.
+    expect(PLAN_FEATURES.basic).toContain('Learn several languages at once');
+    for (const tier of Object.keys(PLAN_FEATURES) as PlanId[]) {
+      if (/languages/i.test(PLAN_FEATURES[tier].join(' '))) {
+        expect(PLANS[tier].maxLanguages).toBeGreaterThan(1);
+      }
+    }
+    expect(PLANS.starter.maxLanguages).toBe(1);
+  });
+
   it('never mentions hearts or streaks', () => {
     for (const tier of Object.keys(PLAN_FEATURES) as PlanId[]) {
       expect(PLAN_FEATURES[tier].join(' ')).not.toMatch(/heart|streak/i);

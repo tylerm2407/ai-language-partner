@@ -7,6 +7,8 @@
  *   - supabase/functions/score-pronunciation/index.ts
  */
 
+import { UNLIMITED_LANGUAGES } from './language-access';
+
 export type PlanId = 'starter' | 'basic' | 'premium' | 'vip';
 
 /**
@@ -58,6 +60,14 @@ export interface SchoolContractConfig {
   // that a contract override has never been needed.
   dailyNewCards: number;
   dailyHints: number;
+  /**
+   * Languages a student may keep open at once (migration 147). Optional: a
+   * contract without the key merges as 0, so the personal plan's value wins.
+   * An integer 1..9999 when present — school-admin validates it, because a
+   * non-integer here would make `get_effective_limits`' `::int` cast throw
+   * for every student of the org.
+   */
+  maxLanguages?: number;
   // No `dailyTranslations` / `dailyWordLookups` here for the same reason as
   // `dailyLessonTtsPlays` above — get_effective_limits does merge them, but no
   // contract_config has ever carried either key, so the COALESCE in migrations
@@ -135,6 +145,16 @@ export interface PlanDefinition {
    * `tutorMinutesPerMonth()` below for anything user-facing.
    */
   monthlyTutorCents: number;
+  /**
+   * Languages that may be open at once (migration 147). Free keeps one;
+   * starting another locks the one being left. Every paid tier is
+   * `UNLIMITED_LANGUAGES` — the sentinel, not `null`, because the school
+   * contract merges with `GREATEST()` like `dailyNewCards`.
+   *
+   * Display only: the gate is the server's (`get_language_access`), and the
+   * switcher reads it from there rather than from this table.
+   */
+  maxLanguages: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -186,6 +206,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyChatCards: 3,
     dailyTutorMinutes: 0,
     monthlyTutorCents: 0,
+    maxLanguages: 1,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -208,6 +229,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyChatCards: 15,
     dailyTutorMinutes: 15,
     monthlyTutorCents: 300,
+    maxLanguages: UNLIMITED_LANGUAGES,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -226,6 +248,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyChatCards: 30,
     dailyTutorMinutes: 30,
     monthlyTutorCents: 800,
+    maxLanguages: UNLIMITED_LANGUAGES,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -244,6 +267,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyChatCards: 50,
     dailyTutorMinutes: 45,
     monthlyTutorCents: 1400,
+    maxLanguages: UNLIMITED_LANGUAGES,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -277,6 +301,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     '20 tutor messages per day',
     '6 minutes of voice practice per day',
     '3 writing grades per day',
+    'Learn several languages at once',
   ],
   premium: [
     'Everything in Basic',
@@ -311,6 +336,7 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyChatCards: number;
   dailyTutorMinutes: number;
   monthlyTutorCents: number;
+  maxLanguages: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
@@ -325,6 +351,7 @@ export function getPlanLimits(planId: PlanId | string): {
     dailyChatCards: plan.dailyChatCards,
     dailyTutorMinutes: plan.dailyTutorMinutes,
     monthlyTutorCents: plan.monthlyTutorCents,
+    maxLanguages: plan.maxLanguages,
   };
 }
 

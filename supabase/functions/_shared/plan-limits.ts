@@ -138,6 +138,17 @@ export interface PlanLimits {
    * conversation may add to tomorrow — not a paywall.
    */
   dailyChatCards: number;
+  /**
+   * Languages that may be open at once (migration 147). Free is 1; every paid
+   * tier is 9999, the same unlimited sentinel `dailyNewCards` uses, so a
+   * school contract merged with GREATEST() can never downgrade it.
+   *
+   * Enforced in Postgres, not here: `fluenci_max_languages` reads it from
+   * `get_effective_limits` inside the BEFORE trigger on `user_profiles`, which
+   * every path that changes the active language passes through. This copy is
+   * for any function that needs to know the allowance.
+   */
+  maxLanguages: number;
   offlineMode: boolean;
 }
 
@@ -174,10 +185,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    dailyTutorMinutes: 0, monthlyTutorCents: 0, offlineMode: false },
-  basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   dailyTutorMinutes: 15, monthlyTutorCents: 300, offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   dailyTutorMinutes: 30, monthlyTutorCents: 800, offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, dailyTutorMinutes: 45, monthlyTutorCents: 1400, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    dailyTutorMinutes: 0, monthlyTutorCents: 0, maxLanguages: 1, offlineMode: false },
+  basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   dailyTutorMinutes: 15, monthlyTutorCents: 300, maxLanguages: 9999, offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   dailyTutorMinutes: 30, monthlyTutorCents: 800, maxLanguages: 9999, offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, dailyTutorMinutes: 45, monthlyTutorCents: 1400, maxLanguages: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -266,6 +277,12 @@ export async function getEffectiveLimits(
         typeof row.dailyTutorMinutes === 'number' ? row.dailyTutorMinutes : base.dailyTutorMinutes,
       monthlyTutorCents:
         typeof row.monthlyTutorCents === 'number' ? row.monthlyTutorCents : base.monthlyTutorCents,
+      // Added by migration 147, school override included (the RPC merges it
+      // with GREATEST, as it does dailyNewCards). Anything but a positive
+      // integer falls to the tier floor, the same fail-closed reading as
+      // fluenci_max_languages: never unlimited by accident.
+      maxLanguages:
+        Number.isInteger(row.maxLanguages) && row.maxLanguages >= 1 ? row.maxLanguages : base.maxLanguages,
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {

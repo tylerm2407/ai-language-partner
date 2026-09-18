@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
+import { validateContractConfig } from './contract-config.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -103,6 +104,8 @@ async function createOrganization(supabase: any, userId: string, body: AdminRequ
   const { name, slug, contactEmail, maxSeats, contractConfig, contractStart, contractEnd } = body as any;
 
   if (!name || !slug) return errorResponse('Missing required fields: name, slug');
+  const config = validateContractConfig(contractConfig ?? null);
+  if (!config.ok) return errorResponse(config.error);
 
   const { data: org, error } = await supabase
     .from('organizations')
@@ -111,7 +114,7 @@ async function createOrganization(supabase: any, userId: string, body: AdminRequ
       slug,
       contact_email: contactEmail ?? null,
       max_seats: maxSeats ?? null,
-      contract_config: contractConfig ?? null,
+      contract_config: config.value,
       contract_start: contractStart ?? null,
       contract_end: contractEnd ?? null,
       created_by: userId,
@@ -136,7 +139,11 @@ async function updateContract(supabase: any, userId: string, body: AdminRequest,
   if (!organizationId) return errorResponse('Missing organizationId');
 
   const updates: Record<string, unknown> = {};
-  if (contractConfig !== undefined) updates.contract_config = contractConfig;
+  if (contractConfig !== undefined) {
+    const config = validateContractConfig(contractConfig);
+    if (!config.ok) return errorResponse(config.error);
+    updates.contract_config = config.value;
+  }
   if (contractStart !== undefined) updates.contract_start = contractStart;
   if (contractEnd !== undefined) updates.contract_end = contractEnd;
   if (maxSeats !== undefined) updates.max_seats = maxSeats;

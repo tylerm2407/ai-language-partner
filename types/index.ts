@@ -1035,6 +1035,9 @@ export interface SchoolContractConfig {
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
   dailyNewCards: number;
+  /** Languages open at once (migration 147). Absent = no grant; the
+   *  personal plan's value wins. Integer 1..9999 when present. */
+  maxLanguages?: number;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];

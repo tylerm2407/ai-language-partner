@@ -145,6 +145,7 @@ it('switches through the RPC, placement included only when starting a language',
     p_level: null,
     p_current_course_id: null,
     p_placement_band: null,
+    p_lock_current: false,
   });
   expect(profile.targetLanguage).toBe('ru');
 
@@ -154,5 +155,6 @@ it('switches through the RPC, placement included only when starting a language',
     p_level: 'beginner',
     p_current_course_id: 'c1',
     p_placement_band: 'A1',
+    p_lock_current: false,
   });
 });
