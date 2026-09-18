@@ -24,7 +24,9 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -43,6 +45,16 @@ interface Ui2SheetProps {
   dismissOnBackdrop?: boolean;
   /** Pin the sheet height to a specific value; otherwise fits content. */
   height?: number | 'auto';
+  /**
+   * Lift the sheet above the keyboard. Off by default, because a sheet with no
+   * text field gains nothing from a KeyboardAvoidingView and every existing
+   * caller is one of those — opting in keeps their layout byte-identical.
+   *
+   * A sheet is pinned to the bottom of the screen, so the keyboard covers it
+   * completely: without this, the learner types into a field they cannot see
+   * and reaches for a Save button that is not on screen.
+   */
+  avoidKeyboard?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -60,6 +72,7 @@ export function Ui2Sheet({
   children,
   dismissOnBackdrop = true,
   height = 'auto',
+  avoidKeyboard = false,
   style,
 }: Ui2SheetProps) {
   const { c, scheme, shape } = useUi2Theme();
@@ -120,26 +133,43 @@ export function Ui2Sheet({
         />
       </Animated.View>
 
-      <Animated.View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: c.card,
-            borderColor: c.cardBorder,
-            borderTopWidth: shape.border,
-            borderTopLeftRadius: shape.radiusHero,
-            borderTopRightRadius: shape.radiusHero,
-          },
-          pinned ? { height } : undefined,
-          { transform: [{ translateY }] },
-          style,
-        ]}
+      <KeyboardAvoidingView
+        // `pointerEvents: box-none` so the backdrop behind it still receives the
+        // dismiss tap: this view spans the screen whenever it is doing its job.
+        pointerEvents="box-none"
+        style={[StyleSheet.absoluteFill, avoidKeyboard && styles.avoiding]}
+        behavior={avoidKeyboard && Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={avoidKeyboard}
       >
-        <View style={styles.grabberWrapper}>
-          <View style={[styles.grabber, { backgroundColor: c.idle }]} />
-        </View>
-        <View style={[styles.content, pinned && styles.contentFilled]}>{children}</View>
-      </Animated.View>
+        <Animated.View
+          style={[
+            styles.sheet,
+            // Absolute positioning is what makes a sheet a sheet, and it is
+            // also what makes KeyboardAvoidingView useless: the padding it adds
+            // is on the wrapper, and `bottom: 0` pins the child past it, so the
+            // keyboard lands on top of the field the learner is typing into.
+            // When avoidance is on, the sheet becomes an ordinary flex child of
+            // a bottom-justified wrapper instead — same place on screen, but it
+            // now moves when the wrapper shrinks.
+            avoidKeyboard && styles.sheetInFlow,
+            {
+              backgroundColor: c.card,
+              borderColor: c.cardBorder,
+              borderTopWidth: shape.border,
+              borderTopLeftRadius: shape.radiusHero,
+              borderTopRightRadius: shape.radiusHero,
+            },
+            pinned ? { height } : undefined,
+            { transform: [{ translateY }] },
+            style,
+          ]}
+        >
+          <View style={styles.grabberWrapper}>
+            <View style={[styles.grabber, { backgroundColor: c.idle }]} />
+          </View>
+          <View style={[styles.content, pinned && styles.contentFilled]}>{children}</View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -153,6 +183,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 32,
   },
+  /** Bottom-justified so the in-flow sheet sits where the absolute one did. */
+  avoiding: { justifyContent: 'flex-end' },
+  sheetInFlow: { position: 'relative' },
   grabberWrapper: { alignItems: 'center', marginBottom: 12 },
   grabber: { width: 40, height: 4, borderRadius: 999 },
   content: { paddingHorizontal: 24 },

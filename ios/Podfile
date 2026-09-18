@@ -82,5 +82,40 @@ target 'Fluenci' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Raise every pod to the app's own deployment target.
+    #
+    # Six pods ship podspecs written against iOS 9.0-13.4 (RNCAsyncStorage,
+    # RevenueCat, SDWebImage, PurchasesHybridCommon, RNSVG, ReachabilitySwift).
+    # Xcode 26 warned about those; Xcode 27 refuses them outright — "the range
+    # of supported deployment target versions is 15.0 to 27.0.x" — and the
+    # simulator build fails before compiling a line of our code. Nothing here
+    # supports iOS 14: the app target is 15.1 and the `platform :ios` line above
+    # is 15.1, so the old floors only ever described what those pods COULD run
+    # on, never what this app ships to.
+    #
+    # Both loops are needed. `pods_project` carries the pod targets themselves;
+    # `generated_projects` carries the per-pod resource-bundle projects that
+    # newer CocoaPods splits out, and the first error Xcode 27 reported was from
+    # one of those (RNCAsyncStorage-RNCAsyncStorage_resources).
+    #
+    # Only raises, never lowers: a pod that already asks for more than 15.1
+    # keeps what it asked for.
+    deployment_target = podfile_properties['ios.deploymentTarget'] || '15.1'
+    raise_target = lambda do |config|
+      current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+      if current.nil? || Gem::Version.new(current) < Gem::Version.new(deployment_target)
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+      end
+    end
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each { |config| raise_target.call(config) }
+    end
+    installer.generated_projects.each do |project|
+      project.targets.each do |target|
+        target.build_configurations.each { |config| raise_target.call(config) }
+      end
+    end
   end
 end

@@ -385,7 +385,7 @@ function NoteEditorSheet({
   const tooShort = trimmed.length > 0 && trimmed.length < MIN_NOTE_CHARS;
 
   return (
-    <Ui2Sheet visible={state !== null} onDismiss={onDismiss} dismissOnBackdrop={!busy}>
+    <Ui2Sheet visible={state !== null} onDismiss={onDismiss} dismissOnBackdrop={!busy} avoidKeyboard>
       <View style={styles.sheet}>
         <Text accessibilityRole="header" style={{ fontFamily: type.heading, fontSize: 18, color: c.ink }}>
           {state?.mode === 'edit' ? 'Rewrite this note' : 'Tell Sol something'}
