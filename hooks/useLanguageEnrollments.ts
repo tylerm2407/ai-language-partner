@@ -111,6 +111,9 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
       // An empty list and a failed read look identical in the switcher, and
       // "you study no languages" is a claim (CLAUDE.md §5).
       setError(loadErrorCopy(err, 'your languages'));
+      // A stale allowance must not outlive a failed read: "unknown" is null,
+      // and consumers never read null as unlimited.
+      setAccess(null);
     } finally {
       setLoading(false);
     }

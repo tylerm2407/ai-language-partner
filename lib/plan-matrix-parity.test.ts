@@ -143,18 +143,20 @@ describe('maxLanguages (migration 147)', () => {
     }
   });
 
-  it('merges a school contract with GREATEST over COALESCE(…, 0), like dailyNewCards', () => {
-    // COALESCE to 0 is what lets a contract without the key leave the personal
-    // plan alone; GREATEST is why "unlimited" must be 9999 and not null.
+  it('merges a school contract with GREATEST over a validated value (0 when absent or malformed)', () => {
+    // 0 for a missing key is what lets a contract without it leave the personal
+    // plan alone; GREATEST is why "unlimited" must be 9999 and not null. The
+    // value is regex-checked rather than cast, so a hand-edited "unlimited" or
+    // 2.5 reads as 0 instead of throwing inside get_effective_limits.
     const src = sqlSource().replace(/\s+/g, '');
     expect(src).toContain(
-      "'maxLanguages',GREATEST((personal_limits->>'maxLanguages')::int,COALESCE((school_config->>'maxLanguages')::int,0))",
+      "'maxLanguages',GREATEST((personal_limits->>'maxLanguages')::int,CASEWHENschool_config->>'maxLanguages'~'^[0-9]{1,9}$'THEN(school_config->>'maxLanguages')::intELSE0END)",
     );
   });
 
   it('the gate reads the merged value and fails closed to 1', () => {
     const src = sqlSource().replace(/\s+/g, ' ');
     expect(src).toContain("public.get_effective_limits(p_user_id)->>'maxLanguages'");
-    expect(src).toMatch(/SELECT GREATEST\(1, COALESCE\( CASE WHEN v\.raw ~ '\^\[0-9\]\{1,6\}\$' THEN v\.raw::int END, 1\)\)/);
+    expect(src).toMatch(/SELECT GREATEST\(1, COALESCE\( CASE WHEN v\.raw ~ '\^\[0-9\]\{1,9\}\$' THEN v\.raw::int END, 1\)\)/);
   });
 });
