@@ -1,5 +1,6 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { handleStart } from './start.ts';
+import { TUTOR_CONTEXT_TOKEN_LIMIT, TUTOR_CONTEXT_RETENTION_RATIO } from '../_shared/tutor-pricing.ts';
 
 /**
  * These tests exist for the class of bug the compiler cannot see.
@@ -293,4 +294,36 @@ Deno.test('without a usable band the declared level still decides, as it always 
   const row = inserted()!;
   assertEquals(row.cefr_level, 'A2');
   assertEquals(row.level, 'elementary');
+});
+
+Deno.test('the minted session bounds its own input context', async () => {
+  // Without this the Realtime API re-sends the whole conversation as input on
+  // every turn, so cost per minute climbs as the session runs rather than
+  // staying flat. `max_output_tokens` bounds the reply and does nothing about
+  // it. Pinned as strings-in-a-JSON-body, which the compiler cannot check.
+  const { supabase } = makeStub();
+  let mintBody: Record<string, unknown> | null = null;
+  globalThis.fetch = ((_url: unknown, init?: RequestInit) => {
+    mintBody = JSON.parse(String(init?.body ?? '{}'));
+    return Promise.resolve(goodMint());
+  }) as unknown as typeof fetch;
+  try {
+    assertEquals((await handleStart(supabase, 'user-1', request, env)).status, 200);
+  } finally { restore(); }
+
+  const session = (mintBody as unknown as { session: Record<string, unknown> }).session;
+  assertEquals(session.truncation, {
+    type: 'retention_ratio',
+    retention_ratio: TUTOR_CONTEXT_RETENTION_RATIO,
+    token_limits: { post_instructions: TUTOR_CONTEXT_TOKEN_LIMIT },
+  });
+
+  // The limit sits ABOVE what a whole session accumulates on purpose: fewer
+  // truncations mean fewer cache busts, and each bust re-bills the retained
+  // remainder cold. Shrinking this to "save context" costs money.
+  assert(
+    TUTOR_CONTEXT_TOKEN_LIMIT > 8000,
+    'a smaller context limit truncates more often and costs MORE, not less',
+  );
+  assert(TUTOR_CONTEXT_RETENTION_RATIO <= 0.5, 'a high retention ratio truncates on nearly every turn');
 });

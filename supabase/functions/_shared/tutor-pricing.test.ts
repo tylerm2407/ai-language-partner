@@ -135,3 +135,74 @@ Deno.test('the published plan ceilings resolve to the minutes the plans are sold
   assertEquals(TUTOR_CENTS_PER_MINUTE, 12);
   assertEquals(TUTOR_MIN_SESSION_SECONDS, 60);
 });
+
+// ─── Purchased minutes (migration 149) ──────────────────────────────────
+
+Deno.test('the plan is spent before a single purchased minute', () => {
+  // Not a courtesy. Purchased credits cannot expire (App Store 3.1.1), so
+  // spending them while an included allowance sits unused converts a benefit
+  // that resets tomorrow into one that is gone for good.
+  const g = resolveGrant({
+    dailySecondsRemaining: 600,
+    monthlyCentsRemaining: 9999,
+    creditSecondsRemaining: 6000,
+  });
+  assertEquals(g.fundedFrom, 'plan');
+  assertEquals(g.seconds, 600);
+});
+
+Deno.test('credits are reached only when the plan cannot seat a session', () => {
+  const g = resolveGrant({
+    dailySecondsRemaining: 0,
+    monthlyCentsRemaining: 0,
+    creditSecondsRemaining: 3000,
+    requestedSeconds: 900,
+  });
+  assertEquals(g.reason, 'ok');
+  assertEquals(g.fundedFrom, 'credits');
+  assertEquals(g.seconds, 900);
+});
+
+Deno.test('purchased minutes ignore the daily cap but not the session cap', () => {
+  // The daily cap exists to stop a learner burning a MONTH of included time in
+  // one day. Paid minutes cannot do that — they are already bought — so the cap
+  // does not apply. TUTOR_MAX_SESSION_SECONDS still does.
+  const g = resolveGrant({
+    dailySecondsRemaining: -100_000,
+    monthlyCentsRemaining: 0,
+    creditSecondsRemaining: 99_999,
+  });
+  assertEquals(g.fundedFrom, 'credits');
+  assertEquals(g.seconds, TUTOR_MAX_SESSION_SECONDS);
+});
+
+Deno.test('a balance too small for a viable session is not a session', () => {
+  // Below the floor the learner would be charged and cut off mid-sentence.
+  const g = resolveGrant({
+    dailySecondsRemaining: 0,
+    monthlyCentsRemaining: 0,
+    creditSecondsRemaining: TUTOR_MIN_SESSION_SECONDS - 1,
+  });
+  assertEquals(g.seconds, 0);
+  assertEquals(g.reason, 'monthly');
+});
+
+Deno.test('a learner with no credits behaves exactly as before', () => {
+  const withField = resolveGrant({
+    dailySecondsRemaining: 0, monthlyCentsRemaining: 0, creditSecondsRemaining: 0,
+  });
+  const without = resolveGrant({ dailySecondsRemaining: 0, monthlyCentsRemaining: 0 });
+  assertEquals(withField, without);
+  assertEquals(without.reason, 'monthly');
+});
+
+Deno.test('a credit grant still carries coherent cents for settlement to check', () => {
+  // Nothing is charged to monthly_usage for a credit session, but the session
+  // row needs a granted_cents that settle_tutor_session can validate a refund
+  // against — it rejects p_refund_cents > granted_cents.
+  const g = resolveGrant({
+    dailySecondsRemaining: 0, monthlyCentsRemaining: 0, creditSecondsRemaining: 1200,
+  });
+  assertEquals(g.cents, centsForSeconds(g.seconds));
+  assert(g.cents > 0);
+});

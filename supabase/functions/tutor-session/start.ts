@@ -36,6 +36,8 @@ import { providerFetch, PROVIDER_TIMEOUT_MS } from '../_shared/provider-fetch.ts
 import {
   TUTOR_MODEL,
   TUTOR_HEARTBEAT_SECONDS,
+  TUTOR_CONTEXT_TOKEN_LIMIT,
+  TUTOR_CONTEXT_RETENTION_RATIO,
   resolveGrant,
 } from '../_shared/tutor-pricing.ts';
 import { buildTutorInstructions, turnDetectionForLevel, type CorrectionMode } from './instructions.ts';
@@ -80,7 +82,7 @@ export interface StartResult {
 async function readMeters(
   supabase: Client,
   userId: string,
-): Promise<{ tutorSecondsToday: number; tutorCentsThisMonth: number }> {
+): Promise<{ tutorSecondsToday: number; tutorCentsThisMonth: number; creditSeconds: number }> {
   try {
     const [{ data: day }, { data: month }] = await Promise.all([
       // NOTE the parameter names differ between these two functions:
@@ -90,18 +92,25 @@ async function readMeters(
       supabase.rpc('fluenci_user_month', { p_user_id: userId }),
     ]);
 
-    const [dayRow, monthRow] = await Promise.all([
+    const [dayRow, monthRow, credit] = await Promise.all([
       supabase.from('daily_usage').select('tutor_seconds').eq('user_id', userId).eq('date', day).maybeSingle(),
       supabase.from('monthly_usage').select('tutor_cents').eq('user_id', userId).eq('month', month).maybeSingle(),
+      // Purchased minutes (migration 149). Only consulted when the plan cannot
+      // seat a session; this read just sizes the grant, and the reservation
+      // re-checks the balance under its own lock before spending any of it.
+      supabase.rpc('tutor_credit_seconds', { p_user_id: userId }),
     ]);
 
     return {
       tutorSecondsToday: Number(dayRow?.data?.tutor_seconds ?? 0) || 0,
       tutorCentsThisMonth: Number(monthRow?.data?.tutor_cents ?? 0) || 0,
+      creditSeconds: Number(credit?.data ?? 0) || 0,
     };
   } catch (err) {
     console.warn('[tutor-session] meter read failed:', err instanceof Error ? err.message : err);
-    return { tutorSecondsToday: 0, tutorCentsThisMonth: 0 };
+    // Zero credits on a failed read is the safe guess in both directions: the
+    // plan path is unaffected, and nobody is handed minutes we could not see.
+    return { tutorSecondsToday: 0, tutorCentsThisMonth: 0, creditSeconds: 0 };
   }
 }
 
@@ -199,6 +208,7 @@ export async function handleStart(
   const grant = resolveGrant({
     dailySecondsRemaining: limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday,
     monthlyCentsRemaining: limits.monthlyTutorCents - meters.tutorCentsThisMonth,
+    creditSecondsRemaining: meters.creditSeconds,
     requestedSeconds: req.requestedMinutes ? Math.round(req.requestedMinutes * 60) : undefined,
   });
 
@@ -335,6 +345,15 @@ export async function handleStart(
               },
             },
             max_output_tokens: MAX_OUTPUT_TOKENS,
+            // Bounds the INPUT side, which max_output_tokens does not touch at
+            // all: without this the whole conversation is re-billed on every
+            // turn and cost per minute climbs as the session runs. See the
+            // derivation on TUTOR_CONTEXT_TOKEN_LIMIT.
+            truncation: {
+              type: 'retention_ratio',
+              retention_ratio: TUTOR_CONTEXT_RETENTION_RATIO,
+              token_limits: { post_instructions: TUTOR_CONTEXT_TOKEN_LIMIT },
+            },
             tools: [],
           },
         }),
