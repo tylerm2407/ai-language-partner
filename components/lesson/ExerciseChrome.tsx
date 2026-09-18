@@ -236,6 +236,14 @@ export function ExerciseChrome({
             paddingBottom: spacing.xl,
           }}
           keyboardShouldPersistTaps="handled"
+          // The exercise card is the tallest thing on the screen and half the
+          // exercise types answer by typing. Letting the ScrollView inset
+          // itself for the keyboard keeps the card at full height and scrolls
+          // the focused field into view; a KeyboardAvoidingView around the
+          // whole runner instead shrank this region to about one line, leaving
+          // Check below the fold. Dragging the body dismisses the keyboard.
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
         >
           {children}
         </ScrollView>

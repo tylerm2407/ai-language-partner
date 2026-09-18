@@ -9,7 +9,7 @@
  * lost by not being saved: the result the learner cares about is the score,
  * and that rides into the account on the pending draft.
  */
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { Exercise, LanguageCode } from '../../../types';
@@ -33,17 +33,18 @@ export function TrialLessonStep({
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <LessonRunner
-            exercises={exercises}
-            lessonId={TRIAL_LESSON_ID}
-            lessonTitle={`${languageName} · Your first words`}
-            userId=""
-            targetLanguage={targetLanguage}
-            onComplete={onComplete}
-            onExit={onExit}
-          />
-        </KeyboardAvoidingView>
+        {/* No KeyboardAvoidingView: the runner's own scroll region insets
+            itself for the keyboard (ExerciseChrome). Wrapping it here shrank
+            the whole runner instead, squeezing the exercise card to a line. */}
+        <LessonRunner
+          exercises={exercises}
+          lessonId={TRIAL_LESSON_ID}
+          lessonTitle={`${languageName} · Your first words`}
+          userId=""
+          targetLanguage={targetLanguage}
+          onComplete={onComplete}
+          onExit={onExit}
+        />
       </SafeAreaView>
     </View>
   );

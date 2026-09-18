@@ -1,4 +1,4 @@
-import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -355,10 +355,10 @@ export default function LessonScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* No KeyboardAvoidingView around the runner: ExerciseChrome's scroll
+          region insets itself for the keyboard, which keeps the exercise card
+          at full height. Avoiding here as well shrank that region to a line
+          and pushed Check below the fold. */}
       {/* Completion sync notice. The learner is never blocked by it — the
           completion is already in the shared progress store either way — but
           silence would be dishonest when the row is only queued. */}
@@ -396,7 +396,6 @@ export default function LessonScreen() {
         onComplete={handleComplete}
         onExit={handleExit}
       />
-      </KeyboardAvoidingView>
 
       {/* Achievement Celebration */}
       <AchievementModal
