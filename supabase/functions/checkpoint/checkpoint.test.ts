@@ -14,8 +14,13 @@ import {
   normalizeAnswer,
   selectItems,
   serveItem,
+  INTERACTION_TURNS,
+  MIN_INTERACTION_TURNS_SCORED,
   RUNG_PASS,
   bandFromStaircase,
+  combineTurn,
+  interactionGraded,
+  interactionScore,
   bandsForAttempt,
   bandsForStrand,
   rungs,
@@ -23,11 +28,12 @@ import {
   strandMeans,
   type Band,
   type GradedItem,
+  type ItemStrand,
   type PoolItem,
   type Strand,
 } from './checkpoint-core.ts';
 
-function item(id: string, strand: Strand, extra: Partial<PoolItem> = {}): PoolItem {
+function item(id: string, strand: ItemStrand, extra: Partial<PoolItem> = {}): PoolItem {
   return {
     id,
     strand,
@@ -268,7 +274,7 @@ function graded(strand: Strand, band: Band, score: number | null): GradedItem {
 function fullPool(): PoolItem[] {
   const out: PoolItem[] = [];
   for (const band of BANDS) {
-    for (const strand of ['listening', 'reading', 'speaking', 'writing'] as Strand[]) {
+    for (const strand of ['listening', 'reading', 'speaking', 'writing'] as ItemStrand[]) {
       out.push(item(`${strand}-${band}-1`, strand, { band }));
       out.push(item(`${strand}-${band}-2`, strand, { band }));
     }
@@ -417,4 +423,89 @@ Deno.test('a strand mean spans its rungs and excludes the ones left blank', () =
   // A strand with nothing answered is absent, not zero — a denied microphone
   // has not demonstrated that a learner cannot speak.
   assertEquals(means.speaking, undefined);
+});
+
+// ── the conversation strand ────────────────────────────────────────────────
+
+function turn(accuracy: number, intelligibility: number | null = null) {
+  return { accuracy, intelligibility };
+}
+
+Deno.test('a spoken turn is half accuracy and half intelligibility', () => {
+  assertEquals(combineTurn(turn(0.8, 0.6)), 0.7);
+});
+
+Deno.test('a turn the recogniser said nothing about is carried by accuracy alone', () => {
+  // Not discarded: an older transcribe deployment reports no confidence, and
+  // throwing the turn away would cost the learner a rung for our deployment.
+  assertEquals(combineTurn(turn(0.8, null)), 0.8);
+  assertEquals(combineTurn(turn(0.8, NaN)), 0.8);
+});
+
+Deno.test('the conversation is absent, never zero, below the turn floor', () => {
+  // The rule that matters most in this file. Interaction is 0.55 of the
+  // practice model; zeroing a denied microphone would cost more band than
+  // every other strand in this test can put back.
+  assertEquals(interactionScore([]), null);
+  assertEquals(interactionScore([turn(0.9), turn(0.9)]), null);
+  assertEquals(interactionGraded('B1', []).score, null);
+});
+
+Deno.test('three scored turns are enough to measure the conversation', () => {
+  assertEquals(MIN_INTERACTION_TURNS_SCORED, 3);
+  const mean = interactionScore([turn(0.9), turn(0.6), turn(0.6)]) as number;
+  assert(Math.abs(mean - 0.7) < 1e-9);
+});
+
+Deno.test('the conversation is one rung at the set band, not one per turn', () => {
+  // Four entries would make the heaviest strand four fifths of its own rung and
+  // drown out the three item strands asked at that band.
+  const graded = interactionGraded('B1', [turn(1), turn(1), turn(1), turn(1)]);
+  assertEquals(graded.strand, 'interaction');
+  assertEquals(graded.band, 'B1');
+  assertEquals(graded.score, 1);
+});
+
+Deno.test('an unmeasured conversation does not hold the band down', () => {
+  // The staircase must read a null interaction entry as "not asked", exactly
+  // like a blank writing task — otherwise a mic failure demotes the learner.
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 1),
+    graded('listening', 'B1', 1),
+    graded('listening', 'B2', 1),
+    graded('interaction', 'B1', null),
+  ]);
+  assertEquals(band, 'B2');
+});
+
+Deno.test('a strong conversation is not a level on its own', () => {
+  // It is one item in the setBand rung, and the rungs beneath still have to
+  // pass. Same instinct as BAND_THRESHOLD sitting above the largest weight.
+  const band = bandFromStaircase('B1', [
+    graded('listening', 'A2', 0),
+    graded('interaction', 'B1', 1),
+  ]);
+  assertEquals(band, 'A2');
+});
+
+Deno.test('the conversation is four turns, which is also the spend ceiling', () => {
+  assertEquals(INTERACTION_TURNS, 4);
+});
+
+Deno.test('interaction has no pool items and is not asked at three bands', () => {
+  // It is not an ItemStrand: a conversation is pitched at one level, and
+  // selection must never try to find a pool row for it.
+  const picked = selectAdaptiveItems(fullPool(), 'B1', 0);
+  assertEquals(picked.some((i) => (i.strand as string) === 'interaction'), false);
+  assertEquals(bandsForAttempt('B1').includes('B1'), true);
+});
+
+Deno.test('a conversation mean lands in the strand summary and the composite', () => {
+  const means = strandMeans([
+    graded('interaction', 'B1', 0.8),
+    graded('listening', 'B1', 1),
+  ]);
+  assertEquals(means.interaction, 0.8);
+  // Excluded from the composite when absent, like every other skipped strand.
+  assertEquals(strandMeans([graded('interaction', 'B1', null)]).interaction, undefined);
 });

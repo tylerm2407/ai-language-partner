@@ -15,6 +15,10 @@ import {
   checkpointScoreLines,
   checkpointSubmission,
   isCheckpointAnswered,
+  CHECKPOINT_SCORE_ORDER,
+  MIN_INTERACTION_REPLIES,
+  STRAND_LABELS,
+  interactionIsEvidence,
   orderCheckpointItems,
   skippedCheckpointStrands,
   testPublishesLevel,
@@ -118,10 +122,15 @@ describe('checkpointSubmission', () => {
 });
 
 describe('checkpointScoreLines', () => {
-  it('reports every strand in ask order, with unmeasured ones null', () => {
-    const lines = checkpointScoreLines(result({ scores: { listening: 0.9, reading: null, speaking: null, writing: 0.5 } }));
-    expect(lines.map((l) => l.strand)).toEqual(CHECKPOINT_STRAND_ORDER);
-    expect(lines.map((l) => l.percent)).toEqual([90, null, 50, null]);
+  it('reports every strand in result order, with unmeasured ones null', () => {
+    // Result order, not ask order: conversation leads — see
+    // CHECKPOINT_SCORE_ORDER. The test asks listening first and reports
+    // conversation first, and the two lists are deliberately different.
+    const lines = checkpointScoreLines(
+      result({ scores: { listening: 0.9, reading: null, speaking: null, writing: 0.5, interaction: 0.72 } }),
+    );
+    expect(lines.map((l) => l.strand)).toEqual(CHECKPOINT_SCORE_ORDER);
+    expect(lines.map((l) => l.percent)).toEqual([72, 90, null, 50, null]);
   });
 });
 
@@ -222,5 +231,48 @@ describe('whether a test result becomes the level', () => {
     expect(checkpointOutcomeLine(result({ composite: null }), true)).toBe(
       'Nothing was scored this time, so your level is unchanged.',
     );
+  });
+});
+
+// ─── the conversation strand ────────────────────────────────────────────────
+
+describe('the conversation in the result', () => {
+  it('is reported first, ahead of the four item strands', () => {
+    // It is 0.55 of the level where the other four are 0.33 together, so it is
+    // the first number a learner should meet.
+    expect(CHECKPOINT_SCORE_ORDER[0]).toBe('interaction');
+  });
+
+  it('is labelled in the learner\'s word, not the CEFR one', () => {
+    expect(STRAND_LABELS.interaction).toBe('Conversation');
+  });
+
+  it('shows Not measured rather than a zero when it was skipped', () => {
+    const lines = checkpointScoreLines(
+      result({ scores: { listening: 0.9, reading: 0.8, speaking: null, writing: 0.8, interaction: null } }),
+    );
+    const conversation = lines.find((l) => l.strand === 'interaction');
+    expect(conversation?.percent).toBeNull();
+  });
+
+  it('parses a result from a deployment that predates the strand', () => {
+    // `interaction` is optional on the wire; an older server omits it and the
+    // row must read as unmeasured rather than as a zero.
+    const lines = checkpointScoreLines(result());
+    expect(lines.find((l) => l.strand === 'interaction')?.percent).toBeNull();
+  });
+
+  it('reports a measured conversation as a percentage', () => {
+    const lines = checkpointScoreLines(
+      result({ scores: { listening: 0.9, reading: 0.8, speaking: 0.7, writing: 0.8, interaction: 0.74 } }),
+    );
+    expect(lines.find((l) => l.strand === 'interaction')?.percent).toBe(74);
+  });
+
+  it('needs three answers before it is worth scoring', () => {
+    expect(MIN_INTERACTION_REPLIES).toBe(3);
+    expect(interactionIsEvidence(2)).toBe(false);
+    expect(interactionIsEvidence(3)).toBe(true);
+    expect(interactionIsEvidence(4)).toBe(true);
   });
 });

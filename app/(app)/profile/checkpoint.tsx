@@ -1,5 +1,6 @@
 /**
- * The level test: a five-minute, four-strand measurement, asked as a staircase.
+ * The level test: an eight-minute, five-strand measurement, asked as a
+ * staircase and ending in a spoken conversation.
  *
  * ── WHAT IT DOES TO THE LEVEL ──
  *
@@ -23,6 +24,24 @@
  * at all, and conversation is 0.55 of the practice score, so it fills the gap
  * and then stands down. It is not the higher of the two and not the more recent
  * — either would let a learner pick their band by testing on a good day.
+ *
+ * ── THE CONVERSATION ──
+ *
+ * Interaction is 0.55 of the practice model and was 0% of this test, which
+ * since the publish rule above can set a learner's level. So the test ends with
+ * four spoken turns against `ai-chat` on the server-only `level_test` scenario.
+ * Nothing about the scoring is test-specific: the turns are written as
+ * `conversation_evidence` by the same shared module practice uses, and the
+ * checkpoint reads them back at submit. A turn has to be worth the same here as
+ * anywhere else, or the test and the report would measure different things and
+ * call both a CEFR band.
+ *
+ * It is spoken-only, which makes it the most failure-prone part of the test and
+ * by far the most expensive to lose — a denied microphone costs 0.55 where a
+ * failed pronunciation item costs 0.08. Hence: the strand is EXCLUDED and never
+ * zeroed (`interactionScore` returns null under three scored turns), it never
+ * blocks Finish, and the result screen says in words that it was left out
+ * rather than counted against them.
  *
  * ── THE SPEAKING STRAND IS DIFFERENT ──
  *
@@ -58,7 +77,14 @@ import { SlabButton } from '../../../components/ui2/SlabButton';
 import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
 import { haptic } from '../../../lib/haptics';
 import { loadErrorCopy, saveErrorCopy } from '../../../lib/error-copy';
-import { scorePronunciation, startCheckpoint, submitCheckpoint } from '../../../lib/ai';
+import { sttConfidence } from '../../../lib/handsfree-grading';
+import {
+  scorePronunciation,
+  sendChatMessage,
+  startCheckpoint,
+  submitCheckpoint,
+  transcribeAudio,
+} from '../../../lib/ai';
 import type { CheckpointItem, CheckpointResult } from '../../../lib/ai';
 import {
   STRAND_LABELS,
@@ -67,7 +93,9 @@ import {
   checkpointProgress,
   checkpointScoreLines,
   checkpointRungLabel,
+  MIN_INTERACTION_REPLIES,
   checkpointSubmission,
+  interactionIsEvidence,
   orderCheckpointItems,
   skippedCheckpointStrands,
   testPublishesLevel,
@@ -75,7 +103,7 @@ import {
 import { normalizeBand } from '../../../lib/cefr-proficiency';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
 import { spacing } from '../../../config/theme';
-import type { LanguageCode } from '../../../types';
+import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 /** What the speaking answer carries. The real score comes from the server. */
 const SPOKEN = 'spoken';
@@ -100,6 +128,10 @@ export default function CheckpointScreen() {
 
   const [items, setItems] = useState<CheckpointItem[] | null>(null);
   const [checkpointId, setCheckpointId] = useState<string | null>(null);
+  // The conversation the attempt is bound to. Null when the server could not
+  // open one, which costs the strand and nothing else.
+  const [interaction, setInteraction] = useState<{ sessionId: string; turns: number } | null>(null);
+  const [replies, setReplies] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -113,6 +145,12 @@ export default function CheckpointScreen() {
       const started = await startCheckpoint(targetLanguage, band, 'monthly');
       setCheckpointId(started.checkpointId);
       setItems(orderCheckpointItems(started.items));
+      setInteraction(
+        started.interactionSessionId
+          ? { sessionId: started.interactionSessionId, turns: started.interactionTurns }
+          : null,
+      );
+      setReplies(0);
     } catch (err) {
       // Surfaced with a retry rather than swallowed (CLAUDE.md §5). The most
       // likely cause by far is an unseeded item pool for this (language, band),
@@ -154,7 +192,9 @@ export default function CheckpointScreen() {
       <SafeAreaView style={styles.flex} edges={['top']}>
         <Ui2Header
           title="Level test"
-          subtitle={result ? 'Your result' : `About five minutes · around ${band}`}
+          // Eight, not five. The conversation added about three minutes and the
+          // claim moves with it rather than quietly drifting.
+          subtitle={result ? 'Your result' : `About eight minutes · around ${band}`}
           onBack={() => goBack()}
         />
 
@@ -183,7 +223,8 @@ export default function CheckpointScreen() {
                 <Body size="sm" tone="secondary" style={styles.spaced}>
                   Fresh questions you have not seen, graded by Fluenci rather than scored from
                   your practice. Each skill is asked just below, at, and just above {band}, so
-                  the result finds your level rather than confirming a guess.
+                  the result finds your level rather than confirming a guess — and it ends with
+                  a short spoken conversation, which counts for more than the rest put together.
                 </Body>
                 {/* The consequence, stated before the first question rather than
                     after the result. A learner is entitled to know whether five
@@ -207,6 +248,23 @@ export default function CheckpointScreen() {
                   locked={submitting}
                 />
               ))}
+
+              {/* Last, for the same reason speaking is last: it is the strand
+                  that can fail for reasons that are not the learner's, and a
+                  failure at the end costs the strand rather than the test. */}
+              {interaction && targetLanguage && user?.id ? (
+                <InteractionBlock
+                  userId={user.id}
+                  sessionId={interaction.sessionId}
+                  turns={interaction.turns}
+                  language={targetLanguage as LanguageCode}
+                  level={profile?.level ?? 'beginner'}
+                  band={band}
+                  locked={submitting}
+                  replies={replies}
+                  onReply={() => setReplies((n) => n + 1)}
+                />
+              ) : null}
 
               {submitError ? (
                 <SlabCard tint="pink" style={styles.card}>
@@ -473,6 +531,248 @@ function SpeakingAnswer({ item, answered, onAnswered, userId, language, locked }
   );
 }
 
+// ─── The conversation ───────────────────────────────────────────
+
+interface ConversationTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface InteractionBlockProps {
+  userId: string;
+  sessionId: string;
+  turns: number;
+  language: LanguageCode;
+  /** The learner's declared level. Still sent, still the fallback band. */
+  level: ProficiencyLevel;
+  /**
+   * The band the conversation runs at — the band this ATTEMPT was set at, not
+   * `conversationCefrBand`'s usual one-rung stretch.
+   *
+   * That stretch exists so practice evidence tagged at a band the learner
+   * already holds cannot fail to promote them. A test is the opposite problem:
+   * `interactionGraded` records the strand at the set band, so the conversation
+   * has to be held there or the rung would be scored against a sample taken at
+   * a different level.
+   */
+  band: string;
+  locked: boolean;
+  /** Learner replies sent so far, so the parent can label the strand's state. */
+  replies: number;
+  onReply: () => void;
+}
+
+/**
+ * The spoken conversation: the strand worth 0.55 of a level, which this test
+ * did not measure at all until now.
+ *
+ * It is a real `ai-chat` conversation, not a special case. The learner speaks,
+ * `transcribe` turns it into text and a recogniser confidence, `ai-chat` scores
+ * the turn through `_shared/conversation-evidence.ts` and stamps the row with
+ * this attempt's `chat_session_id`, and the checkpoint reads those rows back at
+ * submit. Nothing about the scoring is test-specific — which is the point: a
+ * turn has to be worth the same here as it is in practice, or the test and the
+ * report would be measuring different things and calling both a CEFR band.
+ *
+ * SPOKEN ONLY. There is no type-instead affordance, which makes this the most
+ * failure-prone thing in the test and the most expensive to lose: a denied
+ * microphone costs 0.55 of the model where a failed pronunciation item costs
+ * 0.08. Two rules hold because of it, and neither is optional —
+ *
+ *  - Failure is always named and never fatal. Every error path leaves the
+ *    finish button enabled and says the conversation can be left out.
+ *  - The strand is EXCLUDED, never zeroed. That is enforced on the server
+ *    (`interactionScore` returns null below three scored turns) rather than
+ *    here, because the client cannot be the thing that decides it.
+ *
+ * The tutor's replies are shown as text rather than played back. The learner is
+ * reading them anyway to answer, audio would double the length of a test
+ * already going from five minutes to eight, and a spoken reply the learner
+ * mishears is a listening measurement smuggled into the conversation strand.
+ */
+function InteractionBlock({
+  userId,
+  sessionId,
+  turns,
+  language,
+  level,
+  band,
+  locked,
+  replies,
+  onReply,
+}: InteractionBlockProps) {
+  const { recording, startRecording, stopRecording, getBase64 } = useAudioRecorder();
+  const [history, setHistory] = useState<ConversationTurn[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [opened, setOpened] = useState(false);
+  // `requestedRepair` is echoed back so the tutor does not ask a learner to fix
+  // the same thing twice — carried, never interpreted, exactly as chat does it.
+  const repairRef = useRef(false);
+
+  const tutorTurns = history.filter((t) => t.role === 'assistant').length;
+  const done = tutorTurns >= turns && replies >= turns;
+
+  /**
+   * One turn. `said` empty opens the conversation; the tutor's reply is
+   * appended to the history that is sent back on the next turn.
+   *
+   * The history is passed explicitly rather than read from state because both
+   * callers already know what it is and `setHistory` has not flushed yet — a
+   * turn built from stale state would drop the learner's own last sentence
+   * from the context the tutor answers.
+   */
+  const exchange = useCallback(
+    async (prior: ConversationTurn[], said: string, confidence: number | null) => {
+      const messages = said
+        ? [...prior, { role: 'user' as const, content: said }]
+        : prior;
+      const response = await sendChatMessage({
+        userId,
+        messages,
+        targetLanguage: language,
+        nativeLanguage: 'en',
+        level,
+        cefrLevel: band,
+        scenarioKey: 'level_test',
+        chatSessionId: sessionId,
+        modality: 'speaking',
+        ...(confidence !== null ? { recognizerConfidence: confidence } : {}),
+        previousTurnRequestedRepair: repairRef.current,
+        // The last reply should close rather than open a new thread.
+        isClosing: said.length > 0 && replies + 1 >= turns,
+      });
+      repairRef.current = response.requestedRepair === true;
+      setHistory([...messages, { role: 'assistant', content: response.reply }]);
+    },
+    [userId, language, level, band, sessionId, replies, turns],
+  );
+
+  const open = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      // An empty first message asks the tutor to open. The learner has said
+      // nothing yet, so there is nothing to score and no evidence row is
+      // written for it.
+      await exchange([], '', null);
+      setOpened(true);
+    } catch (err) {
+      setError(loadErrorCopy(err, 'the conversation').message);
+    } finally {
+      setBusy(false);
+    }
+  }, [exchange]);
+
+  const answer = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await stopRecording();
+      const audioBase64 = await getBase64();
+      if (!audioBase64) {
+        setError('That recording did not come through.');
+        return;
+      }
+
+      const heard = await transcribeAudio(audioBase64, language);
+      const said = (heard.text ?? '').trim();
+      if (!said) {
+        // Nothing recognised is not a wrong answer and must not be sent as one:
+        // an empty turn would score as an accuracy floor on a strand worth
+        // 0.55. Ask again instead.
+        setError('That did not come through clearly. Try saying it again.');
+        return;
+      }
+
+      // The SAME derivation `components/chat/ChatInput.tsx` uses. It is half of
+      // what a spoken turn scores (`combineTurn`), so deriving it differently
+      // here would make a turn worth a different amount inside the test than
+      // outside it — and both numbers are called a CEFR band.
+      const confidence = sttConfidence({
+        noSpeechProb: heard.noSpeechProb,
+        avgLogprob: heard.avgLogprob,
+        transcript: said,
+        speechDurationMs: (heard.durationSeconds ?? 0) * 1000,
+      });
+
+      onReply();
+      await exchange(history, said, confidence);
+      haptic('buttonPress');
+    } catch (err) {
+      setError(saveErrorCopy(err, 'your answer').message);
+    } finally {
+      setBusy(false);
+    }
+  }, [stopRecording, getBase64, language, exchange, onReply, history]);
+
+  return (
+    <SlabCard style={styles.card}>
+      <Caption tone="tertiary">
+        {STRAND_LABELS.interaction}
+        {opened ? ` · ${Math.min(replies + 1, turns)} of ${turns}` : ''}
+      </Caption>
+      <Body weight="semibold" style={styles.spaced}>
+        {done ? 'Conversation finished.' : 'Speak with Sol for a few turns.'}
+      </Body>
+      {/* Said before the mic is ever tapped. Conversation is the heaviest
+          strand, and a learner deciding whether to bother is entitled to know
+          that both halves of that are true: it counts for the most, and
+          skipping it does not sink the test. */}
+      {!opened ? (
+        <Body size="sm" tone="secondary" style={styles.spaced}>
+          This counts for more than any other part of the test. It is spoken, so
+          if your microphone will not cooperate you can leave it out — the rest
+          still counts.
+        </Body>
+      ) : null}
+
+      {history.map((turn, index) => (
+        <View key={`${turn.role}-${index}`} style={styles.spaced}>
+          <Caption tone="tertiary">{turn.role === 'assistant' ? 'Sol' : 'You'}</Caption>
+          <Body size="sm" tone={turn.role === 'assistant' ? 'primary' : 'secondary'}>
+            {turn.content}
+          </Body>
+        </View>
+      ))}
+
+      {busy ? (
+        <View style={styles.waiting}>
+          <ActivityIndicator />
+        </View>
+      ) : done ? (
+        <Caption tone="tertiary" style={styles.spaced}>
+          {interactionIsEvidence(replies)
+            ? 'Scored when you finish.'
+            : 'Too short to score, so conversation will be left out.'}
+        </Caption>
+      ) : !opened ? (
+        <SlabButton
+          label="Start the conversation"
+          onPress={open}
+          arrow={false}
+          disabled={locked}
+          style={styles.spaced}
+        />
+      ) : (
+        <SlabButton
+          label={recording ? 'Stop and send' : 'Answer out loud'}
+          onPress={recording ? answer : startRecording}
+          arrow={false}
+          disabled={locked}
+          style={styles.spaced}
+        />
+      )}
+
+      {error ? (
+        <Caption tone="tertiary" style={styles.spaced}>
+          {error} You can leave the conversation out — the rest still counts.
+        </Caption>
+      ) : null}
+    </SlabCard>
+  );
+}
+
 // ─── Result ─────────────────────────────────────────────────────
 
 function ResultBody({
@@ -511,7 +811,10 @@ function ResultBody({
       </SlabCard>
 
       <SlabCard style={styles.card}>
-        <Caption tone="tertiary">By strand</Caption>
+        <Caption tone="tertiary">By skill</Caption>
+        {/* Conversation first — CHECKPOINT_SCORE_ORDER — because it is the
+            heaviest thing in the measurement and should be the first number a
+            learner meets. */}
         {lines.map((line) => (
           <View key={line.strand} style={styles.scoreRow}>
             <Body size="sm">{STRAND_LABELS[line.strand]}</Body>
@@ -521,6 +824,17 @@ function ResultBody({
           </View>
         ))}
       </SlabCard>
+
+      {/* "Not measured" on the conversation row is the one that needs saying
+          out loud. It is spoken-only, it is the heaviest strand, and a learner
+          who sees a blank next to it should know it was left out of the score
+          rather than counted as a failure. */}
+      {result.scores.interaction === null || result.scores.interaction === undefined ? (
+        <Caption tone="tertiary" style={styles.spaced}>
+          The conversation was not scored, so it is left out of this result rather than counted
+          against it. It needs at least {MIN_INTERACTION_REPLIES} answers long enough to measure.
+        </Caption>
+      ) : null}
 
       {skipped.length > 0 ? (
         // Named rather than counted: a composite over three strands is a

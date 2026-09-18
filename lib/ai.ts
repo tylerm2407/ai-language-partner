@@ -941,6 +941,19 @@ export interface CheckpointStart {
   band: string;
   kind: 'placement' | 'monthly';
   items: CheckpointItem[];
+  /**
+   * The `chat_sessions` row opened for this attempt's spoken conversation, or
+   * null when one could not be created.
+   *
+   * The client sends this as `chatSessionId` on every turn so `ai-chat` stamps
+   * the evidence with it; the server reads the id back off the ATTEMPT at
+   * submit, never from the request, so pointing this at a different
+   * conversation gains nothing. Null means the conversation is skipped and the
+   * strand is absent — excluded from the score, never zero.
+   */
+  interactionSessionId: string | null;
+  /** How many tutor turns the conversation runs for. `INTERACTION_TURNS`. */
+  interactionTurns: number;
 }
 
 export interface CheckpointResult {
@@ -952,6 +965,19 @@ export interface CheckpointResult {
     reading: number | null;
     speaking: number | null;
     writing: number | null;
+    /**
+     * The spoken conversation, scored from this attempt's own
+     * `conversation_evidence` rows. Null when it was skipped or produced fewer
+     * than `MIN_INTERACTION_TURNS_SCORED` usable turns — excluded from the
+     * composite rather than scored zero, which matters more here than for any
+     * other strand: interaction is 0.55 of the practice model, so zeroing a
+     * denied microphone would cost more band than the whole rest of the test
+     * can give back.
+     *
+     * Optional so a response from a deployment predating the conversation
+     * strand still parses.
+     */
+    interaction?: number | null;
   };
 }
 

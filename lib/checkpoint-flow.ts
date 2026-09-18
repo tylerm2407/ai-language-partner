@@ -32,6 +32,34 @@ import type { CheckpointItem, CheckpointResult } from './ai';
 export type CheckpointStrand = CheckpointItem['strand'];
 
 /**
+ * Every strand the RESULT reports, which is the four item strands plus the
+ * spoken conversation.
+ *
+ * Interaction is not a `CheckpointStrand` because it is not an item: it has no
+ * prompt to answer, no rung to sit on, and its score comes from what the
+ * learner produced rather than from matching a key. Keeping the two types
+ * apart is what stops a conversation being looked for in the item list.
+ */
+export type CheckpointScoreStrand = CheckpointStrand | 'interaction';
+
+/**
+ * Result rows, conversation first.
+ *
+ * Deliberately not the order the test asks in. This mirrors
+ * `nextLevelSteps` in the report, which leads with conversation because that
+ * is where the work pays — interaction is 0.55 of the level and the other four
+ * strands together are 0.33. A learner reading their result should meet the
+ * heaviest number first.
+ */
+export const CHECKPOINT_SCORE_ORDER: CheckpointScoreStrand[] = [
+  'interaction',
+  'listening',
+  'reading',
+  'writing',
+  'speaking',
+];
+
+/**
  * The order strands are asked in.
  *
  * Receptive before productive, which is the order every lesson already uses,
@@ -173,28 +201,58 @@ export function checkpointSubmission(
   return out;
 }
 
-export const STRAND_LABELS: Record<CheckpointStrand, string> = {
+export const STRAND_LABELS: Record<CheckpointScoreStrand, string> = {
   listening: 'Listening',
   reading: 'Reading',
   writing: 'Writing',
   speaking: 'Speaking',
+  // "Conversation", not "Interaction". The CEFR term names the strand in the
+  // code; the learner-facing word is the one the rest of the app uses.
+  interaction: 'Conversation',
 };
 
 export interface CheckpointScoreLine {
-  strand: CheckpointStrand;
+  strand: CheckpointScoreStrand;
   /** 0–100, rounded. Null when the strand was not measured. */
   percent: number | null;
 }
 
-/** Per-strand result rows in the order they were asked. */
+/** Per-strand result rows, conversation first. See `CHECKPOINT_SCORE_ORDER`. */
 export function checkpointScoreLines(result: CheckpointResult): CheckpointScoreLine[] {
-  return CHECKPOINT_STRAND_ORDER.map((strand) => {
+  return CHECKPOINT_SCORE_ORDER.map((strand) => {
     const raw = result.scores[strand];
     return {
       strand,
       percent: typeof raw === 'number' && Number.isFinite(raw) ? Math.round(raw * 100) : null,
     };
   });
+}
+
+/**
+ * Turns the conversation still owes before it counts as evidence.
+ *
+ * Mirrors `MIN_INTERACTION_TURNS_SCORED` on the server (3), and it is a
+ * COUNT OF LEARNER REPLIES rather than of scored turns, because the client
+ * cannot know which of its turns the server found long enough to score —
+ * `scoreTurn` discards anything under four words and never tells the client.
+ *
+ * So this is a floor the UI uses to say "one more to go", not the verdict. A
+ * learner who answers four times in single words will still see the strand come
+ * back unmeasured, and the result screen has to be able to say so.
+ */
+export const MIN_INTERACTION_REPLIES = 3;
+
+/**
+ * Whether the conversation has run long enough to be worth submitting.
+ *
+ * Never a gate on finishing the test. The conversation is skippable in exactly
+ * the way speaking is, and for a sharper version of the same reason: it is
+ * spoken-only, so a denied microphone or a noisy room can end it through no
+ * fault of the learner. An absent strand is excluded from the score; a strand
+ * that blocked submission would turn a mic problem into a lost checkpoint.
+ */
+export function interactionIsEvidence(replies: number): boolean {
+  return replies >= MIN_INTERACTION_REPLIES;
 }
 
 /**

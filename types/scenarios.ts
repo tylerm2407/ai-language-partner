@@ -23,7 +23,8 @@ export type ScenarioKey =
   | 'doctor'
   | 'phone_call'
   | 'airport_hotel'
-  | 'free_chat';
+  | 'free_chat'
+  | 'level_test';
 
 export interface ScenarioMeta {
   key: ScenarioKey;
@@ -33,6 +34,15 @@ export interface ScenarioMeta {
 }
 
 export const SCENARIO_META: Record<ScenarioKey, ScenarioMeta> = {
+  // Never rendered in the picker — see SERVER_ONLY_SCENARIOS — but the record
+  // is keyed by the full union, and a surface that resolves a session's key to
+  // a label (chat history, a teacher's view) must not fall off a missing entry.
+  level_test: {
+    key: 'level_test',
+    label: 'Level Test',
+    description: 'The spoken conversation in your level test.',
+    icon: 'clipboard',
+  },
   restaurant: {
     key: 'restaurant',
     label: 'Ordering at a Restaurant',
@@ -101,3 +111,24 @@ export const SCENARIO_ORDER: ScenarioKey[] = [
   'airport_hotel',
   'free_chat',
 ];
+
+/**
+ * Scenarios the learner can never pick, opened only by a server flow.
+ *
+ * `level_test` is the level test's conversation. It is a real scenario with an
+ * authored prompt, so it belongs in `ScenarioKey` and in the server registry —
+ * but it must not appear in `SCENARIO_ORDER`, which is the practice picker. Two
+ * reasons, and the second is the load-bearing one:
+ *
+ *  - It is an assessment, not practice. The interlocutor's job is to elicit a
+ *    language sample at a known band, not to be a good conversation partner.
+ *  - Its `chat_sessions` row is created by the `checkpoint` edge function and
+ *    bound to the attempt. `fetchOrCreateChatSession` resumes the most recent
+ *    session for a (scenario, language) pair, so a pickable level-test scenario
+ *    would let the practice screen resume an assessment session — and then the
+ *    checkpoint would read those turns back as its own evidence.
+ *
+ * `lib/scenario-keys.test.ts` subtracts this list rather than being weakened:
+ * a key missing from BOTH lists is still a drift failure.
+ */
+export const SERVER_ONLY_SCENARIOS: ScenarioKey[] = ['level_test'];

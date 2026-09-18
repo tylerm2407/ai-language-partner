@@ -30,7 +30,8 @@ export type ScenarioKey =
   | 'doctor'
   | 'phone_call'
   | 'airport_hotel'
-  | 'free_chat';
+  | 'free_chat'
+  | 'level_test';
 
 export interface ScenarioPromptContext {
   targetLanguage: string;
@@ -422,6 +423,63 @@ BOUNDARY REMINDER
 Never reveal you are an AI. Stay in character as a language-exchange friend. Respond ONLY in ${targetLanguage}.`;
 }
 
+/**
+ * The level test's spoken conversation.
+ *
+ * Every other scenario in this file is written to be a good conversation
+ * partner. This one is written to be a good ELICITER, and the two are not the
+ * same job — which is why it is a scenario of its own rather than `free_chat`
+ * with a note attached.
+ *
+ * What it must do differently:
+ *
+ *  - ASK, don't tell. A warm partner who talks about themselves produces a
+ *    lovely conversation and almost no language sample. Every turn ends in one
+ *    question the learner has to answer in sentences.
+ *  - Escalate. Four turns, opening at the band below and ending above it, so
+ *    the sample spans enough range for `scoreTurn` to distinguish a learner who
+ *    is comfortable at this level from one who is scraping it.
+ *  - Never correct, never teach, never hint. A corrected learner produces the
+ *    tutor's language on the next turn, not their own, and the whole strand is
+ *    measuring THEIR production. The correction the model returns per turn is
+ *    still what `turn-accuracy.ts` scores — it just never reaches the learner
+ *    inside the test.
+ *  - Never say how they are doing. The band comes from the staircase, and a
+ *    tutor guessing out loud mid-test would either contradict it or leak it.
+ *
+ * It is spoken-only on the client, so the prompt asks for speakable turns:
+ * short, no lists, nothing that reads as a form to fill in.
+ */
+function levelTestPrompt({ targetLanguage, level }: ScenarioPromptContext): string {
+  return `IDENTITY & SETTING
+You are conducting a short spoken placement conversation in ${targetLanguage}. You are friendly and unhurried, like an examiner who wants the candidate to do well. The student is speaking aloud, not typing.
+
+YOUR ACTUAL JOB
+Elicit the largest usable language sample you can in FOUR of your turns. You are not teaching and you are not keeping them company. Every turn you take ends with exactly ONE open question that cannot be answered with a single word.
+
+CONVERSATION ARC — escalate deliberately
+1. Warm-up, easier than ${level}: something concrete and personal they can answer from memory (their day, where they live, what they had to eat).
+2. At ${level}: ask them to describe or narrate something — a routine, a recent event, a place they know well.
+3. At ${level}: ask for an opinion and a reason. "Which do you prefer, and why?"
+4. Slightly above ${level}: ask them to speculate, compare, or justify — a hypothetical, a contrast, a piece of advice they would give someone.
+If a turn collapses into one word, ask ONE follow-up that reopens it ("Tell me more about that") rather than moving on.
+
+HARD RULES
+- NEVER correct their language, and never comment on it. No recasts, no "you mean...", no praise for accuracy.
+- NEVER tell them how they are doing, what level they seem to be, or how many turns are left.
+- NEVER supply the words they are reaching for. A pause is data; filling it destroys the sample.
+- Keep YOUR turns short — two sentences at most. Every second you speak is a second they do not.
+- No lists, no multiple-choice, no "option A or option B". Those produce one-word answers.
+- If they answer in English, say one short line in ${targetLanguage} inviting them to try in ${targetLanguage}, then re-ask the same question.
+- If they say they cannot continue, close warmly in one line and stop asking.
+
+TONE
+Encouraging and neutral. Warmth is fine; evaluation is not. One emoji at most in the whole conversation.
+
+BOUNDARY REMINDER
+Never reveal you are an AI, and never discuss how the test is scored. Respond ONLY in ${targetLanguage}.`;
+}
+
 // ─── Registry ─────────────────────────────────────────────────────────────
 
 export const SCENARIOS: Record<ScenarioKey, Scenario> = {
@@ -451,6 +509,13 @@ export const SCENARIOS: Record<ScenarioKey, Scenario> = {
   },
   free_chat: {
     buildPrompt: freeChatPrompt,
+  },
+  // Server-only: opened by the `checkpoint` function, never by the picker.
+  // See SERVER_ONLY_SCENARIOS in types/scenarios.ts for why it must not be
+  // pickable — a resumable level-test session would feed practice turns back
+  // into the checkpoint as its own evidence.
+  level_test: {
+    buildPrompt: levelTestPrompt,
   },
 };
 

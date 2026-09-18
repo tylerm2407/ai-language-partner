@@ -21,8 +21,21 @@
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { SCENARIO_META, SCENARIO_ORDER } from '../types/scenarios';
+import { SCENARIO_META, SCENARIO_ORDER, SERVER_ONLY_SCENARIOS } from '../types/scenarios';
 import type { ScenarioKey } from '../types/scenarios';
+
+/**
+ * Every key that must exist on both sides: the pickable ones plus the
+ * server-only ones.
+ *
+ * `SCENARIO_ORDER` alone used to be that list, because every scenario was
+ * pickable. `level_test` is not — the checkpoint opens it, and making it
+ * pickable would let the practice screen resume an assessment session whose
+ * turns the checkpoint then reads back as its own evidence. The exception is
+ * an explicit list rather than a loosened assertion: a key missing from BOTH
+ * lists is still caught, which is the drift this file exists to stop.
+ */
+const ALL_KEYS: ScenarioKey[] = [...SCENARIO_ORDER, ...SERVER_ONLY_SCENARIOS];
 
 const EDGE_MODULE = resolve(__dirname, '../supabase/functions/_shared/scenarios.ts');
 
@@ -49,30 +62,41 @@ function edgeUnionKeys(): string[] {
 }
 
 describe('scenario keys across the client/edge boundary', () => {
-  it('every scenario the learner can pick resolves to an authored prompt', () => {
+  it('every scenario the client knows resolves to an authored prompt', () => {
     const edge = edgeScenarioKeys();
-    for (const key of SCENARIO_ORDER) {
+    for (const key of ALL_KEYS) {
       expect(edge).toContain(key);
     }
   });
 
-  it('every authored prompt is reachable from the picker', () => {
+  it('every authored prompt is reachable', () => {
     // The other direction matters too: a scenario written server-side but
-    // absent from SCENARIO_ORDER is work nobody can ever run.
-    const clientKeys = SCENARIO_ORDER as readonly string[];
+    // absent from both client lists is work nobody can ever run.
+    const clientKeys = ALL_KEYS as readonly string[];
     for (const key of edgeScenarioKeys()) {
       expect(clientKeys).toContain(key);
     }
   });
 
   it('the two ScenarioKey unions have the same members', () => {
-    expect([...edgeUnionKeys()].sort()).toEqual([...SCENARIO_ORDER].sort());
+    expect([...edgeUnionKeys()].sort()).toEqual([...ALL_KEYS].sort());
   });
 
-  it('SCENARIO_ORDER and SCENARIO_META cover exactly the same keys', () => {
-    expect([...SCENARIO_ORDER].sort()).toEqual(
+  it('SCENARIO_META covers every key, pickable or not', () => {
+    // Keyed by the full union, so a surface resolving a stored session's key
+    // to a label does not fall off a missing entry.
+    expect([...ALL_KEYS].sort()).toEqual(
       (Object.keys(SCENARIO_META) as ScenarioKey[]).sort(),
     );
+  });
+
+  it('a server-only scenario stays out of the picker', () => {
+    // The thing that would actually break: fetchOrCreateChatSession resumes
+    // the newest session for a (scenario, language) pair, so a pickable
+    // level_test would hand the practice screen an assessment session.
+    for (const key of SERVER_ONLY_SCENARIOS) {
+      expect(SCENARIO_ORDER).not.toContain(key);
+    }
   });
 
   it('labels and descriptions live only on the client', () => {

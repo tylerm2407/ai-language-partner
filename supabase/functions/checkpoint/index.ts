@@ -55,10 +55,12 @@ import {
   COHORT_TARGET_SIZE,
   MAX_ANSWER_CHARS,
   aliasFor,
+  INTERACTION_TURNS,
   bandFromStaircase,
   bandsForAttempt,
   buildCheckpointWritingPrompt,
   composite,
+  interactionGraded,
   isCorrect,
   selectAdaptiveItems,
   serveItem,
@@ -67,6 +69,7 @@ import {
   type GradedItem,
   type PoolItem,
   type Strand,
+  type TurnEvidence,
 } from './checkpoint-core.ts';
 import { buildSeedPrompt, parseSeeded } from './seed-core.ts';
 
@@ -444,6 +447,14 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
     return json({ error: 'Could not start the checkpoint.', code: 'START_FAILED' }, 502);
   }
 
+  const interactionSessionId = await openInteractionSession(
+    supabase,
+    userId,
+    language,
+    band,
+    attempt.id as string,
+  );
+
   // Signed URLs for the listening items only. The bucket is private, so this
   // is the only way in, and it expires.
   const served = await Promise.all(
@@ -458,7 +469,74 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
     }),
   );
 
-  return json({ checkpointId: attempt.id, band, kind, items: served });
+  return json({
+    checkpointId: attempt.id,
+    band,
+    kind,
+    items: served,
+    // Null when the session could not be opened. The client then skips the
+    // conversation and the strand is absent — never zero, and never a failed
+    // checkpoint over a strand that is not the learner's fault.
+    interactionSessionId,
+    interactionTurns: INTERACTION_TURNS,
+  });
+}
+
+/**
+ * Open the conversation this attempt will be scored on.
+ *
+ * Created HERE, with the service role, and stored on the attempt. The client is
+ * told the id so it can talk to `ai-chat`, but `submit` reads the id back off
+ * the attempt row and never from the request — same discipline as the speaking
+ * strand's `pronunciation_scores` readback. A client-supplied session id is a
+ * self-assigned interaction score: point it at the conversation you held on
+ * your best day and the strand worth 0.55 of the model is yours to choose.
+ *
+ * `scenario_key` is `level_test`, which is deliberately absent from the
+ * learner's picker (`SERVER_ONLY_SCENARIOS`). `fetchOrCreateChatSession`
+ * resumes the newest session for a (scenario, language) pair, so a pickable key
+ * would let the practice screen resume this row — and its practice turns would
+ * come back as this attempt's evidence.
+ *
+ * Best-effort. A failure here costs the strand, not the checkpoint: the learner
+ * still has ten graded items waiting, and losing the whole attempt over a chat
+ * row would be the worse trade.
+ */
+async function openInteractionSession(
+  supabase: Db,
+  userId: string,
+  language: string,
+  band: string,
+  checkpointId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({
+      user_id: userId,
+      scenario_key: 'level_test',
+      target_language: language,
+      level: band,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[checkpoint] interaction session insert failed:', error?.message);
+    return null;
+  }
+
+  const { error: bindError } = await supabase
+    .from('checkpoints')
+    .update({ interaction_session_id: data.id })
+    .eq('id', checkpointId);
+  if (bindError) {
+    // An unbound session cannot be read back at submit, so it is not evidence.
+    // Say so rather than handing the client an id the server will ignore.
+    console.error('[checkpoint] interaction session bind failed:', bindError.message);
+    return null;
+  }
+
+  return data.id as string;
 }
 
 // ─── submit ────────────────────────────────────────────────────────────────
@@ -613,6 +691,56 @@ async function placeInCohort(supabase: Db, userId: string, language: string, ban
 }
 
 /**
+ * This attempt's scored conversation turns.
+ *
+ * `ai-chat` wrote them through `_shared/conversation-evidence.ts` — the same
+ * writer, and therefore the same definition of what counts as a language
+ * sample, that the proficiency report reads. Nothing is re-scored here: the
+ * accuracy and intelligibility columns are taken as stored and combined by
+ * `combineTurn`. Re-deriving them would be a second answer to "what is a turn
+ * worth", and a learner's band would then depend on which surface asked.
+ *
+ * Capped at `INTERACTION_TURNS * 2`. The conversation asks for four turns and
+ * the client enforces that, but the client is untrusted and this is a strand
+ * worth 0.55: without a ceiling, a learner who kept the session open and talked
+ * for an hour would submit a mean over sixty turns, which is a different
+ * measurement from the one the test claims to make. Doubled rather than exact
+ * so an extra turn from a retried send is not silently dropped.
+ *
+ * Returns `[]` on a missing session or a failed read, which `interactionScore`
+ * turns into null — the strand absent, never zero.
+ */
+async function readInteractionTurns(
+  supabase: Db,
+  sessionId: string | null,
+): Promise<TurnEvidence[]> {
+  if (!sessionId) return [];
+
+  const { data, error } = await supabase
+    .from('conversation_evidence')
+    .select('accuracy, intelligibility, created_at')
+    .eq('chat_session_id', sessionId)
+    .order('created_at', { ascending: true })
+    .limit(INTERACTION_TURNS * 2);
+
+  if (error) {
+    console.error('[checkpoint] interaction readback failed:', error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as { accuracy: unknown; intelligibility: unknown }[];
+  return rows
+    .map((row): TurnEvidence => ({
+      accuracy: Number(row.accuracy),
+      intelligibility:
+        row.intelligibility === null || row.intelligibility === undefined
+          ? null
+          : Number(row.intelligibility),
+    }))
+    .filter((turn) => Number.isFinite(turn.accuracy));
+}
+
+/**
  * Append a row to `level_history` when this attempt CHANGED the tested band.
  *
  * One row per change, not per attempt. A learner who tests at B1 four times
@@ -666,7 +794,7 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
 
   const { data: attempt } = await supabase
     .from('checkpoints')
-    .select('id, user_id, language, band, item_ids, started_at, completed_at')
+    .select('id, user_id, language, band, item_ids, started_at, completed_at, interaction_session_id')
     .eq('id', checkpointId)
     .maybeSingle();
 
@@ -753,6 +881,16 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
     graded.push({ strand: 'speaking', band: item.band, score: spokenByPrompt.get(item.prompt) ?? null });
   }
 
+  // Interaction: the attempt's own conversation, read back from the rows
+  // `ai-chat` already wrote. The session id comes off the ATTEMPT, never the
+  // request — see `openInteractionSession`.
+  graded.push(
+    interactionGraded(
+      attempt.band as Band,
+      await readInteractionTurns(supabase, attempt.interaction_session_id as string | null),
+    ),
+  );
+
   const scores = strandMeans(graded);
   const value = composite(scores);
   const newBand = bandFromStaircase(attempt.band as Band, graded);
@@ -765,6 +903,7 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
       reading_score: scores.reading ?? null,
       speaking_score: scores.speaking ?? null,
       writing_score: scores.writing ?? null,
+      interaction_score: scores.interaction ?? null,
       composite: value,
     })
     .eq('id', checkpointId);
@@ -791,6 +930,7 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
       reading: scores.reading ?? null,
       speaking: scores.speaking ?? null,
       writing: scores.writing ?? null,
+      interaction: scores.interaction ?? null,
     },
   });
 }

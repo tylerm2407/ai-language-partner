@@ -1,7 +1,28 @@
 // Pure logic for the checkpoint: item selection, grading, and the composite.
 // No Deno.env / serve(), so it is unit testable.
 
-export const STRANDS = ['listening', 'reading', 'speaking', 'writing'] as const;
+/**
+ * Strands backed by a POOL ITEM — something with a prompt and an answer key,
+ * selected from `checkpoint_items` and graded by comparison.
+ */
+export const ITEM_STRANDS = ['listening', 'reading', 'speaking', 'writing'] as const;
+export type ItemStrand = (typeof ITEM_STRANDS)[number];
+
+/**
+ * Every strand the attempt SCORES, item-backed or not.
+ *
+ * `interaction` is the odd one and has to be: a conversation is not an item. It
+ * has no answer key, it is pitched at one band rather than asked at three, and
+ * its score comes from what the learner produced. It is scored from the
+ * `conversation_evidence` rows `ai-chat` wrote for the attempt's own session —
+ * the same rows, from the same shared writer, that the proficiency report
+ * reads, so the test and the report cannot disagree about what a turn is worth.
+ *
+ * It is here at all because interaction is 0.55 of the practice model and was
+ * 0% of this test, which since migration 143 has been able to publish a
+ * learner's level.
+ */
+export const STRANDS = [...ITEM_STRANDS, 'interaction'] as const;
 export type Strand = (typeof STRANDS)[number];
 
 export const BANDS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
@@ -29,7 +50,7 @@ export function buildCheckpointWritingPrompt(language: string, band: string, pro
 
 export interface PoolItem {
   id: string;
-  strand: Strand;
+  strand: ItemStrand;
   /**
    * The band this item was authored FOR.
    *
@@ -56,7 +77,7 @@ export interface PoolItem {
  */
 export interface ServedItem {
   id: string;
-  strand: Strand;
+  strand: ItemStrand;
   band: Band;
   prompt: string;
   options: string[] | null;
@@ -82,7 +103,7 @@ export function serveItem(item: PoolItem): ServedItem {
  */
 export function selectItems(pool: PoolItem[], attemptNumber: number): PoolItem[] {
   const chosen: PoolItem[] = [];
-  for (const strand of STRANDS) {
+  for (const strand of ITEM_STRANDS) {
     const forStrand = pool
       .filter((i) => i.strand === strand)
       .sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -136,7 +157,7 @@ export function selectItems(pool: PoolItem[], attemptNumber: number): PoolItem[]
  * is the ~5 minutes the UI has always promised, which the old four-item version
  * never actually took.
  */
-export const STRAND_BAND_OFFSETS: Record<Strand, number[]> = {
+export const STRAND_BAND_OFFSETS: Record<ItemStrand, number[]> = {
   listening: [-1, 0, 1],
   reading: [-1, 0, 1],
   writing: [0, 1],
@@ -167,7 +188,7 @@ function shiftBand(band: Band, offset: number): Band | null {
  * the ends rather than being faked. A learner at A1 cannot be demoted and does
  * not need a rung that would only ever prove it.
  */
-export function bandsForStrand(setBand: Band, strand: Strand): Band[] {
+export function bandsForStrand(setBand: Band, strand: ItemStrand): Band[] {
   return STRAND_BAND_OFFSETS[strand]
     .map((offset) => shiftBand(setBand, offset))
     .filter((b): b is Band => b !== null);
@@ -179,7 +200,8 @@ export function bandsForStrand(setBand: Band, strand: Strand): Band[] {
  */
 export function bandsForAttempt(setBand: Band): Band[] {
   const wanted = new Set<Band>();
-  for (const strand of STRANDS) for (const band of bandsForStrand(setBand, strand)) wanted.add(band);
+  // Item strands only: interaction has no pool to query.
+  for (const strand of ITEM_STRANDS) for (const band of bandsForStrand(setBand, strand)) wanted.add(band);
   return BANDS.filter((b) => wanted.has(b));
 }
 
@@ -199,7 +221,7 @@ export function selectAdaptiveItems(
   attemptNumber: number,
 ): PoolItem[] {
   const chosen: PoolItem[] = [];
-  for (const strand of STRANDS) {
+  for (const strand of ITEM_STRANDS) {
     for (const band of bandsForStrand(setBand, strand)) {
       const rung = pool
         .filter((i) => i.strand === strand && i.band === band)
@@ -209,6 +231,106 @@ export function selectAdaptiveItems(
     }
   }
   return chosen;
+}
+
+// ─── Interaction ────────────────────────────────────────────────────────────
+
+/**
+ * Tutor turns the level-test conversation runs for.
+ *
+ * Four, which is the shortest thing honestly callable a conversation and the
+ * point at which a mean stops being one sentence's luck. It takes the test from
+ * "about five minutes" to about eight, and the UI says eight — a claim that
+ * quietly drifts is worse than a longer one that is true.
+ *
+ * It is also a spend ceiling. The checkpoint is quota-exempt, so the only thing
+ * bounding conversation cost is this cap times the seven-day cooldown.
+ */
+export const INTERACTION_TURNS = 4;
+
+/**
+ * Scored turns the conversation needs before it counts as evidence at all.
+ *
+ * Three of the four asked. Below that the strand is ABSENT — excluded from the
+ * composite and from the staircase — never zero.
+ *
+ * That distinction carries more weight here than anywhere else in this file.
+ * The conversation is spoken-only, so it can fail for reasons that are not the
+ * learner's: a denied microphone, a noisy room, a recogniser that returns
+ * nothing. Speaking has always been excluded rather than zeroed for exactly
+ * that reason, and it is worth 0.08 of the practice model. Interaction is worth
+ * 0.55. Scoring a mic failure as a zero would take more off a learner's band
+ * than every other strand in this test can put on.
+ *
+ * Three rather than the report's `MIN_INTERACTION_TURNS_PER_UNIT` of 5 because
+ * these are different questions. Five turns is what makes a session count as a
+ * UNIT toward a volume gate of twelve such sessions; this is one sample, and
+ * three scored turns is enough to mean something about it. `scoreTurn` has
+ * already discarded anything under four words, so these are three real
+ * contributions.
+ */
+export const MIN_INTERACTION_TURNS_SCORED = 3;
+
+/** One scored turn, as `conversation_evidence` stores it. */
+export interface TurnEvidence {
+  accuracy: number;
+  /** Speech-recogniser confidence for a spoken turn; null when none reported. */
+  intelligibility: number | null;
+}
+
+/**
+ * Collapse one turn's stored components into a single 0–1 score.
+ *
+ * The THIRD copy of this rule, and the duplication is deliberate rather than
+ * careless. `_shared/turn-accuracy.ts` has `combinedScore` for the write path
+ * and `lib/cefr-proficiency.ts` has `combineConversationScore` for the app
+ * bundle; an edge function cannot import the second and this module is kept
+ * dependency-free so it stays unit-testable without a runtime. What matters is
+ * that all three compute the same thing, which is asserted in the test suite.
+ *
+ * Half accuracy, half intelligibility: a grammatically perfect sentence nobody
+ * can follow has not achieved the can-do statement. Where the recogniser
+ * reported nothing, accuracy carries the turn alone rather than the turn being
+ * thrown away.
+ */
+export function combineTurn(turn: TurnEvidence): number {
+  if (turn.intelligibility === null || !Number.isFinite(turn.intelligibility)) {
+    return turn.accuracy;
+  }
+  return 0.5 * turn.accuracy + 0.5 * turn.intelligibility;
+}
+
+/**
+ * The interaction strand's score for one attempt, or null when it did not
+ * happen.
+ *
+ * Null rather than 0 on every failure path — skipped, too few turns, nothing
+ * scoreable. See `MIN_INTERACTION_TURNS_SCORED`.
+ */
+export function interactionScore(turns: TurnEvidence[]): number | null {
+  const scores = turns
+    .map(combineTurn)
+    .filter((s) => Number.isFinite(s));
+  if (scores.length < MIN_INTERACTION_TURNS_SCORED) return null;
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+/**
+ * The interaction strand as a graded rung, at the band the attempt was set at.
+ *
+ * ONE entry, not one per turn. Every other strand contributes one item per
+ * (strand, band), and a conversation that contributed four would be four
+ * fifths of its own rung — the most important strand would drown out the three
+ * others asked at that band, which is the opposite of what
+ * `BAND_THRESHOLD` sitting above the largest single weight is there to prevent.
+ *
+ * At the SET band only. A conversation is pitched at one level; the tutor
+ * escalates within it (see `levelTestPrompt`), but the sample is one band's
+ * worth of evidence, and pretending otherwise would let one conversation both
+ * promote and demote on the same turns.
+ */
+export function interactionGraded(setBand: Band, turns: TurnEvidence[]): GradedItem {
+  return { strand: 'interaction', band: setBand, score: interactionScore(turns) };
 }
 
 /** One item after grading. `score` is null when the learner left it blank. */

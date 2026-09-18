@@ -35,7 +35,16 @@
 
 import type { ScenarioKey } from './scenarios.ts';
 
-export type MissionScenarioKey = Exclude<ScenarioKey, 'free_chat'>;
+/**
+ * Scenes that have an authored mission ladder.
+ *
+ * Two exclusions, for different reasons. `free_chat` has no ladder because it
+ * has no scene to have one about. `level_test` has none because it is an
+ * assessment: its four turns are there to elicit a language sample at a known
+ * band, and a pass/fail objective checklist on top of that would be a second,
+ * contradictory verdict on the same conversation.
+ */
+export type MissionScenarioKey = Exclude<ScenarioKey, 'free_chat' | 'level_test'>;
 export type MissionStage = 1 | 2 | 3 | 4;
 export type MissionBand = 'A1' | 'A2' | 'B1' | 'B2';
 
