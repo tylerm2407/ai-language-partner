@@ -39,7 +39,7 @@ import { SUPPORTED_LANGUAGES } from '../../config/app';
 import { spacing } from '../../config/theme';
 import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
 import { languageAccessRefusal, type LanguageAccessRefusal } from '../../lib/language-access';
-import { requestLanguageAccessCheck } from '../../lib/language-access-events';
+import { markSwitcherOpen, requestLanguageAccessCheck } from '../../lib/language-access-events';
 import {
   PAYWALL_PATHNAME,
   actionForLockedTapped,
@@ -50,6 +50,7 @@ import {
   stepForAddTapped,
   switcherFooterNote,
   upgradeReturnOutcome,
+  upgradePendingCopy,
   type AddMode,
   type PaywallTrip,
   type SwitcherStep,
@@ -112,6 +113,9 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   const [lockedTarget, setLockedTarget] = useState<LanguageCode | null>(null);
   /** The step the paywall was opened from — where a decline comes back to. */
   const [upgradeFrom, setUpgradeFrom] = useState<'limit' | 'locked'>('limit');
+  /** The device's own belief about the plan when the learner left for the
+   *  paywall: whether a paid answer on return means "just bought" or "stale". */
+  const paidAtDeparture = useRef(false);
   const [trip, setTrip] = useState<PaywallTrip>('idle');
   const [upgradeCheck, setUpgradeCheck] = useState<'idle' | 'checking' | 'ready'>('idle');
   // A failed switch keeps the sheet open with the reason on it: the learner is
@@ -266,9 +270,10 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   const onUpgrade = useCallback(() => {
     setUpgradeFrom(step === 'locked' ? 'locked' : 'limit');
     trackEvent('language_limit_resolved', { screen: 'switcher', outcome: 'upgrade' });
+    paidAtDeparture.current = devicePaid;
     setTrip('leaving');
     router.push('/(app)/plans');
-  }, [step, router]);
+  }, [step, router, devicePaid]);
 
   const checkUpgrade = useCallback(async () => {
     setUpgradeCheck('checking');
@@ -292,18 +297,31 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   useEffect(() => {
     if (upgradeCheck !== 'ready') return;
     setUpgradeCheck('idle');
-    const outcome = upgradeReturnOutcome(knownAccess, devicePaid, upgradeFrom === 'locked' ? lockedTarget : null);
+    const outcome = upgradeReturnOutcome(
+      knownAccess,
+      devicePaid,
+      upgradeFrom === 'locked' ? lockedTarget : null,
+      paidAtDeparture.current,
+    );
     if (outcome === 'resume') {
       if (upgradeFrom === 'locked' && lockedTarget) void doSwitch(lockedTarget);
       else {
         setMode('add');
         setStep('pick-language');
       }
-    } else if (outcome === 'activating') setStep('activating');
+    } else if (outcome === 'activating' || outcome === 'mismatch') setStep(outcome);
     else if (outcome === 'declined') setStep(upgradeFrom);
     // 'unknown': the list carries the read error and its retry.
     else setStep('list');
   }, [upgradeCheck, knownAccess, devicePaid, upgradeFrom, lockedTarget, doSwitch]);
+
+  // On screen means the Modal is up: the keep sheet waits for every switcher
+  // to be gone before presenting its own (lib/language-access-events.ts).
+  const onScreen = visible && trip === 'idle';
+  useEffect(() => {
+    if (!onScreen) return;
+    return markSwitcherOpen();
+  }, [onScreen]);
 
   const activeName = active ? languageName(active) : 'the language you are on';
   const pendingName = pending ? languageName(pending) : '';
@@ -322,10 +340,10 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
               ? `${lockedTarget ? languageName(lockedTarget) : 'This language'} is locked`
               : step === 'confirm-lock'
                 ? `Lock ${activeName}?`
-                : 'Finishing your upgrade';
+                : upgradePendingCopy(step === 'mismatch' ? 'mismatch' : 'activating').title;
 
   return (
-    <Ui2Sheet visible={visible && trip === 'idle'} onDismiss={onDismiss}>
+    <Ui2Sheet visible={onScreen} onDismiss={onDismiss}>
       <View style={styles.headerRow}>
         {step !== 'list' ? (
           <Pressable
@@ -453,13 +471,10 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
           />
         ) : null}
 
-        {step === 'activating' ? (
+        {step === 'activating' || step === 'mismatch' ? (
           <LanguageLimitPanel
-            icon="hourglass-outline"
-            body={[
-              'Your plan shows as active on this phone, but our servers have not caught up with it yet.',
-              'This usually takes a few seconds. Try again in a moment.',
-            ]}
+            icon={step === 'activating' ? 'hourglass-outline' : 'alert-circle-outline'}
+            body={upgradePendingCopy(step).body}
             primary={{ label: 'Try again', onPress: () => void checkUpgrade(), loading: upgradeCheck !== 'idle' }}
             secondary={{ label: 'Back', onPress: () => setStep('list') }}
           />

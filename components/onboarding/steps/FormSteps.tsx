@@ -39,7 +39,7 @@ export function LanguageStep({
       {/* First question of the whole app: the mascot says hello rather than sitting. */}
       {frame.hero('What language do you want to learn?', 'slide', 'wave')}
       <Animated.View entering={frame.enter(0)}>
-        <Lede>You can add another later.</Lede>
+        <Lede>You can change it later. Learning several at once comes with a paid plan.</Lede>
       </Animated.View>
       {/* Short labels, so two columns: the grid is a different silhouette
           from a stacked list, and eight rows plus the hero did not fit

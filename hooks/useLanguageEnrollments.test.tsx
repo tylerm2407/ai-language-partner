@@ -104,6 +104,21 @@ describe('useLanguageEnrollments: language access', () => {
     warn.mockRestore();
   });
 
+  it('reads only the allowance when list: false (the keep sheet)', async () => {
+    function AccessOnly() {
+      hook = useLanguageEnrollments({ list: false });
+      return null;
+    }
+    await act(async () => {
+      TestRenderer.create(<AccessOnly />);
+    });
+    await flush();
+    expect(mockFetchEnrollments).not.toHaveBeenCalled();
+    expect(mockFetchAccess).toHaveBeenCalled();
+    expect(hook.access).toEqual(FREE);
+    expect(hook.enrollments).toEqual([]);
+  });
+
   it('reports an error and clears access when the LIST read fails', async () => {
     mockFetchEnrollments.mockRejectedValue(new Error('offline'));
     await mount();

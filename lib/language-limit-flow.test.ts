@@ -10,10 +10,17 @@ import {
   stepForAddTapped,
   switcherFooterNote,
   toggleKeep,
+  upgradePendingCopy,
   upgradeReturnOutcome,
 } from './language-limit-flow';
 import { UNLIMITED_LANGUAGES, type LanguageAccess } from './language-access';
-import { onLanguageAccessCheck, requestLanguageAccessCheck } from './language-access-events';
+import {
+  markSwitcherOpen,
+  onLanguageAccessCheck,
+  onSwitcherOpenChange,
+  openSwitcherCount,
+  requestLanguageAccessCheck,
+} from './language-access-events';
 
 const free: LanguageAccess = { maxLanguages: 1, open: ['es'], locked: ['fr'], overLimit: false };
 const paid: LanguageAccess = { maxLanguages: UNLIMITED_LANGUAGES, open: ['es'], locked: ['fr'], overLimit: false };
@@ -71,23 +78,53 @@ describe('Back', () => {
 });
 
 describe('coming back from the paywall', () => {
+  // The fourth argument is whether the device believed it was paid when the
+  // learner LEFT: false = a purchase could have happened on this trip.
   it('resumes when the server now has room', () => {
-    expect(upgradeReturnOutcome(paid, true, null)).toBe('resume');
+    expect(upgradeReturnOutcome(paid, true, null, false)).toBe('resume');
   });
-  it('says the upgrade is activating when the device is paid and the server is not', () => {
-    expect(upgradeReturnOutcome(free, true, null)).toBe('activating');
+  it('says the upgrade is activating when the device became paid on this trip', () => {
+    expect(upgradeReturnOutcome(free, true, null, false)).toBe('activating');
+  });
+  it('says the plan is not active — never "finishing your upgrade" — when the device was already paid before the trip', () => {
+    expect(upgradeReturnOutcome(free, true, null, true)).toBe('mismatch');
   });
   it('returns to the wall when the learner did not buy', () => {
-    expect(upgradeReturnOutcome(free, false, null)).toBe('declined');
+    expect(upgradeReturnOutcome(free, false, null, false)).toBe('declined');
+    expect(upgradeReturnOutcome(free, false, null, true)).toBe('declined');
   });
   it('resumes a locked language that something else already reopened', () => {
-    expect(upgradeReturnOutcome({ ...free, open: ['fr'], locked: ['es'] }, false, 'fr')).toBe('resume');
+    expect(upgradeReturnOutcome({ ...free, open: ['fr'], locked: ['es'] }, false, 'fr', false)).toBe('resume');
   });
   it('is unknown when the re-read failed', () => {
-    expect(upgradeReturnOutcome(null, true, null)).toBe('unknown');
+    expect(upgradeReturnOutcome(null, true, null, false)).toBe('unknown');
   });
   it('never resumes into a lapsed plan', () => {
-    expect(upgradeReturnOutcome(lapsed, true, 'fr')).toBe('activating');
+    expect(upgradeReturnOutcome(lapsed, true, 'fr', false)).toBe('activating');
+    expect(upgradeReturnOutcome(lapsed, true, 'fr', true)).toBe('mismatch');
+  });
+  it('has distinct, honest copy for both pending states', () => {
+    const activating = upgradePendingCopy('activating');
+    const mismatch = upgradePendingCopy('mismatch');
+    expect(activating.title).toBe('Finishing your upgrade');
+    expect(mismatch.title).not.toMatch(/upgrade/i);
+    expect(mismatch.body.join(' ')).toMatch(/Restore purchases/);
+  });
+});
+
+describe('open switchers (the keep sheet waits for them)', () => {
+  it('counts open switchers and releases each exactly once', () => {
+    const seen: number[] = [];
+    const off = onSwitcherOpenChange((n) => seen.push(n));
+    const releaseHome = markSwitcherOpen();
+    const releaseSettings = markSwitcherOpen();
+    expect(openSwitcherCount()).toBe(2);
+    releaseHome();
+    releaseHome(); // a double release must not go negative
+    releaseSettings();
+    expect(openSwitcherCount()).toBe(0);
+    expect(seen).toEqual([1, 2, 1, 0]);
+    off();
   });
 });
 

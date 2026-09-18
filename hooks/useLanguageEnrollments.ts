@@ -79,7 +79,16 @@ export interface UseLanguageEnrollments {
   keep: (languages: LanguageCode[]) => Promise<void>;
 }
 
-export function useLanguageEnrollments(): UseLanguageEnrollments {
+export interface UseLanguageEnrollmentsOptions {
+  /**
+   * Read the enrollment list as well as the allowance (default true). The
+   * app-wide keep sheet only needs the allowance, and it re-reads on every
+   * foreground, so it passes false and `enrollments` stays empty.
+   */
+  list?: boolean;
+}
+
+export function useLanguageEnrollments({ list: readList = true }: UseLanguageEnrollmentsOptions = {}): UseLanguageEnrollments {
   const { user } = useAuth();
   // Keyed on the id, not the user object: `session.user` is a new object on
   // every token refresh, which re-read every mounted copy of this hook.
@@ -109,7 +118,10 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
       // and REOPENING, so a failed allowance read must not take away the
       // switch between languages the learner already studies. It reads as
       // null ("unknown"), which every gated action already treats as "wait".
-      const [list, allowance] = await Promise.allSettled([fetchLanguageEnrollments(), fetchLanguageAccess()]);
+      const [list, allowance] = await Promise.allSettled([
+        readList ? fetchLanguageEnrollments() : Promise.resolve([] as LanguageEnrollment[]),
+        fetchLanguageAccess(),
+      ]);
       if (list.status === 'rejected') throw list.reason;
       setEnrollments(list.value);
       setAccess(allowance.status === 'fulfilled' ? allowance.value : null);
@@ -127,7 +139,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, readList]);
 
   useEffect(() => {
     void reload();

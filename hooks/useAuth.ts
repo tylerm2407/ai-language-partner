@@ -62,6 +62,7 @@ function start(): void {
     .getSession()
     .then(({ data: { session } }) => {
       publish({ session, loading: false });
+      if (session) void verifyAccountStillExists();
     })
     .catch(async (err) => {
       console.warn('[auth] getSession failed — clearing stale session:', err);
@@ -77,6 +78,51 @@ function start(): void {
   });
 
   setUnauthorizedHandler(handleUnauthorized);
+}
+
+/**
+ * Error codes the auth server returns when the account behind a still-valid
+ * token no longer exists (deleted) or its session was revoked. Exported for
+ * the test that pins them.
+ */
+export const GONE_ACCOUNT_CODES = new Set(['user_not_found', 'session_not_found']);
+
+export function isGoneAccountError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const code = (err as { code?: unknown }).code;
+  return typeof code === 'string' && GONE_ACCOUNT_CODES.has(code);
+}
+
+/**
+ * The stored session belongs to an account that was deleted.
+ *
+ * A JWT outlives its account until it expires: PostgREST checks only the
+ * signature, so every read still "works" and every write fails on a foreign
+ * key (409, not 401) — which `handleUnauthorized` never sees. The learner is
+ * stuck on "Couldn't complete that" with no way to sign in again. So on
+ * start, a restored session is confirmed against the auth server once.
+ *
+ * Signs out ONLY on the auth server's own "gone" codes. Offline, a timeout or
+ * a 5xx keeps the session: ejecting someone because the network blinked is
+ * worse than the stale-account case this handles.
+ *
+ * Keeps the pending onboarding draft: that draft belongs to whoever is on
+ * this device now (typically re-onboarding after the deletion), not to the
+ * deleted account, and their answers should survive into the new sign-up.
+ */
+async function verifyAccountStillExists(): Promise<void> {
+  let error: unknown = null;
+  try {
+    ({ error } = await supabase.auth.getUser());
+  } catch {
+    return; // network: keep the session
+  }
+  if (!isGoneAccountError(error)) return;
+
+  console.warn('[auth] stored session belongs to an account that no longer exists; signing out');
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => { /* already gone */ });
+  await tearDownSession({ keepPendingOnboarding: true });
+  publish({ session: null, loading: false });
 }
 
 /** Set while a rejection is being investigated, so a burst produces one check. */
@@ -216,7 +262,9 @@ export function useAuth() {
  * Every step is best-effort and independent: a failure in one must not leave
  * the rest of the previous session in place.
  */
-export async function tearDownSession(): Promise<void> {
+export async function tearDownSession(
+  { keepPendingOnboarding = false }: { keepPendingOnboarding?: boolean } = {},
+): Promise<void> {
   // Notifications first — this is the one with someone else's words in it.
   await cancelAllScheduledNotifications().catch((err) =>
     console.warn('[auth] failed to cancel notifications on sign-out:', err),
@@ -233,7 +281,7 @@ export async function tearDownSession(): Promise<void> {
     console.warn('[auth] store teardown failed on sign-out:', err);
   }
 
-  await Promise.allSettled([clearReadCache(), clearPendingOnboarding()]);
+  await Promise.allSettled([clearReadCache(), keepPendingOnboarding ? Promise.resolve() : clearPendingOnboarding()]);
 }
 
 /**

@@ -19,8 +19,8 @@
  * hidden: the allowance becomes unknown (null), and an unknown allowance is
  * never grounds to demand a choice. The next foreground reads again.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 
 import { useLanguageEnrollments } from '../../hooks/useLanguageEnrollments';
@@ -28,7 +28,7 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { effectiveTier, useAppStore } from '../../stores/useAppStore';
 import { spacing } from '../../config/theme';
 import { saveErrorCopy, type ErrorCopy } from '../../lib/error-copy';
-import { onLanguageAccessCheck } from '../../lib/language-access-events';
+import { onLanguageAccessCheck, onSwitcherOpenChange, openSwitcherCount } from '../../lib/language-access-events';
 import { languageAccessRefusal } from '../../lib/language-access';
 import {
   PAYWALL_PATHNAME,
@@ -37,6 +37,7 @@ import {
   initialKeepSelection,
   orderKeepSelection,
   toggleKeep,
+  upgradePendingCopy,
   type PaywallTrip,
 } from '../../lib/language-limit-flow';
 import { trackEvent } from '../../lib/analytics';
@@ -49,21 +50,35 @@ import { Ui2InlineError } from './Ui2InlineError';
 import { Ui2Sheet } from './Ui2Sheet';
 import { Body } from './Ui2Text';
 
+/** Long enough for an RN Modal's iOS dismiss transition to finish. */
+const SWITCHER_SETTLE_MS = 400;
+
 export function LanguageKeepSheet() {
   const { c, type } = useUi2Theme();
   const router = useRouter();
   const pathname = usePathname();
   const devicePaid = useAppStore((s) => effectiveTier(s.subscription, s.entitledTier) !== 'starter');
-  const { active, access, switching, reload, keep } = useLanguageEnrollments();
+  // Allowance only: this sheet never draws the enrollment list, so it does
+  // not pay for reading it on every mount, foreground and FLL03 nudge.
+  const { active, access, switching, reload, keep } = useLanguageEnrollments({ list: false });
 
   const [selection, setSelection] = useState<LanguageCode[] | null>(null);
   const [keepError, setKeepError] = useState<ErrorCopy | null>(null);
   /** "Not now" after an error: stand aside until the next check. */
   const [snoozed, setSnoozed] = useState(false);
   const [trip, setTrip] = useState<PaywallTrip>('idle');
-  /** Back from the paywall, the device is paid, the server still says over. */
-  const [activating, setActivating] = useState(false);
+  /**
+   * Back from the paywall, the device is paid, the server still says over:
+   * 'activating' if the device became paid on this trip, 'mismatch' if it
+   * already believed it was paid before (a stale entitlement, not a purchase).
+   */
+  const [pending, setPending] = useState<'activating' | 'mismatch' | null>(null);
+  const paidAtDeparture = useRef(false);
+  /** A switcher is on screen, or dismissed too recently for iOS to present another Modal. */
+  const [switcherBlocking, setSwitcherBlocking] = useState(() => openSwitcherCount() > 0);
   const [checking, setChecking] = useState(false);
+  /** A tap on a full selection (max > 1) did nothing; say why on screen too. */
+  const [fullNotice, setFullNotice] = useState(false);
   /** Set after a post-paywall re-read; decided on the render that has it. */
   const [returnCheck, setReturnCheck] = useState(false);
 
@@ -95,7 +110,7 @@ export function LanguageKeepSheet() {
   useEffect(() => {
     if (!overLimit || !access) {
       setSelection(null);
-      setActivating(false);
+      setPending(null);
       return;
     }
     setSelection((prev) => prev ?? initialKeepSelection(access, active));
@@ -127,15 +142,33 @@ export function LanguageKeepSheet() {
     setReturnCheck(false);
     // Still over after a purchase the device believes in: the webhook has not
     // landed. Say so rather than sending them back to the paywall.
-    setActivating(overLimit && devicePaid);
+    setPending(overLimit && devicePaid ? (paidAtDeparture.current ? 'mismatch' : 'activating') : null);
   }, [returnCheck, overLimit, devicePaid]);
+
+  // iOS drops a Modal presented while another is up or still dismissing, and
+  // Ui2Sheet unmounts its Modal the frame it hides. So wait for every
+  // switcher to be gone, then long enough for the dismiss to finish.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const off = onSwitcherOpenChange((open) => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      if (open > 0) setSwitcherBlocking(true);
+      else timer = setTimeout(() => setSwitcherBlocking(false), SWITCHER_SETTLE_MS);
+    });
+    return () => {
+      off();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   const onUpgrade = useCallback(() => {
     trackEvent('language_limit_resolved', { screen: 'keep', outcome: 'upgrade' });
-    setActivating(false);
+    setPending(null);
+    paidAtDeparture.current = devicePaid;
     setTrip('leaving');
     router.push('/(app)/plans');
-  }, [router]);
+  }, [router, devicePaid]);
 
   const onKeep = useCallback(async () => {
     if (!access || !selection || !canConfirmKeep(selection, access.maxLanguages)) return;
@@ -158,7 +191,7 @@ export function LanguageKeepSheet() {
   }, [access, selection, keep, check]);
 
   const max = access?.maxLanguages ?? 1;
-  const visible = overLimit && !snoozed && trip === 'idle' && selection !== null;
+  const visible = overLimit && !snoozed && trip === 'idle' && selection !== null && !switcherBlocking;
   const busy = switching !== null;
   // Only a failed KEEP is shown here; a failed read hides the sheet (header).
   const shownError = keepError;
@@ -176,7 +209,7 @@ export function LanguageKeepSheet() {
     <Ui2Sheet visible={visible} dismissOnBackdrop={false}>
       <View style={styles.headerRow}>
         <Text accessibilityRole="header" style={{ fontFamily: type.heading, fontSize: 22, color: c.ink }}>
-          {activating ? 'Finishing your upgrade' : heading}
+          {pending ? upgradePendingCopy(pending).title : heading}
         </Text>
       </View>
 
@@ -188,19 +221,16 @@ export function LanguageKeepSheet() {
           </>
         ) : null}
 
-        {activating ? (
+        {pending ? (
           <LanguageLimitPanel
-            icon="hourglass-outline"
-            body={[
-              'Your plan shows as active on this phone, but our servers have not caught up with it yet.',
-              'This usually takes a few seconds. Try again in a moment.',
-            ]}
+            icon={pending === 'activating' ? 'hourglass-outline' : 'alert-circle-outline'}
+            body={upgradePendingCopy(pending).body}
             primary={{
               label: 'Try again',
               loading: checking,
               onPress: () => void recheckAfterPaywall(),
             }}
-            secondary={{ label: 'Pick instead', onPress: () => setActivating(false) }}
+            secondary={{ label: 'Pick instead', onPress: () => setPending(null) }}
           />
         ) : (
           <>
@@ -219,7 +249,18 @@ export function LanguageKeepSheet() {
                   selected={selected}
                   onSelect={() => {
                     setKeepError(null);
-                    setSelection((prev) => toggleKeep(prev ?? [], language, max));
+                    const prev = selection ?? [];
+                    const next = toggleKeep(prev, language, max);
+                    if (next === prev) {
+                      // Full, and max > 1: say why the tap did nothing.
+                      AccessibilityInfo.announceForAccessibility(
+                        `You can keep up to ${max}. Unselect one first.`,
+                      );
+                      setFullNotice(true);
+                      return;
+                    }
+                    setFullNotice(false);
+                    setSelection(next);
                   }}
                   lead={<Text style={styles.flag}>{languageFlag(language)}</Text>}
                   role={max === 1 ? 'radio' : 'checkbox'}
@@ -228,6 +269,12 @@ export function LanguageKeepSheet() {
                 />
               );
             })}
+
+            {fullNotice ? (
+              <Body tone="secondary" style={styles.intro} accessibilityLiveRegion="polite">
+                {`You can keep up to ${max}. Unselect one first.`}
+              </Body>
+            ) : null}
 
             <SlabButton
               label={selection && selection.length > 1 ? `Keep these ${selection.length}` : 'Keep this one'}

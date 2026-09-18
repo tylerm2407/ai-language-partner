@@ -15,7 +15,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import { useAuth, tearDownSession, __resetAuthStoreForTests } from './useAuth';
+import { useAuth, tearDownSession, isGoneAccountError, __resetAuthStoreForTests } from './useAuth';
 import * as Notifications from 'expo-notifications';
 import { clearTtsCache } from '../lib/tts-cache';
 import { clearPendingOnboarding } from '../lib/pending-onboarding';
@@ -28,6 +28,8 @@ const mockOnAuthStateChange = jest.fn();
 const mockUnsubscribe = jest.fn();
 const mockRefreshSession = jest.fn();
 const mockSetUnauthorizedHandler = jest.fn();
+const mockGetUser = jest.fn();
+const mockSignOut = jest.fn();
 
 jest.mock('../lib/supabase', () => ({
   setUnauthorizedHandler: (...args: unknown[]) => mockSetUnauthorizedHandler(...args),
@@ -36,7 +38,8 @@ jest.mock('../lib/supabase', () => ({
       getSession: (...args: unknown[]) => mockGetSession(...args),
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
       refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
-      signOut: jest.fn().mockResolvedValue({ error: null }),
+      getUser: (...args: unknown[]) => mockGetUser(...args),
+      signOut: (...args: unknown[]) => mockSignOut(...args),
     },
   },
 }));
@@ -94,6 +97,8 @@ beforeEach(() => {
   mockGetSession.mockResolvedValue({ data: { session: null } });
   mockOnAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: mockUnsubscribe } } });
   mockRefreshSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+  mockSignOut.mockResolvedValue({ error: null });
 });
 
 describe('useAuth shares one subscription', () => {
@@ -196,5 +201,55 @@ describe('unauthorized handling', () => {
     });
     // Signed out already — a 401 here is expected, not evidence of anything.
     expect(mockRefreshSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('a restored session whose account was deleted', () => {
+  const SESSION = { user: { id: 'deleted-user' }, access_token: 't' };
+  let warn: jest.SpyInstance;
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockGetSession.mockResolvedValue({ data: { session: SESSION } });
+  });
+  afterEach(() => warn.mockRestore());
+
+  async function boot() {
+    renderConsumers(1);
+    await TestRenderer.act(async () => {
+      for (let i = 0; i < 6; i += 1) await Promise.resolve();
+    });
+  }
+
+  it('signs out when the auth server says the user no longer exists, and keeps the onboarding draft', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: { code: 'user_not_found', status: 403 } });
+    await boot();
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(clearPendingOnboarding).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session when offline — the network blinking is not evidence', async () => {
+    mockGetUser.mockRejectedValue(new Error('Network request failed'));
+    await boot();
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session on any other auth error (5xx, rate limit)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: { code: 'unexpected_failure', status: 500 } });
+    await boot();
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('does not check at all when there is no session', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    await boot();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('recognises exactly the gone-account codes', () => {
+    expect(isGoneAccountError({ code: 'user_not_found' })).toBe(true);
+    expect(isGoneAccountError({ code: 'session_not_found' })).toBe(true);
+    expect(isGoneAccountError({ code: 'over_request_rate_limit' })).toBe(false);
+    expect(isGoneAccountError(null)).toBe(false);
+    expect(isGoneAccountError('user_not_found')).toBe(false);
   });
 });

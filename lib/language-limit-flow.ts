@@ -29,6 +29,7 @@ import type { LanguageCode } from '../types';
  *  - `locked`       a locked language the plan cannot reopen: Upgrade
  *  - `confirm-lock` the last step of "switch instead": says what gets locked
  *  - `activating`   back from a purchase the server has not seen yet
+ *  - `mismatch`     the phone still holds a subscription the server says ended
  */
 export type SwitcherStep =
   | 'list'
@@ -37,7 +38,8 @@ export type SwitcherStep =
   | 'limit'
   | 'locked'
   | 'confirm-lock'
-  | 'activating';
+  | 'activating'
+  | 'mismatch';
 
 /**
  * Why the learner is picking a new language: an ordinary add (the plan has
@@ -104,18 +106,25 @@ export function previousStep(step: SwitcherStep, mode: AddMode): SwitcherStep {
  * What the sheet does after the learner comes back from the paywall and
  * access has been re-read.
  *  - `resume`     the plan now has room: carry on with what they wanted
- *  - `activating` the device holds a paid entitlement but the server still
- *                 says no — the RevenueCat webhook has not landed. Say so and
- *                 offer a retry, never the paywall again (that is a loop).
+ *  - `activating` the device became paid DURING this trip (a purchase or a
+ *                 restore) but the server still says no: the RevenueCat
+ *                 webhook has not landed. Say so and offer a retry, never the
+ *                 paywall again (that is a loop).
+ *  - `mismatch`   the device already believed it was paid BEFORE the trip and
+ *                 the server still says no. Nothing was bought, so "finishing
+ *                 your upgrade" would be false: the cached entitlement is
+ *                 stale, or the plan lapsed. Say that, and point at Restore.
  *  - `declined`   still on the free plan: back to the step they left from
  *  - `unknown`    the re-read failed; the sheet shows its ordinary error
  */
-export type UpgradeReturn = 'resume' | 'activating' | 'declined' | 'unknown';
+export type UpgradeReturn = 'resume' | 'activating' | 'mismatch' | 'declined' | 'unknown';
 
 export function upgradeReturnOutcome(
   access: LanguageAccess | null,
   devicePaid: boolean,
   lockedTarget: LanguageCode | null,
+  /** Whether the device believed it was paid when the learner LEFT for the paywall. */
+  paidAtDeparture: boolean,
 ): UpgradeReturn {
   if (!access) return 'unknown';
   // A locked language the learner wanted back needs room like any add does.
@@ -123,7 +132,28 @@ export function upgradeReturnOutcome(
   // reopened it, resuming is still the right move.
   const room = canOpenAnother(access) || (lockedTarget !== null && access.open.includes(lockedTarget));
   if (room && !access.overLimit) return 'resume';
-  return devicePaid ? 'activating' : 'declined';
+  if (!devicePaid) return 'declined';
+  return paidAtDeparture ? 'mismatch' : 'activating';
+}
+
+/** Copy for the two "the server has not agreed yet" steps, shared by both sheets. */
+export function upgradePendingCopy(kind: 'activating' | 'mismatch'): { title: string; body: string[] } {
+  if (kind === 'activating') {
+    return {
+      title: 'Finishing your upgrade',
+      body: [
+        'Your plan shows as active on this phone, but our servers have not caught up with it yet.',
+        'This usually takes a few seconds. Try again in a moment.',
+      ],
+    };
+  }
+  return {
+    title: 'Your plan is not active',
+    body: [
+      'This phone still shows a subscription, but your account does not have an active plan right now.',
+      'If you renewed, open Plans and tap Restore purchases, then try again.',
+    ],
+  };
 }
 
 /**
