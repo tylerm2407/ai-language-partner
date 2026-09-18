@@ -24,7 +24,7 @@
  * conversation finishes like a conversation. A screen that also enforced the
  * ceiling would be a second, dumber timer racing the first — and the way that
  * race is lost is the tutor being cut off mid-sentence, which is the exact
- * failure `lib/handsfree-budget.ts`'s header was written about.
+ * failure `lib/tutor-budget.ts`'s header was written about.
  *
  * ── CHANGING CORRECTION MODE MID-CALL DOES NOT RECONNECT ──
  *

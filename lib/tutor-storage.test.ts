@@ -8,7 +8,7 @@
  * impose — which is only possible if the two can be told apart.
  *
  * AsyncStorage is replaced with the same in-memory mock shape used by
- * handsfree-storage.test.ts and lesson-session-storage.test.ts.
+ * lesson-session-storage.test.ts.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

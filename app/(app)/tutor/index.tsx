@@ -13,8 +13,7 @@
  *   1. `ensureConsent('voice')` comes BEFORE the system microphone prompt.
  *      Apple 5.1.2(i) wants the disclosure about sending audio to a third
  *      party in front of the learner before the OS asks for the hardware, not
- *      after — and `app/(app)/practice/handsfree.tsx` already does it in this
- *      order, so doing it differently here would make one of the two wrong.
+ *      after.
  *
  *   2. The microphone permission is requested here, not on the call screen. A
  *      denial is then a sentence on a screen the learner still has context

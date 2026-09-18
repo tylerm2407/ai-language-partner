@@ -237,8 +237,8 @@ describe('headline and proof', () => {
     const renderer = await render();
     const all = texts(renderer);
 
-    expect(all).toContain('Learning a language can now be done during your drive to work.');
-    expect(all).toContain('HANDS-FREE VOICE PRACTICE');
+    expect(all).toContain('Learn a language by talking with a tutor that talks back.');
+    expect(all).toContain('LIVE VOICE TUTOR');
     expect(all).not.toContain('YOUR PLAN IS READY');
   });
 
@@ -258,8 +258,8 @@ describe('headline and proof', () => {
     const renderer = await render();
     const all = texts(renderer);
 
-    expect(all).toContain('Learning a language can now be done during your drive to work.');
-    expect(all).toContain('HANDS-FREE VOICE PRACTICE');
+    expect(all).toContain('Learn a language by talking with a tutor that talks back.');
+    expect(all).toContain('LIVE VOICE TUTOR');
     expect(all).not.toContain('Order dinner in Lyon without switching to English');
     expect(all).not.toContain('YOUR PLAN IS READY');
   });

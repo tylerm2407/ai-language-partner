@@ -4,8 +4,8 @@
  *
  * ── USER-SCOPED, NOT DEVICE-WIDE ──
  *
- * Keyed on the user id, following `lib/handsfree-storage.ts` rather than
- * `lib/voice-preference.ts`, and the difference is not stylistic.
+ * Keyed on the user id rather than device-wide like `lib/voice-preference.ts`,
+ * and the difference is not stylistic.
  *
  * `voice-preference` is device-wide on purpose: which synthetic timbre you
  * prefer is a playback setting, one bit from a closed enum, and a second

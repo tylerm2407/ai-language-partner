@@ -296,7 +296,7 @@ export default function PlansScreen() {
             marginTop: spacing.lg + 2,
           }}
         >
-          Learning a language can now be done during your drive to work.
+          Learn a language by talking with a tutor that talks back.
         </Text>
         <Text
           style={{
@@ -308,7 +308,7 @@ export default function PlansScreen() {
             marginTop: spacing.sm,
           }}
         >
-          HANDS-FREE VOICE PRACTICE
+          LIVE VOICE TUTOR
         </Text>
 
         {loading ? (

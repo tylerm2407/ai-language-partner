@@ -17,7 +17,7 @@
  * working: 5.1.1(ii) forbids making paid functionality depend on granting access
  * to data, and the same rule appears in Google's policy.
  *
- * Stored per-user on the device, mirroring lib/handsfree-storage.ts. That is a
+ * Stored per-user on the device, mirroring lib/tutor-storage.ts. That is a
  * conscious trade for launch: a reinstall re-asks, which is the safe direction
  * to fail. If a provable, timestamped record is needed (BIPA §15(b) asks for a
  * written release for biometric identifiers), move `read`/`write` below to a

@@ -33,7 +33,6 @@ export type ScreenName =
   /** The mission debrief after Finish. Its own screen for the same reason
    *  `tutor_debrief` is: never reading the result is a drop-off worth seeing. */
   | 'chat_debrief'
-  | 'practice'
   | 'profile'
   | 'paywall'
   | 'onboarding'

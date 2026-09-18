@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSchoolStore } from '../../stores/useSchoolStore';
-import { SCHOOL_ENABLED, HANDSFREE_ENABLED, levelToNewsTier } from '../../config/app';
+import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
@@ -323,21 +323,6 @@ export default function HomeScreen() {
               subtitle="A real conversation, corrected as you go"
               onPress={() => router.push('/chat' as any)}
             />
-            {/* Hands-free. This is the only entry point into the eyes-free
-                session, and the only route into the `/practice` group at all
-                (the tab is `href: null`); removing it makes the feature
-                unreachable rather than hidden. */}
-            {HANDSFREE_ENABLED && (
-              <ActionRow
-                index={1}
-                icon="headset-outline"
-                tint="pink"
-                title="Hands-free practice"
-                subtitle="Speak and listen — no screen needed"
-                onPress={() => router.push('/practice/handsfree' as any)}
-                accessibilityHint="Runs a spoken review session you can do without looking at the screen"
-              />
-            )}
           </View>
         </SafeAreaView>
       </ScrollView>

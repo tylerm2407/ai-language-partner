@@ -5,12 +5,9 @@
  *
  * Ending the call is the one action here that cannot be undone: the session is
  * closed, the minutes are spent, and the learner is back on the lobby. It goes
- * last in reading order and on its own line under the round controls, exactly
- * as `app/(app)/practice/handsfree.tsx` does, so a thumb reaching for mute in
- * the middle of a sentence cannot land on it. That screen's comment is the
- * reason, verbatim: "End is separated below a divider so it is not hit by
- * accident with a thumb aiming for Pause." Tint blocks draws no rules, so the
- * separation is space rather than a hairline; the order is unchanged.
+ * last in reading order and on its own line under the round controls, so a
+ * thumb reaching for mute in the middle of a sentence cannot land on it. Tint
+ * blocks draws no rules, so the separation is space rather than a hairline.
  *
  * It is not styled as a big red button either. `error` text on the plain
  * background is the app's existing destructive-action treatment and it does not

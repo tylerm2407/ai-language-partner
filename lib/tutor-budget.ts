@@ -3,11 +3,11 @@
  *
  * THIS IS NOT AN OPTIMISATION. Without it the feature is broken on every tier.
  *
- * The sibling of `lib/handsfree-budget.ts`, and it exists to prevent the same
- * specific, bad failure: a learner starts a session, settles into it, and the
- * audio dies three minutes later with a quota error they cannot read or act
- * on. In a live call that is worse than in hands-free — the tutor stops
- * mid-sentence, so it reads as a crash rather than a limit. Better to warn
+ * It exists to prevent one specific, bad failure: a learner starts a session,
+ * settles into it, and the audio dies three minutes later with a quota error
+ * they cannot read or act on. In a live call that is worse than anywhere else
+ * — the tutor stops mid-sentence, so it reads as a crash rather than a limit.
+ * Better to warn
  * while there is still time to react, let the tutor wind the conversation up
  * like a person would, and only then stop.
  *

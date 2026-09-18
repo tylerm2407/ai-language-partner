@@ -33,7 +33,7 @@
  *   has already shipped once.
  *
  * - The budget NEVER hard-cuts mid-sentence. Cutting a teacher off mid-word is
- *   exactly the failure `lib/handsfree-budget.ts` was written to avoid. At 60s
+ *   exactly the failure `lib/tutor-budget.ts` was written to avoid. At 60s
  *   left the tutor is cued to wrap up and does so in its own words; at zero, a
  *   sentence already in flight gets a bounded grace to finish.
  *
@@ -851,7 +851,7 @@ function checkDeadlines(state: TutorSessionState): Reduced {
     // A sentence already in flight gets to finish. The grace is bounded so a
     // runaway response cannot spend the grant indefinitely, but it exists
     // because cutting a teacher off mid-word is the exact failure
-    // `lib/handsfree-budget.ts` was written to prevent.
+    // `lib/tutor-budget.ts` was written to prevent.
     if (s.overrunDeadline === null) {
       const at = s.now + s.config.overrunGraceMs;
       const timer = withTimer(s, 'overrun', at);

@@ -75,8 +75,7 @@ import {
  *
  * If you are about to add an `if` to this file, check first whether it is a
  * decision. Decisions belong in `lib/realtime-session.ts`, where they can be
- * verified without a microphone. The same instruction is in the header of
- * `useHandsFreeSession.ts`, for the same reason, and it has held up.
+ * verified without a microphone. That split has held up; keep it.
  *
  * ── THE ORDER THAT IS LOAD-BEARING ──
  *
