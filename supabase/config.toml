@@ -244,3 +244,9 @@ verify_jwt = true
 # getAuthenticatedUser (_shared/auth.ts), same posture as phrase-help.
 [functions.tutor-memory]
 verify_jwt = false
+
+# ─── referral-rewards ─────────────────────────────────────────────────────
+# MUST be false. Fired hourly by pg_cron (migration 148), which cannot present
+# a user JWT. Auth is the Vault cron secret, same as tutor-session-reaper.
+[functions.referral-rewards]
+verify_jwt = false

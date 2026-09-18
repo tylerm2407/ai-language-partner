@@ -24,6 +24,7 @@ import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './a
 import { classifyEvent, isRevocation, INACTIVE_EVENTS } from './tier.ts';
 import { fetchRevenueCatSubscription, transferUserIds } from './reconcile.ts';
 import { captureRevenueCatAnalytics } from './analytics.ts';
+import { referralStoreEventArgs } from './referral.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -271,10 +272,14 @@ serve(async (req: Request) => {
   }
 
   if (eventWasCompleted) {
-    // A previous delivery may have committed the entitlement and then lost
-    // the analytics response. The stale-expiration guard above runs first so
-    // an intentionally ignored expiry can never become a real expiry event on
-    // retry. Genuine applied events reuse deterministic UUIDs and timestamps.
+    // A previous delivery may have committed the entitlement and then failed
+    // the referral step (which asked for this retry) or lost the analytics
+    // response. The stale-expiration guard above runs first so an
+    // intentionally ignored expiry can never become a real expiry event on
+    // retry. Both steps below are idempotent.
+    if (!(await recordReferral(event, userId, eventId, revocation))) {
+      return new Response(JSON.stringify({ error: 'referral_unavailable' }), { status: 500 });
+    }
     try {
       await captureRevenueCatAnalytics(event, tier);
     } catch (analyticsError) {
@@ -326,6 +331,15 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
 
+  // Referral bookkeeping: the store identity, and a friend's first real
+  // payment qualifying their referrer. Runs AFTER the entitlement commit so a
+  // referral fault can never cost anyone access. On failure answer 500: the
+  // retry arrives as a completed event and takes the duplicate path above,
+  // which re-runs only this step.
+  if (!(await recordReferral(event, userId, eventId, revocation))) {
+    return new Response(JSON.stringify({ error: 'referral_unavailable' }), { status: 500 });
+  }
+
   // Only the webhook can assert that provider state was accepted and written
   // to the entitlement source of truth. The entitlement is already committed
   // by this point, so an analytics outage must NOT fail the delivery: a 5xx
@@ -342,6 +356,27 @@ serve(async (req: Request) => {
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 });
+
+/** False only when the referral RPC itself failed and the event should be retried. */
+async function recordReferral(
+  event: Record<string, unknown>,
+  userId: string,
+  eventId: string,
+  revocation: boolean,
+): Promise<boolean> {
+  const args = referralStoreEventArgs(event, userId, eventId, revocation);
+  if (!args) return true;
+  const { data, error } = await supabase.rpc('record_referral_store_event', args);
+  if (error) {
+    console.error('[revenuecat-webhook] referral bookkeeping failed:', error.message);
+    return false;
+  }
+  const outcome = data && typeof data === 'object' ? (data as Record<string, unknown>).outcome : null;
+  if (outcome && outcome !== 'none') {
+    console.log(`[revenuecat-webhook] referral ${String(outcome)} on ${String(event.type)} for ${userId}`);
+  }
+  return true;
+}
 
 async function markEventFailed(eventId: string, leaseToken: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc('fail_revenuecat_event', {
