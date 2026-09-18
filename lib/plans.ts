@@ -261,7 +261,10 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 7,
     dailyLessonTtsPlays: 80,
     dailyNewCards: UNLIMITED_NEW_CARDS,
-    dailyHints: UNLIMITED_HINTS,
+    // 150, not UNLIMITED_HINTS: the server (plan-limits.ts and
+    // get_effective_limits) has always enforced 150, and the paywall sold
+    // "unlimited hints" on the strength of this number.
+    dailyHints: 150,
     dailyTranslations: 90,
     dailyWordLookups: UNLIMITED_WORD_LOOKUPS,
     dailyChatCards: 50,
@@ -316,7 +319,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     '75 tutor messages per day',
     '18 minutes of voice practice per day',
     '12 writing grades per day',
-    'Unlimited hints',
+    '150 hints per day',
     'Audiobook narration',
   ],
 };

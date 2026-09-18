@@ -101,7 +101,7 @@ export const GOAL_TRACK_LESSONS = 6;
  *                           feature roughly twentyfold (see lib/plans.ts).
  *   lessons offline ....... PLANS[t].offlineMode
  *   audiobook narration ... PLANS[t].audiobookNarration
- *   unlimited hints ....... isUnlimitedHints(PLANS[t].dailyHints)
+ *   hints a day ........... PLANS[t].dailyHints
  *
  * "Lessons and books offline" rather than "your plan offline": offline packs
  * warm course units, books and the day's news (`lib/offline-packs.ts`), and
@@ -112,7 +112,7 @@ export const GOAL_TRACK_LESSONS = 6;
 export const STEP_ADDS: Record<Exclude<PlanId, 'starter'>, string> = {
   basic: 'Your 6-lesson plan · 20 new words a day · 20 messages · 24 tutor minutes a month',
   premium: 'Unlimited new words · lessons and books offline · 50 messages · 66 tutor minutes a month',
-  vip: 'Audiobook narration · unlimited hints · 75 messages · 116 tutor minutes a month',
+  vip: 'Audiobook narration · 150 hints a day · 75 messages · 116 tutor minutes a month',
 };
 
 /**

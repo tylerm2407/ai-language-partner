@@ -74,12 +74,12 @@ function clientTier(tier: PlanId): Limits {
  * rather than hidden. Each is asserted to STILL differ, so fixing one fails
  * this test until its entry is removed — the list can only shrink honestly.
  *
- * vip dailyHints / dailyWordLookups: the client says unlimited (9999) while
- * the edge copy and the SQL both enforce 150 / 800. The paywall's "unlimited
- * hints" line for VIP is quoting the client number.
+ * vip dailyWordLookups: the client says unlimited (9999) while the edge copy
+ * and the SQL both enforce 800. No paywall line quotes it. (vip dailyHints
+ * was the same drift until 2026-09-17, when the client moved to the
+ * server's 150 and the paywall stopped selling "unlimited hints".)
  */
 const KNOWN_CLIENT_DRIFT: { tier: PlanId; key: string }[] = [
-  { tier: 'vip', key: 'dailyHints' },
   { tier: 'vip', key: 'dailyWordLookups' },
 ];
 

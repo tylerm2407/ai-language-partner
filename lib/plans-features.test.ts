@@ -23,6 +23,7 @@ describe('PLAN_FEATURES quotes PLANS, not memory', () => {
       else if (/tutor messages/.test(line)) expect(n).toBe(plan.dailyTextMessages);
       else if (/voice practice/.test(line)) expect(n).toBe(plan.dailyVoiceMinutes);
       else if (/writing grades/.test(line)) expect(n).toBe(plan.dailyWritingGrades);
+      else if (/hints/.test(line)) expect(n).toBe(plan.dailyHints);
       else throw new Error(`unrecognised numbered feature line: "${line}"`);
     }
   });

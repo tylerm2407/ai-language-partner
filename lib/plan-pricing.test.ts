@@ -269,8 +269,11 @@ describe('STEP_ADDS agrees with lib/plans.ts', () => {
     expect(STEP_ADDS.vip).toContain(`${tutorMinutesPerMonth('vip')} tutor minutes a month`);
     expect(PLANS.vip.audiobookNarration).toBe(true);
     expect(STEP_ADDS.vip).toContain('Audiobook narration');
-    expect(isUnlimitedHints(PLANS.vip.dailyHints)).toBe(true);
-    expect(STEP_ADDS.vip).toContain('unlimited hints');
+    // VIP hints are capped at 150 on the server; the paywall must quote that
+    // number and never "unlimited".
+    expect(isUnlimitedHints(PLANS.vip.dailyHints)).toBe(false);
+    expect(STEP_ADDS.vip).toContain(`${PLANS.vip.dailyHints} hints a day`);
+    expect(STEP_ADDS.vip).not.toMatch(/unlimited hints/i);
   });
 
   it('never quotes the daily tutor cap, which overstates the feature', () => {
@@ -291,7 +294,7 @@ describe('STEP_ADDS agrees with lib/plans.ts', () => {
         tutorMinutesPerMonth('basic'),
       ],
       premium: [PLANS.premium.dailyTextMessages, tutorMinutesPerMonth('premium')],
-      vip: [PLANS.vip.dailyTextMessages, tutorMinutesPerMonth('vip')],
+      vip: [PLANS.vip.dailyHints, PLANS.vip.dailyTextMessages, tutorMinutesPerMonth('vip')],
     };
 
     for (const tier of STEP_ORDER) {
