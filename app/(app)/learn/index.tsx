@@ -43,6 +43,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
+import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useProfile } from '../../../hooks/useProfile';
 import { initialCourseSelection } from '../../../lib/course-placement';
@@ -352,13 +353,15 @@ export default function LearnScreen() {
       await resolveGoalTrack(
         profile.targetLanguage,
         profile.nativeLanguage ?? 'en',
-        profile.level ?? 'A1',
+        // `profile.level` is a ProficiencyLevel ("elementary"), and the function
+        // allow-lists CEFR bands — sending the raw level 400s on every build.
+        cefrBandForProficiencyLevel(profile.level),
       );
       await loadGoalTrack();
       trackEvent('goal_track_requested', {
         ok: true,
         language: profile.targetLanguage,
-        band: profile.level ?? undefined,
+        band: cefrBandForProficiencyLevel(profile.level),
       });
     } catch (err) {
       const code = (err as { code?: string })?.code;
