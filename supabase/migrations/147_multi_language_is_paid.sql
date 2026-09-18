@@ -95,7 +95,12 @@ BEGIN
     'monthlyAvatarGenerations', GREATEST((personal_limits->>'monthlyAvatarGenerations')::int,COALESCE((school_config->>'monthlyAvatarGenerations')::int,0)),
     'dailyTutorMinutes', GREATEST((personal_limits->>'dailyTutorMinutes')::int,COALESCE((school_config->>'dailyTutorMinutes')::int,0)),
     'monthlyTutorCents', GREATEST((personal_limits->>'monthlyTutorCents')::int,COALESCE((school_config->>'monthlyTutorCents')::int,0)),
-    'maxLanguages', GREATEST((personal_limits->>'maxLanguages')::int,COALESCE((school_config->>'maxLanguages')::int,0)),
+    -- Validated rather than cast: this is a key admins hand-edit, and a bad
+    -- value ("unlimited", 2.5) must not throw here, where it would take every
+    -- other quota check for the student down with it.
+    'maxLanguages', GREATEST((personal_limits->>'maxLanguages')::int,
+                    CASE WHEN school_config->>'maxLanguages' ~ '^[0-9]{1,9}$'
+                         THEN (school_config->>'maxLanguages')::int ELSE 0 END),
     'audiobookNarration', COALESCE((personal_limits->>'audiobookNarration')::boolean,false) OR COALESCE((school_config->>'audiobookNarration')::boolean,false),
     'offlineMode', COALESCE((personal_limits->>'offlineMode')::boolean,false) OR COALESCE((school_config->>'offlineMode')::boolean,false)
   );
@@ -117,7 +122,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT GREATEST(1, COALESCE(
-    CASE WHEN v.raw ~ '^[0-9]{1,6}$' THEN v.raw::int END, 1))
+    CASE WHEN v.raw ~ '^[0-9]{1,9}$' THEN v.raw::int END, 1))
     FROM (SELECT public.get_effective_limits(p_user_id)->>'maxLanguages' AS raw) v;
 $$;
 
@@ -216,6 +221,10 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND OLD.onboarding_completed IS NOT TRUE
      AND OLD.target_language IS NOT NULL
+     -- Only a LONE placeholder: an account holding any other enrollment has
+     -- made a real choice before.
+     AND NOT EXISTS (SELECT 1 FROM public.user_language_enrollments
+                      WHERE user_id = NEW.user_id AND language <> OLD.target_language)
      AND NOT EXISTS (SELECT 1 FROM public.review_items WHERE user_id = NEW.user_id)
      AND NOT EXISTS (SELECT 1 FROM public.lesson_completions WHERE user_id = NEW.user_id) THEN
     DELETE FROM public.user_language_enrollments
@@ -265,6 +274,68 @@ CREATE TRIGGER fluenci_guard_onboarding_one_way
   BEFORE UPDATE OF onboarding_completed
   ON public.user_profiles
   FOR EACH ROW EXECUTE FUNCTION public.fluenci_guard_onboarding_one_way();
+
+/**
+ * Boolean form of the gate, for callers that must fall back rather than fail.
+ */
+CREATE OR REPLACE FUNCTION public.fluenci_language_capacity_ok(p_uid uuid, p_target text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM public.fluenci_assert_language_capacity(p_uid, p_target);
+  RETURN true;
+EXCEPTION WHEN SQLSTATE 'FLL01' OR SQLSTATE 'FLL02' OR SQLSTATE 'FLL03' THEN
+  RETURN false;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.fluenci_language_capacity_ok(uuid, text) FROM public, anon, authenticated;
+
+/**
+ * The enrollment course guard (133) re-validated the course pointer on EVERY
+ * update, so locking an enrollment whose course was later unpublished raised
+ * 23514 — and a lapsed learner in that state could never resolve being over
+ * the limit. Only a write that changes the pointer (or the row's language) is
+ * checked now; the pointer itself is unchanged by a lock.
+ */
+CREATE OR REPLACE FUNCTION public.fluenci_guard_enrollment_course()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  c record;
+BEGIN
+  IF NEW.current_course_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'UPDATE'
+     AND NEW.current_course_id IS NOT DISTINCT FROM OLD.current_course_id
+     AND NEW.language = OLD.language THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT id, target_language, is_published, goal_key
+    INTO c
+    FROM public.courses
+   WHERE id = NEW.current_course_id;
+
+  IF c.id IS NULL
+     OR NOT c.is_published
+     OR c.goal_key IS NOT NULL
+     OR c.target_language <> NEW.language THEN
+    RAISE EXCEPTION 'current_course_id must be a published, non-goal course in the enrollment''s language'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 
 -- The active language is never locked: whichever path made it active (and got
 -- past the gate above) reopens it here.
@@ -571,3 +642,127 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_language_access() FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_language_access() TO authenticated;
+
+-- ─── apply_onboarding_draft: a returning learner is not refused ─────────────
+-- Onboarding can run again while signed out, then flush into an account that
+-- already exists (sign in with Apple/Google as the old account). Before 147
+-- that silently moved the account to the new language; under the gate, a free
+-- account would now fail the whole flush with FLL01 and a generic "couldn't
+-- save" alert. So: for an account that already finished onboarding, the
+-- draft's language (and the level/course that belong to it) is applied only
+-- when the plan can open it; otherwise the account keeps the language it has,
+-- and the rest of the draft still lands. Adding a language is the switcher's
+-- job, where the learner sees the choice. Body otherwise identical to the live
+-- definition (127 → 142 → 143 → 144 lineage).
+
+CREATE OR REPLACE FUNCTION public.apply_onboarding_draft(
+  p_target_language text, p_level text, p_daily_goal_minutes integer, p_ideal_l2_self text,
+  p_display_name text, p_avatar_preset_id text, p_current_course_id uuid, p_placement_band text,
+  p_first_lesson boolean)
+ RETURNS user_profiles
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_uid        uuid := auth.uid();
+  v_name       text := NULLIF(btrim(COALESCE(p_display_name, '')), '');
+  v_ideal      text := NULLIF(btrim(COALESCE(p_ideal_l2_self, '')), '');
+  v_preset     text := NULLIF(btrim(COALESCE(p_avatar_preset_id, '')), '');
+  v_checklist  jsonb;
+  v_existing   public.user_profiles;
+  v_keep_lang  boolean := false;
+  v_row        public.user_profiles;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'authentication required' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_target_language IS NULL
+     OR p_target_language NOT IN ('es','fr','de','it','pt','ja','ko','zh','ru') THEN
+    RAISE EXCEPTION 'invalid target_language' USING ERRCODE = '22023';
+  END IF;
+  IF p_level IS NULL
+     OR p_level NOT IN ('beginner','elementary','intermediate','upper_intermediate','advanced') THEN
+    RAISE EXCEPTION 'invalid level' USING ERRCODE = '22023';
+  END IF;
+  IF p_daily_goal_minutes IS NULL OR p_daily_goal_minutes < 1 OR p_daily_goal_minutes > 180 THEN
+    RAISE EXCEPTION 'invalid daily_goal_minutes (1-180)' USING ERRCODE = '22023';
+  END IF;
+  IF v_ideal IS NOT NULL AND char_length(v_ideal) > 300 THEN
+    RAISE EXCEPTION 'ideal_l2_self exceeds 300 characters' USING ERRCODE = '22023';
+  END IF;
+  IF v_name IS NOT NULL AND char_length(v_name) > 24 THEN
+    RAISE EXCEPTION 'display_name exceeds 24 characters' USING ERRCODE = '22023';
+  END IF;
+  IF v_preset IS NOT NULL AND char_length(v_preset) > 64 THEN
+    RAISE EXCEPTION 'invalid avatar_preset_id' USING ERRCODE = '22023';
+  END IF;
+  IF p_placement_band IS NOT NULL
+     AND p_placement_band NOT IN ('A1','A2','B1','B2','C1','C2') THEN
+    RAISE EXCEPTION 'invalid placement_band' USING ERRCODE = '22023';
+  END IF;
+
+  -- Locked so the capacity answer below still holds when the upsert lands.
+  SELECT * INTO v_existing FROM public.user_profiles WHERE user_id = v_uid FOR UPDATE;
+  IF v_existing.user_id IS NOT NULL
+     AND v_existing.onboarding_completed IS TRUE
+     AND v_existing.target_language IS DISTINCT FROM p_target_language THEN
+    v_keep_lang := NOT public.fluenci_language_capacity_ok(v_uid, p_target_language);
+  END IF;
+
+  v_checklist := jsonb_build_object(
+    'chooseLanguage', true,
+    'firstLesson',    COALESCE(p_first_lesson, false),
+    'aiConversation', false,
+    'dailyReminder',  false,
+    'skipped',        '[]'::jsonb,
+    'dismissed',      false,
+    'completedAt',    NULL,
+    'celebratedAt',   NULL
+  );
+
+  INSERT INTO public.user_profiles AS up (
+    user_id, display_name, native_language, target_language, level, daily_goal_minutes,
+    ideal_l2_self, current_course_id, placement_band, avatar_kind, avatar_preset_id,
+    onboarding_checklist, onboarding_completed, updated_at
+  )
+  VALUES (
+    v_uid, COALESCE(v_name, ''), 'en', p_target_language, p_level, p_daily_goal_minutes,
+    v_ideal, p_current_course_id, p_placement_band,
+    CASE WHEN v_preset IS NOT NULL THEN 'preset' ELSE 'procedural' END,
+    v_preset, v_checklist, true, now()
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    display_name         = COALESCE(v_name, up.display_name),
+    target_language      = CASE WHEN v_keep_lang THEN up.target_language   ELSE EXCLUDED.target_language   END,
+    level                = CASE WHEN v_keep_lang THEN up.level             ELSE EXCLUDED.level             END,
+    daily_goal_minutes   = EXCLUDED.daily_goal_minutes,
+    ideal_l2_self        = EXCLUDED.ideal_l2_self,
+    current_course_id    = CASE WHEN v_keep_lang THEN up.current_course_id ELSE EXCLUDED.current_course_id END,
+    placement_band       = CASE WHEN v_keep_lang THEN up.placement_band    ELSE EXCLUDED.placement_band    END,
+    avatar_kind          = CASE WHEN v_preset IS NOT NULL THEN 'preset' ELSE up.avatar_kind END,
+    avatar_preset_id     = CASE WHEN v_preset IS NOT NULL THEN v_preset ELSE up.avatar_preset_id END,
+    onboarding_checklist = EXCLUDED.onboarding_checklist,
+    onboarding_completed = true,
+    updated_at           = now()
+  RETURNING * INTO v_row;
+
+  -- The NAME is written by the fluenci_sync_name_memory trigger (144), which
+  -- fires wherever display_name is actually set — including this statement.
+  -- The goal note belongs to the language the account actually ended up in.
+  BEGIN
+    IF v_ideal IS NOT NULL THEN
+      PERFORM public.upsert_learner_memory(
+        v_uid, v_row.target_language, 'goal',
+        'What they pictured being able to do: ' || left(v_ideal, 160),
+        'onboarding'
+      );
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'tutor_memory goal seed skipped for %: % (%)', v_uid, SQLERRM, SQLSTATE;
+  END;
+
+  RETURN v_row;
+END;
+$function$;

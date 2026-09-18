@@ -133,7 +133,12 @@ export async function upsertProfile(
     .single();
 
   if (error) {
-    // Fallback: if upsert fails (e.g. missing unique constraint), try a direct insert
+    // The insert fallback exists for ONE failure: no unique constraint to
+    // resolve ON CONFLICT against (42P10). Retrying anything else as an insert
+    // replaced the real error with a duplicate-key 23505 — which hid, among
+    // others, the language gate's FLL0x refusals (migration 147) from
+    // `languageAccessRefusal`.
+    if (error.code !== '42P10') throw error;
     console.warn('upsertProfile upsert failed, trying insert fallback:', error.message);
     const { data: inserted, error: insertErr } = await supabase
       .from('user_profiles')

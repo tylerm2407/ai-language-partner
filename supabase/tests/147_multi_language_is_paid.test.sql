@@ -72,7 +72,9 @@ BEGIN
   PERFORM pg_temp.t('free: upsert naming fr → FLL01', u1,
     $q$INSERT INTO public.user_profiles (user_id, target_language) VALUES (auth.uid(), 'fr')
        ON CONFLICT (user_id) DO UPDATE SET target_language = EXCLUDED.target_language$q$, 'FLL01', true);
-  PERFORM pg_temp.t('free: re-running onboarding with fr → FLL01', u1, format(onboard, 'fr'), 'FLL01', true);
+  -- A completed account re-running onboarding is saved, not refused; it keeps
+  -- the language it has (the switcher is where a language is added).
+  PERFORM pg_temp.t('free: re-running onboarding with fr → saved, keeps es', u1, format(onboard, 'fr'), 'ok', true);
   PERFORM pg_temp.check('free: still es only after refusals', pg_temp.active(u1) = 'es' AND pg_temp.langs(u1, false) = 'es' AND pg_temp.langs(u1, true) = '');
 
   PERFORM pg_temp.t('free: timezone upsert (column default es) still works', u1,
@@ -119,6 +121,8 @@ BEGIN
     $q$SET LOCAL ROLE anon; SELECT public.switch_target_language('fr')$q$, '42501');
   PERFORM pg_temp.t('authenticated: internal helper not executable', u1,
     $q$SELECT public.fluenci_assert_language_capacity(auth.uid(), 'de')$q$, '42501', true);
+  PERFORM pg_temp.t('authenticated: capacity_ok not executable', u1,
+    $q$SELECT public.fluenci_language_capacity_ok(auth.uid(), 'de')$q$, '42501', true);
 
   -- ── Upgrade ───────────────────────────────────────────────────────────────
   INSERT INTO public.subscriptions (user_id, tier, is_active, subscription_status, current_period_end)
@@ -156,6 +160,20 @@ BEGIN
   PERFORM pg_temp.check('lapsed: es kept intermediate while locked',
     (SELECT level FROM public.user_language_enrollments WHERE user_id = u1 AND language = 'es') = 'intermediate');
 
+  -- ── Re-onboarding into an existing (free) account ─────────────────────────
+  PERFORM pg_temp.t('reonboard: free account, draft names locked de → saved, not refused', u1,
+    $q$SELECT public.apply_onboarding_draft('de','advanced',25,NULL,'T',NULL,NULL,NULL,false)$q$, 'ok', true);
+  PERFORM pg_temp.check('reonboard: kept fr and its level, took the goal minutes',
+    pg_temp.active(u1) = 'fr'
+      AND (SELECT level FROM public.user_profiles WHERE user_id = u1) = 'beginner'
+      AND (SELECT daily_goal_minutes FROM public.user_profiles WHERE user_id = u1) = 25
+      AND pg_temp.langs(u1, true) = 'de,es',
+    pg_temp.active(u1) || ' locked=' || pg_temp.langs(u1, true));
+  PERFORM pg_temp.t('reonboard: free account, draft names new it → saved, stays fr', u1,
+    $q$SELECT public.apply_onboarding_draft('it','beginner',10,NULL,'T',NULL,NULL,NULL,false)$q$, 'ok', true);
+  PERFORM pg_temp.check('reonboard: no it enrollment created', pg_temp.active(u1) = 'fr'
+    AND NOT EXISTS (SELECT 1 FROM public.user_language_enrollments WHERE user_id = u1 AND language = 'it'));
+
   -- ── Pre-onboarding placeholder ────────────────────────────────────────────
   PERFORM pg_temp.t('onboard: profile created early by timezone upsert (default es)', u2,
     $q$INSERT INTO public.user_profiles (user_id, timezone) VALUES (auth.uid(), 'UTC')
@@ -165,13 +183,25 @@ BEGIN
   PERFORM pg_temp.check('onboard: fr only, placeholder gone (not locked)',
     pg_temp.langs(u2, false) = 'fr' AND pg_temp.langs(u2, true) = '',
     'open=' || pg_temp.langs(u2, false) || ' locked=' || pg_temp.langs(u2, true));
-  PERFORM pg_temp.t('onboard: second onboarding run with es → FLL01', u2, format(onboard, 'es'), 'FLL01', true);
+  PERFORM pg_temp.t('onboard: second onboarding run with es → saved', u2, format(onboard, 'es'), 'ok', true);
+  PERFORM pg_temp.check('onboard: second run kept fr', pg_temp.active(u2) = 'fr' AND pg_temp.langs(u2, false) = 'fr');
 
   -- ── Trusted operators are not gated ───────────────────────────────────────
   PERFORM pg_temp.t('free, first lang for u3', u3, format(onboard, 'ja'), 'ok', true);
   UPDATE public.user_profiles SET target_language = 'ko' WHERE user_id = u3;  -- no JWT: operator session
   PERFORM pg_temp.check('operator: service/DB session may move a learner', pg_temp.active(u3) = 'ko');
   PERFORM pg_temp.check('operator: active language is open', pg_temp.langs(u3, false) LIKE '%ko%');
+
+  -- ── School contract: a hand-edited non-integer must not break the limits ──
+  -- Exercised on the expression get_effective_limits uses, not a fabricated org.
+  PERFORM pg_temp.check('school: "unlimited" reads as 0, does not throw',
+    (SELECT CASE WHEN '{"maxLanguages":"unlimited"}'::jsonb->>'maxLanguages' ~ '^[0-9]{1,9}$'
+                 THEN 1 ELSE 0 END) = 0);
+  PERFORM pg_temp.check('school: 2.5 reads as 0', (SELECT CASE WHEN '{"maxLanguages":2.5}'::jsonb->>'maxLanguages' ~ '^[0-9]{1,9}$' THEN 1 ELSE 0 END) = 0);
+  PERFORM pg_temp.check('school: 3 reads as 3', (SELECT CASE WHEN '{"maxLanguages":3}'::jsonb->>'maxLanguages' ~ '^[0-9]{1,9}$' THEN ('{"maxLanguages":3}'::jsonb->>'maxLanguages')::int ELSE 0 END) = 3);
 END $$;
 
-SELECT name, expected, actual, pass FROM results ORDER BY pass, name;
+SELECT count(*) FILTER (WHERE pass) AS passed, count(*) AS total,
+       COALESCE(json_agg(json_build_object('name', name, 'expected', expected, 'actual', actual))
+                FILTER (WHERE NOT pass), '[]') AS failures
+  FROM results;
