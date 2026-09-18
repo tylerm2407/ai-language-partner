@@ -188,6 +188,37 @@ function requireEnv(name) {
  * bake into the bundle. `preferUrl: false` asks for base64: the function's
  * signed URLs are short-lived and we want the bytes now.
  */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The `tts` function's burst limit is 30 requests per 60 seconds per user
+ * (supabase/functions/tts/index.ts). Firing 180 clips flat out spends that in
+ * the first two seconds and takes 429s for the rest of the run, so requests
+ * are spaced just under the ceiling and a burst refusal waits out the window
+ * rather than counting as a failed clip.
+ *
+ * The same status also means the account's DAILY lesson-audio allowance is
+ * spent (`DAILY_LESSON_AUDIO_LIMIT_REACHED`; VIP is 80 a day). Waiting a
+ * minute cannot fix that, so it ends the run instead: re-run tomorrow and the
+ * clips already on disk are skipped.
+ */
+const PACE_MS = 2100;
+const BURST_WINDOW_MS = 60_000;
+const BURST_RETRIES = 3;
+
+async function synthesiseWithRetry(session, clip) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await synthesise(session, clip);
+    } catch (error) {
+      const rateLimited = error?.code === 'RATE_LIMITED';
+      if (!rateLimited || attempt >= BURST_RETRIES) throw error;
+      console.log(`    rate limited, waiting ${BURST_WINDOW_MS / 1000}s`);
+      await sleep(BURST_WINDOW_MS);
+    }
+  }
+}
+
 async function synthesise({ url, anonKey, token }, clip) {
   const response = await fetch(`${url}/functions/v1/tts`, {
     method: 'POST',
@@ -207,7 +238,9 @@ async function synthesise({ url, anonKey, token }, clip) {
 
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`tts ${response.status}: ${body?.error ?? '(no body)'}`);
+    const error = new Error(`tts ${response.status}: ${body?.error ?? '(no body)'}`);
+    error.code = body?.code;
+    throw error;
   }
   if (typeof body?.audioBase64 !== 'string' || body.audioBase64.length === 0) {
     throw new Error('tts returned no audioBase64 — is preferUrl being honoured?');
@@ -307,10 +340,13 @@ async function main() {
   let bytes = 0;
   const failures = [];
 
+  let first = true;
   for (const clip of pending) {
     const key = audioKeyFor(clip);
+    if (!first) await sleep(PACE_MS);
+    first = false;
     try {
-      const audio = await synthesise(session, clip);
+      const audio = await synthesiseWithRetry(session, clip);
       const path = filePathFor(clip);
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, audio);
@@ -323,6 +359,10 @@ async function main() {
       // end non-zero so CI or a human notices.
       failures.push({ key, message: error instanceof Error ? error.message : String(error) });
       console.error(`  ✗ ${key}  ${error instanceof Error ? error.message : error}`);
+      if (error?.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED') {
+        console.error('\nDaily lesson-audio allowance spent. Stopping; re-run tomorrow.');
+        break;
+      }
     }
   }
 
