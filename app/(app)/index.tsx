@@ -315,13 +315,16 @@ export default function HomeScreen() {
 
           <View style={styles.stack}>
             <SectionTitle title="Practice" />
+            {/* Points at the live voice tutor — the mic tab — not at
+                Situations. Same icon as that tab so the row and the
+                destination read as one thing. */}
             <ActionRow
               index={0}
-              icon="chatbubbles-outline"
+              icon="mic-outline"
               tint="primary"
               title="Talk with your tutor"
-              subtitle="A real conversation, corrected as you go"
-              onPress={() => router.push('/chat' as any)}
+              subtitle="Speak out loud, corrected as you go"
+              onPress={() => router.push('/tutor' as any)}
             />
           </View>
         </SafeAreaView>
