@@ -108,7 +108,10 @@ export function ExerciseCard({
   const { c, shape } = useUi2Theme();
   const { instructionInHero } = useExerciseChrome();
   const listen = exercise && language ? exerciseListenTarget(exercise, language) : null;
-  const showListen = !!listen && (listen.availableBeforeAnswer || answered);
+  // Speech comes from the tts function, which needs a JWT. The onboarding
+  // trial lesson runs before sign-up with an empty `userId`, so a button
+  // offered there could only ever return a red "Retry".
+  const showListen = !!userId && !!listen && (listen.availableBeforeAnswer || answered);
   return (
     <View
       className="p-6 min-h-[200px]"

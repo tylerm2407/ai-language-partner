@@ -135,6 +135,10 @@ export async function identifyPurchaser(appUserId: string): Promise<void> {
 export async function resetPurchaser(): Promise<void> {
   if (!configured || !isPurchasesAvailable()) return;
   try {
+    // The SDK logs its own console error before throwing when there is nobody
+    // to log out, which in a dev build raises a LogBox over the onboarding
+    // screen. Asking first is the only way to keep that quiet.
+    if (await Purchases.isAnonymous()) return;
     await Purchases.logOut();
   } catch (err) {
     // logOut throws for anonymous users — non-fatal.

@@ -133,7 +133,7 @@ export function ClozeExercise({
           the gap is the answer, and `exerciseListenTarget` fills the gap with
           `correctAnswer` to build the text, so playing it early would read the
           answer out loud. */}
-      {isRevealed && listen && language ? (
+      {isRevealed && listen && language && userId ? (
         <ListenWordButton text={listen.text} language={language} userId={userId} />
       ) : null}
 
