@@ -653,7 +653,7 @@ GRANT EXECUTE ON FUNCTION public.get_language_access() TO authenticated;
 -- when the plan can open it; otherwise the account keeps the language it has,
 -- and the rest of the draft still lands. Adding a language is the switcher's
 -- job, where the learner sees the choice. Body otherwise identical to the live
--- definition (127 → 142 → 143 → 144 lineage).
+-- definition (127 → 142 → 143 → 144 → 145 lineage).
 
 CREATE OR REPLACE FUNCTION public.apply_onboarding_draft(
   p_target_language text, p_level text, p_daily_goal_minutes integer, p_ideal_l2_self text,
