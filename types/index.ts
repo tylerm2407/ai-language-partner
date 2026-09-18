@@ -138,6 +138,12 @@ export interface LanguageEnrollment {
   startedAt: string;
   /** Orders the switcher, most recent first. */
   lastActiveAt: string;
+  /**
+   * Set when the language was closed to fit the plan (migration 147): data
+   * kept, reopening needs a plan with room. The active language is never
+   * locked.
+   */
+  lockedAt: string | null;
 }
 
 /**

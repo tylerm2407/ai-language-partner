@@ -34,9 +34,12 @@ import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import {
   fetchCourses,
+  fetchLanguageAccess,
   fetchLanguageEnrollments,
+  keepLanguages,
   switchTargetLanguage,
 } from '../lib/supabase-queries';
+import type { LanguageAccess } from '../lib/language-access';
 import { resolvePlacement } from '../lib/course-placement';
 import { loadErrorCopy, type ErrorCopy } from '../lib/error-copy';
 import { trackEvent } from '../lib/analytics';
@@ -53,10 +56,27 @@ export interface UseLanguageEnrollments {
   /** The language a switch is currently in flight for, or null. */
   switching: LanguageCode | null;
   reload: () => Promise<void>;
-  /** Move to a language the learner already studies. */
+  /**
+   * The plan's language allowance (migration 147), or null until the first
+   * read lands or when it failed (then `error` is set). Consumers must treat
+   * null as "unknown", not as "unlimited".
+   */
+  access: LanguageAccess | null;
+  /** Move to a language the learner already studies. Throws the server's
+   *  refusal (FLL0x, see lib/language-access.ts) when the plan says no. */
   switchTo: (language: LanguageCode) => Promise<void>;
-  /** Start a language the learner has never studied, at `level`. */
-  addLanguage: (language: LanguageCode, level: ProficiencyLevel) => Promise<void>;
+  /**
+   * Start a language the learner has never studied, at `level`.
+   * `lockCurrent` is the free tier's "switch instead": the language being
+   * left is locked in the same server transaction.
+   */
+  addLanguage: (
+    language: LanguageCode,
+    level: ProficiencyLevel,
+    options?: { lockCurrent?: boolean },
+  ) => Promise<void>;
+  /** Resolve a lapsed plan: keep `languages` open, lock every other one. */
+  keep: (languages: LanguageCode[]) => Promise<void>;
 }
 
 export function useLanguageEnrollments(): UseLanguageEnrollments {
@@ -67,6 +87,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
   const refreshReviewCount = useAppStore((s) => s.refreshReviewCount);
 
   const [enrollments, setEnrollments] = useState<LanguageEnrollment[]>([]);
+  const [access, setAccess] = useState<LanguageAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorCopy | null>(null);
   const [switching, setSwitching] = useState<LanguageCode | null>(null);
@@ -75,12 +96,16 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
   const reload = useCallback(async () => {
     if (!user) {
       setEnrollments([]);
+      setAccess(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      setEnrollments(await fetchLanguageEnrollments());
+      // Read together so the list and the allowance describe the same moment.
+      const [list, allowance] = await Promise.all([fetchLanguageEnrollments(), fetchLanguageAccess()]);
+      setEnrollments(list);
+      setAccess(allowance);
       setError(null);
     } catch (err) {
       // An empty list and a failed read look identical in the switcher, and
@@ -142,7 +167,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
   );
 
   const addLanguage = useCallback(
-    async (language: LanguageCode, level: ProficiencyLevel) => {
+    async (language: LanguageCode, level: ProficiencyLevel, options?: { lockCurrent?: boolean }) => {
       if (!user) return;
       setSwitching(language);
       try {
@@ -151,7 +176,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
         // to the language.
         const courses = await fetchCourses(language);
         const placement = resolvePlacement(courses, level, 'start');
-        const profile = await switchTargetLanguage(language, { level, ...placement });
+        const profile = await switchTargetLanguage(language, { level, ...placement }, options);
         await adopt(profile);
         trackEvent('language_selected', { screen: 'switcher', language, source: 'added' });
         trackEvent('course_placement_set', {
@@ -167,5 +192,31 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
     [user, adopt],
   );
 
-  return { enrollments, active, loading, error, switching, reload, switchTo, addLanguage };
+  const keep = useCallback(
+    async (languages: LanguageCode[]) => {
+      if (!user || languages.length === 0) return;
+      setSwitching(languages[0]);
+      try {
+        // Adopted like a switch: when the active language is not kept, the
+        // server moves the account to the first kept one.
+        await adopt(await keepLanguages(languages));
+      } finally {
+        setSwitching(null);
+      }
+    },
+    [user, adopt],
+  );
+
+  return {
+    enrollments,
+    active,
+    loading,
+    error,
+    switching,
+    reload,
+    access,
+    switchTo,
+    addLanguage,
+    keep,
+  };
 }

@@ -88,6 +88,7 @@ import type {
 } from '../types';
 
 import { SUPPORTED_LANGUAGES, type NewsTier } from '../config/app';
+import { parseLanguageAccess, type LanguageAccess } from './language-access';
 
 // ─── User Profile ───────────────────────────────────────────────
 
@@ -204,6 +205,7 @@ function mapLanguageEnrollment(row: Record<string, unknown>): LanguageEnrollment
     currentCourseId: (row.current_course_id as string | null) ?? null,
     startedAt: row.started_at as string,
     lastActiveAt: row.last_active_at as string,
+    lockedAt: (row.locked_at as string | null) ?? null,
   };
 }
 
@@ -241,15 +243,44 @@ export async function fetchLanguageEnrollments(): Promise<LanguageEnrollment[]> 
 export async function switchTargetLanguage(
   language: LanguageCode,
   placement?: { level: ProficiencyLevel; currentCourseId: string | null; placementBand: string | null },
+  options?: { lockCurrent?: boolean },
 ): Promise<UserProfile> {
   const { data, error } = await supabase.rpc('switch_target_language', {
     p_language: language,
     p_level: placement?.level ?? null,
     p_current_course_id: placement?.currentCourseId ?? null,
     p_placement_band: placement?.placementBand ?? null,
+    // The free tier's "switch instead": lock the language being left. Only
+    // valid for a language never studied; the server refuses it otherwise
+    // (migration 147). A refusal carries an FLL0x code — see
+    // lib/language-access.ts `languageAccessRefusal`.
+    p_lock_current: options?.lockCurrent ?? false,
   });
   if (error) throw error;
   if (!data) throw new Error('switch_target_language returned no row');
+  return mapProfile(data as Record<string, unknown>);
+}
+
+/**
+ * The caller's language allowance from the live plan, school contract
+ * included (migration 147). The switcher draws from this, never from the
+ * tier name on the device.
+ */
+export async function fetchLanguageAccess(): Promise<LanguageAccess> {
+  const { data, error } = await supabase.rpc('get_language_access');
+  if (error) throw error;
+  return parseLanguageAccess(data);
+}
+
+/**
+ * Resolve a lapsed plan: keep `languages` open and lock the rest. If the
+ * active language is not kept, the first kept one becomes active, so the
+ * returned profile must be adopted like any other switch.
+ */
+export async function keepLanguages(languages: LanguageCode[]): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc('keep_languages', { p_languages: languages });
+  if (error) throw error;
+  if (!data) throw new Error('keep_languages returned no row');
   return mapProfile(data as Record<string, unknown>);
 }
 
