@@ -51,7 +51,10 @@ export function isHydrated(): boolean {
 export async function hydrateMotionPreference(): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(REDUCE_MOTION_KEY);
-    current = raw === 'true';
+    // Checked after the await: a `setReduceMotion` that landed while this read
+    // was in flight is a deliberate choice, and the stored value must not be
+    // written back over it.
+    if (!hydrated) current = raw === 'true';
   } catch {
     // Storage unavailable — keep the default.
   }
@@ -63,6 +66,9 @@ export async function hydrateMotionPreference(): Promise<boolean> {
 /** Persist and broadcast a new value. */
 export async function setReduceMotion(value: boolean): Promise<void> {
   current = value;
+  // Settles the preference even if hydration has not returned yet — see the
+  // note in `hydrateMotionPreference`.
+  hydrated = true;
   emit();
   try {
     await AsyncStorage.setItem(REDUCE_MOTION_KEY, value ? 'true' : 'false');

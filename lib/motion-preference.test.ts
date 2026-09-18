@@ -106,4 +106,20 @@ describe('motion preference', () => {
     await expect(setReduceMotion(true)).resolves.toBeUndefined();
     expect(getReduceMotion()).toBe(true);
   });
+
+  it('a toggle made while hydration is in flight is not overwritten by it', async () => {
+    // The stored value says motion is fine; the learner has just said it is
+    // not. Whichever promise resolves second, the tap has to win — otherwise
+    // the switch flips itself back and the setting looks broken.
+    await storage.setItem(REDUCE_MOTION_KEY, 'false');
+    let release: (value: string | null) => void = () => {};
+    storage.getItem.mockReturnValueOnce(new Promise<string | null>((r) => { release = r; }));
+
+    const hydrating = hydrateMotionPreference();
+    await setReduceMotion(true);
+    release('false');
+    await hydrating;
+
+    expect(getReduceMotion()).toBe(true);
+  });
 });

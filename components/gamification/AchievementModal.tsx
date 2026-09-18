@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SlabCard } from '../ui2/SlabCard';
 import { scrimColor } from '../ui2/Ui2Sheet';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
 import { haptic } from '../../lib/haptics';
 import type { AchievementDefinition } from '../../lib/achievements';
 
@@ -82,6 +83,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
   onDismiss: () => void;
 }) {
   const { c, scheme } = useUi2Theme();
+  const { shouldReduce } = useMotion();
   const cardScale = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -89,21 +91,36 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
 
   useEffect(() => {
     if (visible && achievement) {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(cardScale, { toValue: 1, speed: 14, bounciness: 8, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]).start();
-      Animated.sequence([
-        Animated.delay(200),
-        Animated.spring(iconScale, { toValue: 1, speed: 30, bounciness: 10, useNativeDriver: true }),
-      ]).start();
+      if (shouldReduce) {
+        // Snap to the open state rather than springing into it, and skip the
+        // confetti below. The modal still appears, still says what was
+        // unlocked, and still buzzes — it just does not fly in.
+        backdropOpacity.setValue(1);
+        cardScale.setValue(1);
+        cardOpacity.setValue(1);
+        iconScale.setValue(1);
+      } else {
+        Animated.parallel([
+          Animated.timing(backdropOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.spring(cardScale, { toValue: 1, speed: 14, bounciness: 8, useNativeDriver: true }),
+          Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        ]).start();
+        Animated.sequence([
+          Animated.delay(200),
+          Animated.spring(iconScale, { toValue: 1, speed: 30, bounciness: 10, useNativeDriver: true }),
+        ]).start();
+      }
 
       // `achievement` is in the dependency list, so a queue of several unlocked
       // at once re-runs this on every advance and each one gets its own buzz.
       // That is the intent: finishing a lesson that unlocks three achievements
       // should feel like three things happening, not one long modal.
       haptic('achievement');
+    } else if (shouldReduce) {
+      backdropOpacity.setValue(0);
+      cardScale.setValue(0);
+      cardOpacity.setValue(0);
+      iconScale.setValue(0);
     } else {
       Animated.parallel([
         Animated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
@@ -112,7 +129,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
         Animated.timing(iconScale, { toValue: 0, duration: 150, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible, achievement, backdropOpacity, cardScale, cardOpacity, iconScale]);
+  }, [visible, achievement, shouldReduce, backdropOpacity, cardScale, cardOpacity, iconScale]);
 
   if (!achievement) return null;
 
@@ -141,16 +158,18 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
         {/* Was a gradient hairline around a fixed dark panel. UI 2.0 grounds
             flat, so the slab's own border and bottom edge carry the depth. */}
         <SlabCard hero style={{ padding: 32, alignItems: 'center' }}>
-          {/* Confetti Particles */}
-          <View style={{ position: 'absolute', top: '40%', left: '50%' }}>
-            {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
-              <ConfettiParticle
-                key={i}
-                index={i}
-                color={confettiColors[i % confettiColors.length]}
-              />
-            ))}
-          </View>
+          {/* Confetti Particles — omitted entirely under reduced motion. */}
+          {!shouldReduce && (
+            <View style={{ position: 'absolute', top: '40%', left: '50%' }}>
+              {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
+                <ConfettiParticle
+                  key={i}
+                  index={i}
+                  color={confettiColors[i % confettiColors.length]}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Achievement Unlocked Label */}
           <Text className="text-sm font-semibold tracking-widest uppercase mb-4" style={{ color: c.muted }}>

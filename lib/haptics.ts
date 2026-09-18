@@ -157,7 +157,12 @@ export async function hydrateHapticsPreference(): Promise<boolean> {
     const raw = await AsyncStorage.getItem(HAPTICS_ENABLED_KEY);
     // Only an explicit stored "false" turns them off. A missing key is a user
     // who has never touched the setting, and they get the default.
-    if (raw !== null) enabled = raw !== 'false';
+    //
+    // `hydrated` is re-checked *after* the await on purpose: this read is kicked
+    // off at import time, and a `setHapticsEnabled` that lands while it is in
+    // flight has already settled the question. Applying the stored value on top
+    // of it would silently undo the learner's tap.
+    if (!hydrated && raw !== null) enabled = raw !== 'false';
   } catch {
     // Storage unavailable — keep the default.
   }
@@ -169,6 +174,9 @@ export async function hydrateHapticsPreference(): Promise<boolean> {
 /** Persist and broadcast a new value. */
 export async function setHapticsEnabled(value: boolean): Promise<void> {
   enabled = value;
+  // An explicit choice settles the preference whether or not the import-time
+  // read has come back yet — see the note in `hydrateHapticsPreference`.
+  hydrated = true;
   emit();
   try {
     await AsyncStorage.setItem(HAPTICS_ENABLED_KEY, value ? 'true' : 'false');

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
 import type { Ui2Palette } from '../../config/theme';
 
 const PARTICLE_COUNT = 8;
@@ -67,25 +68,42 @@ interface CorrectSparkleProps {
   children: React.ReactNode;
 }
 
+/**
+ * The right-answer response: a scale pulse, a green wash and eight star
+ * particles thrown outward.
+ *
+ * Reduced motion keeps the green wash and drops the other two — the particles
+ * are decoration and the pulse resizes the whole exercise, while the wash says
+ * "correct" without anything moving. Same split as `WrongShake`.
+ */
 export function CorrectSparkle({ trigger = false, children }: CorrectSparkleProps) {
   const { c } = useUi2Theme();
+  const { shouldReduce } = useMotion();
   const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (trigger) {
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(pulseScale, { toValue: 1.05, duration: 150, useNativeDriver: true }),
-          Animated.spring(pulseScale, { toValue: 1, speed: 15, bounciness: 8, useNativeDriver: true }),
-        ]),
-        Animated.sequence([
-          Animated.timing(pulseOpacity, { toValue: 0.3, duration: 150, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-      ]).start();
+    if (!trigger) return;
+
+    const wash = Animated.sequence([
+      Animated.timing(pulseOpacity, { toValue: 0.3, duration: 150, useNativeDriver: true }),
+      Animated.timing(pulseOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]);
+
+    if (shouldReduce) {
+      pulseScale.setValue(1);
+      wash.start();
+      return;
     }
-  }, [trigger, pulseScale, pulseOpacity]);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(pulseScale, { toValue: 1.05, duration: 150, useNativeDriver: true }),
+        Animated.spring(pulseScale, { toValue: 1, speed: 15, bounciness: 8, useNativeDriver: true }),
+      ]),
+      wash,
+    ]).start();
+  }, [trigger, shouldReduce, pulseScale, pulseOpacity]);
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseScale }] }}>
@@ -94,7 +112,7 @@ export function CorrectSparkle({ trigger = false, children }: CorrectSparkleProp
         pointerEvents="none"
       />
       {children}
-      {trigger && (
+      {trigger && !shouldReduce && (
         <View style={{ position: 'absolute', top: '50%', left: '50%' }} pointerEvents="none">
           {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
             <Particle key={i} index={i} trigger={trigger} />

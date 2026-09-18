@@ -52,6 +52,7 @@ jest.mock('expo-haptics', () => ({
 }));
 
 const storage = AsyncStorage as unknown as { __reset: () => void };
+const mockStorage = AsyncStorage as unknown as { getItem: jest.Mock; setItem: jest.Mock };
 
 beforeEach(async () => {
   storage.__reset();
@@ -97,6 +98,24 @@ describe('preference', () => {
     (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
     await setHapticsEnabled(false);
     expect(getHapticsEnabled()).toBe(false);
+  });
+
+  it('a toggle made while the import-time read is in flight is not overwritten', async () => {
+    // hydrateHapticsPreference() starts at module import, so a learner who
+    // opens settings and turns vibration off can beat it back. The stored
+    // "true" must not land on top of the tap and buzz them again.
+    await AsyncStorage.setItem(HAPTICS_ENABLED_KEY, 'true');
+    let release: (value: string | null) => void = () => {};
+    mockStorage.getItem.mockReturnValueOnce(new Promise<string | null>((r) => { release = r; }));
+
+    const hydrating = hydrateHapticsPreference();
+    await setHapticsEnabled(false);
+    release('true');
+    await hydrating;
+
+    expect(getHapticsEnabled()).toBe(false);
+    haptic('correct');
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
   });
 
   it('notifies subscribers and stops after unsubscribe', async () => {

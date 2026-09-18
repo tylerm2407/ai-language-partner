@@ -1,15 +1,33 @@
 import { useEffect, useRef } from 'react';
 import { View, Animated } from 'react-native';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
 
-/** Three-dot animated typing indicator styled to match assistant bubbles. */
+/**
+ * Three-dot animated typing indicator styled to match assistant bubbles.
+ *
+ * The bounce is an infinite loop that starts on its own and runs for as long as
+ * Sol is composing, which is exactly the shape WCAG 2.2 SC 2.2.2 asks for a
+ * stop mechanism for — so it is gated on `useMotion().shouldReduce`. Reduced
+ * motion keeps the three dots and the bubble, and simply holds them still: the
+ * "Sol is answering" signal survives, the movement does not.
+ */
 export function TypingIndicator() {
   const { c } = useUi2Theme();
+  const { shouldReduce } = useMotion();
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (shouldReduce) {
+      // Whatever a previous run left mid-bounce, put the dots back on the line.
+      dot1.setValue(0);
+      dot2.setValue(0);
+      dot3.setValue(0);
+      return;
+    }
+
     const animateDot = (dot: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
@@ -27,7 +45,7 @@ export function TypingIndicator() {
     animation.start();
 
     return () => animation.stop();
-  }, [dot1, dot2, dot3]);
+  }, [shouldReduce, dot1, dot2, dot3]);
 
   const dotStyle = {
     width: 8,
