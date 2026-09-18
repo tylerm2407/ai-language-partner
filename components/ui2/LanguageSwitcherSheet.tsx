@@ -25,11 +25,10 @@
  * decided in `lib/language-limit-flow.ts`; the server's refusal codes override
  * it whenever the two disagree, because the server is the gate.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
 
 import { useLanguageEnrollments } from '../../hooks/useLanguageEnrollments';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -98,7 +97,6 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   const { c, type } = useUi2Theme();
   const router = useRouter();
   const pathname = usePathname();
-  const hostFocused = useIsFocused();
   const devicePaid = useAppStore((s) => effectiveTier(s.subscription, s.entitledTier) !== 'starter');
   const { enrollments, active, loading, error, switching, reload, access, switchTo, addLanguage } =
     useLanguageEnrollments();
@@ -120,17 +118,24 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   // mid-decision, and an Alert over a dismissed sheet loses where they were.
   const [actionError, setActionError] = useState<ErrorCopy | null>(null);
 
+  // A switch can settle after the sheet was dismissed; its result must not
+  // be written into the NEXT open (it would open straight onto a wall or an
+  // old error).
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+
   useEffect(() => {
-    if (!visible) {
-      setStep('list');
-      setMode('add');
-      setPending(null);
-      setPendingLevel(null);
-      setLockedTarget(null);
-      setTrip('idle');
-      setUpgradeCheck('idle');
-      setActionError(null);
-    } else {
+    // Reset on close AND on open: the close-time reset can be overtaken by a
+    // call that was still in flight when the learner tapped away.
+    setStep('list');
+    setMode('add');
+    setPending(null);
+    setPendingLevel(null);
+    setLockedTarget(null);
+    setTrip('idle');
+    setUpgradeCheck('idle');
+    setActionError(null);
+    if (visible) {
       // The allowance changes off-device (a purchase, a lapse, a school
       // contract), so every open reads it fresh rather than trusting the read
       // this mount made when Home first rendered.
@@ -154,6 +159,12 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   const handleSwitchError = useCallback(
     (err: unknown, language: LanguageCode) => {
       const refusal = languageAccessRefusal(err);
+      if (!visibleRef.current) {
+        // Dismissed mid-flight: nothing to draw on. A lapse still has to be
+        // noticed, so FLL03 still wakes the keep sheet.
+        if (refusal === 'resolve') requestLanguageAccessCheck();
+        return;
+      }
       if (!refusal) {
         setActionError(loadErrorCopy(err, 'that language'));
         return;
@@ -190,6 +201,8 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
   const onPickExisting = useCallback(
     async (enrollment: LanguageEnrollment) => {
       const language = enrollment.language;
+      // One switch at a time: a second tap would reset navigation twice.
+      if (switching !== null) return;
       if (language === active) {
         onDismiss();
         return;
@@ -207,16 +220,17 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
       }
       await doSwitch(language);
     },
-    [active, onDismiss, knownAccess, showWall, doSwitch],
+    [active, switching, onDismiss, knownAccess, showWall, doSwitch],
   );
 
   const onAddTapped = useCallback(() => {
+    if (switching !== null) return;
     const next = stepForAddTapped(knownAccess);
     if (next === null) return;
     setMode('add');
     if (next === 'limit') showWall('limit', 'limit');
     else setStep('pick-language');
-  }, [knownAccess, showWall]);
+  }, [switching, knownAccess, showWall]);
 
   const addPending = useCallback(
     async (level: ProficiencyLevel, lockCurrent: boolean) => {
@@ -237,6 +251,7 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
 
   const onPickLevel = useCallback(
     (level: ProficiencyLevel) => {
+      if (switching !== null) return;
       if (mode === 'switch-instead') {
         setPendingLevel(level);
         setStep('confirm-lock');
@@ -244,7 +259,7 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
       }
       void addPending(level, false);
     },
-    [mode, addPending],
+    [mode, switching, addPending],
   );
 
   // ─── The paywall round trip ─────────────────────────────────────────────
@@ -264,10 +279,15 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
 
   useEffect(() => {
     if (trip === 'idle') return;
-    const next = advancePaywallTrip(trip, { onPaywall: pathname === PAYWALL_PATHNAME, hostFocused });
+    // hostFocused is not waited for. The paywall is a sibling tab and the tab
+    // navigator goes back to Home, not to Settings, so a switcher opened from
+    // Settings would wait for a focus that may come minutes later — and then
+    // resume a purchase-time switch out of context. The sheet is a modal; it
+    // finishes the round trip over whatever screen the learner landed on.
+    const next = advancePaywallTrip(trip, { onPaywall: pathname === PAYWALL_PATHNAME, hostFocused: true });
     if (next.trip !== trip) setTrip(next.trip);
     if (next.returned) void checkUpgrade();
-  }, [trip, pathname, hostFocused, checkUpgrade]);
+  }, [trip, pathname, checkUpgrade]);
 
   useEffect(() => {
     if (upgradeCheck !== 'ready') return;
@@ -350,6 +370,7 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
                     subtitle={subtitle}
                     selected={enrollment.language === active}
                     onSelect={() => void onPickExisting(enrollment)}
+                    disabled={switching !== null && switching !== enrollment.language}
                     lead={<Text style={styles.flag}>{languageFlag(enrollment.language)}</Text>}
                     trail={
                       switching === enrollment.language ? (
@@ -469,6 +490,7 @@ export function LanguageSwitcherSheet({ visible, onDismiss }: LanguageSwitcherSh
                 subtitle={cefrCanDo(cefrBandForProficiencyLevel(l.value))}
                 selected={false}
                 onSelect={() => onPickLevel(l.value)}
+                disabled={switching !== null}
                 trail={switching === pending && pending ? <ActivityIndicator color={c.primary} /> : undefined}
                 accessibilityLabel={`${l.label}. ${cefrCanDo(cefrBandForProficiencyLevel(l.value))}`}
               />

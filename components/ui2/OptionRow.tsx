@@ -49,6 +49,13 @@ interface OptionRowProps {
    */
   tile?: boolean;
   accessibilityLabel?: string;
+  /**
+   * Screen-reader role. 'button' (default) for a one-shot pick; 'radio' or
+   * 'checkbox' for a choice list, where the state is read as checked.
+   */
+  role?: 'button' | 'radio' | 'checkbox';
+  /** Not pressable (an action is in flight); announced as dimmed. */
+  disabled?: boolean;
   style?: ViewStyle;
 }
 
@@ -65,6 +72,8 @@ export function OptionRow({
   trail,
   detail,
   accessibilityLabel,
+  role = 'button',
+  disabled = false,
   style,
   tile = false,
 }: OptionRowProps) {
@@ -94,9 +103,11 @@ export function OptionRow({
           haptic('select');
           onSelect();
         }}
-        accessibilityRole="button"
+        disabled={disabled}
+        accessibilityRole={role}
         accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}: ${subtitle}` : title)}
-        accessibilityState={{ selected }}
+        accessibilityState={role === 'button' ? { selected, disabled } : { checked: selected, disabled }}
+        style={disabled ? styles.disabled : undefined}
       >
         <Animated.View
           style={[
@@ -138,6 +149,7 @@ export function OptionRow({
 }
 
 const styles = StyleSheet.create({
+  disabled: { opacity: 0.55 },
   block: { overflow: 'hidden' },
   row: {
     flexDirection: 'row',

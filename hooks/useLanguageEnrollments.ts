@@ -81,6 +81,9 @@ export interface UseLanguageEnrollments {
 
 export function useLanguageEnrollments(): UseLanguageEnrollments {
   const { user } = useAuth();
+  // Keyed on the id, not the user object: `session.user` is a new object on
+  // every token refresh, which re-read every mounted copy of this hook.
+  const userId = user?.id ?? null;
   const active = useAppStore((s) => s.profile?.targetLanguage ?? null);
   const setProfile = useAppStore((s) => s.setProfile);
   const setMeasuredBand = useAppStore((s) => s.setMeasuredBand);
@@ -94,7 +97,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
   const rootNavigation = useNavigationContainerRef();
 
   const reload = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setEnrollments([]);
       setAccess(null);
       setLoading(false);
@@ -102,10 +105,17 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
     }
     setLoading(true);
     try {
-      // Read together so the list and the allowance describe the same moment.
-      const [list, allowance] = await Promise.all([fetchLanguageEnrollments(), fetchLanguageAccess()]);
-      setEnrollments(list);
-      setAccess(allowance);
+      // Read together, settled separately: the allowance only gates ADDING
+      // and REOPENING, so a failed allowance read must not take away the
+      // switch between languages the learner already studies. It reads as
+      // null ("unknown"), which every gated action already treats as "wait".
+      const [list, allowance] = await Promise.allSettled([fetchLanguageEnrollments(), fetchLanguageAccess()]);
+      if (list.status === 'rejected') throw list.reason;
+      setEnrollments(list.value);
+      setAccess(allowance.status === 'fulfilled' ? allowance.value : null);
+      if (allowance.status === 'rejected') {
+        console.warn('[languages] allowance read failed; adding stays disabled until it succeeds', allowance.reason);
+      }
       setError(null);
     } catch (err) {
       // An empty list and a failed read look identical in the switcher, and
@@ -117,7 +127,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     void reload();
@@ -146,15 +156,15 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
       resetNavigation();
       setProfile(profile);
       setMeasuredBand(null);
-      if (user) void refreshReviewCount(user.id);
+      if (userId) void refreshReviewCount(userId);
       await reload();
     },
-    [resetNavigation, setProfile, setMeasuredBand, refreshReviewCount, user, reload],
+    [resetNavigation, setProfile, setMeasuredBand, refreshReviewCount, userId, reload],
   );
 
   const switchTo = useCallback(
     async (language: LanguageCode) => {
-      if (!user || language === active) return;
+      if (!userId || language === active) return;
       setSwitching(language);
       try {
         const profile = await switchTargetLanguage(language);
@@ -166,12 +176,12 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
         setSwitching(null);
       }
     },
-    [user, active, adopt],
+    [userId, active, adopt],
   );
 
   const addLanguage = useCallback(
     async (language: LanguageCode, level: ProficiencyLevel, options?: { lockCurrent?: boolean }) => {
-      if (!user) return;
+      if (!userId) return;
       setSwitching(language);
       try {
         // `lib/course-placement.ts` is the one place that turns a level into a
@@ -192,12 +202,12 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
         setSwitching(null);
       }
     },
-    [user, adopt],
+    [userId, adopt],
   );
 
   const keep = useCallback(
     async (languages: LanguageCode[]) => {
-      if (!user || languages.length === 0) return;
+      if (!userId || languages.length === 0) return;
       setSwitching(languages[0]);
       try {
         // Adopted like a switch: when the active language is not kept, the
@@ -207,7 +217,7 @@ export function useLanguageEnrollments(): UseLanguageEnrollments {
         setSwitching(null);
       }
     },
-    [user, adopt],
+    [userId, adopt],
   );
 
   return {

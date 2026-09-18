@@ -14,8 +14,10 @@
  * WHAT IT WILL NOT DO. It cannot be swiped away without choosing or
  * upgrading — the server would refuse the next switch anyway, and a sheet
  * that reappears on every foreground is worse than one decision. But it never
- * traps anyone on an error: a failed read or a failed keep shows the reason,
- * a retry, and a "Not now" that steps aside until the next check.
+ * traps anyone on an error: a failed keep shows the reason, a retry, and a
+ * "Not now" that steps aside until the next check. A failed READ fails
+ * hidden: the allowance becomes unknown (null), and an unknown allowance is
+ * never grounds to demand a choice. The next foreground reads again.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -27,6 +29,7 @@ import { effectiveTier, useAppStore } from '../../stores/useAppStore';
 import { spacing } from '../../config/theme';
 import { saveErrorCopy, type ErrorCopy } from '../../lib/error-copy';
 import { onLanguageAccessCheck } from '../../lib/language-access-events';
+import { languageAccessRefusal } from '../../lib/language-access';
 import {
   PAYWALL_PATHNAME,
   advancePaywallTrip,
@@ -51,7 +54,7 @@ export function LanguageKeepSheet() {
   const router = useRouter();
   const pathname = usePathname();
   const devicePaid = useAppStore((s) => effectiveTier(s.subscription, s.entitledTier) !== 'starter');
-  const { active, access, error, switching, reload, keep } = useLanguageEnrollments();
+  const { active, access, switching, reload, keep } = useLanguageEnrollments();
 
   const [selection, setSelection] = useState<LanguageCode[] | null>(null);
   const [keepError, setKeepError] = useState<ErrorCopy | null>(null);
@@ -142,15 +145,23 @@ export function LanguageKeepSheet() {
       await keep(ordered);
       trackEvent('language_limit_resolved', { screen: 'keep', outcome: 'kept', count: ordered.length });
     } catch (err) {
+      if (languageAccessRefusal(err)) {
+        // The allowance or the open set moved under us (another device, a
+        // contract change). Retrying the same pick would be refused forever:
+        // re-read and preselect again from what is true now.
+        setSelection(null);
+        void check();
+        return;
+      }
       setKeepError(saveErrorCopy(err, 'your choice'));
     }
-  }, [access, selection, keep]);
+  }, [access, selection, keep, check]);
 
   const max = access?.maxLanguages ?? 1;
   const visible = overLimit && !snoozed && trip === 'idle' && selection !== null;
   const busy = switching !== null;
-  const readError = error && !checking ? error : null;
-  const shownError = keepError ?? readError;
+  // Only a failed KEEP is shown here; a failed read hides the sheet (header).
+  const shownError = keepError;
 
   const heading = max === 1 ? 'Pick the language to keep' : `Pick up to ${max} languages to keep`;
   const intro = useMemo(
@@ -172,7 +183,7 @@ export function LanguageKeepSheet() {
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
         {shownError ? (
           <>
-            <Ui2InlineError copy={shownError} onRetry={() => (keepError ? void onKeep() : void check())} />
+            <Ui2InlineError copy={shownError} onRetry={() => void onKeep()} />
             <SlabButton variant="ghost" label="Not now" arrow={false} onPress={() => setSnoozed(true)} />
           </>
         ) : null}
@@ -211,6 +222,8 @@ export function LanguageKeepSheet() {
                     setSelection((prev) => toggleKeep(prev ?? [], language, max));
                   }}
                   lead={<Text style={styles.flag}>{languageFlag(language)}</Text>}
+                  role={max === 1 ? 'radio' : 'checkbox'}
+                  disabled={busy}
                   accessibilityLabel={`${languageName(language)}. ${selected ? 'Stays open' : 'Will be locked'}`}
                 />
               );

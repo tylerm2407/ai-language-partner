@@ -91,11 +91,24 @@ describe('useLanguageEnrollments: language access', () => {
     expect(hook.error).toBeNull();
   });
 
-  it('leaves access null — unknown, not unlimited — when the read fails', async () => {
+  it('leaves access null — unknown, not unlimited — when the allowance read fails, and keeps the list', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockFetchEnrollments.mockResolvedValue([{ language: 'es' }, { language: 'fr' }]);
     mockFetchAccess.mockRejectedValue(new Error('offline'));
     await mount();
     expect(hook.access).toBeNull();
+    // Switching between languages already studied is not gated on the
+    // allowance, so its failure must not take the list away.
+    expect(hook.enrollments).toHaveLength(2);
+    expect(hook.error).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('reports an error and clears access when the LIST read fails', async () => {
+    mockFetchEnrollments.mockRejectedValue(new Error('offline'));
+    await mount();
     expect(hook.error).not.toBeNull();
+    expect(hook.access).toBeNull();
   });
 
   it('addLanguage forwards lockCurrent to the server switch', async () => {
