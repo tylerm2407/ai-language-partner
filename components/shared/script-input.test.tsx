@@ -92,14 +92,29 @@ describe('ScriptInput', () => {
     expect(f.latest()).toBe('한국');
   });
 
-  it('deletes one keystroke at a time inside a composition', () => {
+  it('deletes a character of the script, not a letter of the romaji', () => {
+    // Backspace works on what is ON SCREEN: さかな loses な, not the `a` of
+    // `sakana`. The field keeps no hidden romaji to walk back through — that
+    // hidden buffer is exactly what raced against the native field and
+    // committed raw `konbanha` as an answer — so what you see is what you
+    // delete, which is also what a system IME does once a syllable is formed.
     const f = mount('ja');
     f.type('sakana');
-    f.backspace();
-    // `sakan` — the trailing n is not kana yet, so the settled value is さかん.
-    expect(f.latest()).toBe('さかん');
+    expect(f.latest()).toBe('さかな');
     f.backspace();
     expect(f.latest()).toBe('さか');
+    f.backspace();
+    expect(f.latest()).toBe('さ');
+  });
+
+  it('repairs itself when the field gets ahead of the conversion', () => {
+    // The race this component was rewritten for: a controlled TextInput
+    // applies its value a frame late, so a fast typist's keystrokes arrive
+    // appended to the RAW text. Simulated here by handing the field a whole
+    // romaji word at once, which is what the simulator's HID injection did.
+    const f = mount('ja');
+    f.type('konbanha');
+    expect(f.latest()).toBe('こんばんは');
   });
 
   it('commits a Chinese candidate when one is tapped', () => {

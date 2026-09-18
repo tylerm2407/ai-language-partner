@@ -101,14 +101,44 @@ export function ScriptInput({
   const { c } = useUi2Theme();
   const engine = scriptInputFor(language);
 
-  /** Script text already decided. */
-  const [committed, setCommitted] = useState(value);
-  /** Latin keystrokes not yet converted into anything final. */
-  const [buffer, setBuffer] = useState('');
+  /**
+   * The string the FIELD shows: settled script, then the tail still being
+   * composed, left in Latin so the next keystroke lands on it.
+   */
+  const [shownText, setShownText] = useState(value);
   const [showKeypad, setShowKeypad] = useState(false);
   const [page, setPage] = useState(0);
   /** What we last handed the parent, so an echo does not reset composition. */
   const emitted = useRef(value);
+
+  /**
+   * Split any string into settled script and the romaji still in flight.
+   *
+   * THIS IS WHY THERE IS NO DIFFING. The first version compared each incoming
+   * string against what React thought was on screen, and recovered the
+   * keystroke from the difference. That works while the learner types slowly
+   * and fails the moment they do not: a controlled TextInput applies its value
+   * a frame later, so a fast typist's next keystroke arrives appended to the
+   * RAW text the field still holds, the comparison misses, and the fallback
+   * commits `konbanha` as the answer. It was found on a simulator by typing at
+   * machine speed, and a fast thumb would have found it in the wild.
+   *
+   * Splitting needs no history: the scripts this component serves have no
+   * Latin letters, so a trailing run of them IS the composition, wherever the
+   * field got to. If our value never landed and the field holds `konbanha`,
+   * this reads it as one buffer and converts the lot — the race repairs
+   * itself on the very next keystroke instead of corrupting the answer.
+   */
+  const split = useCallback(
+    (text: string) => {
+      const match = engine ? engine.composing.exec(text) : null;
+      const buffer = match ? match[0] : '';
+      return { committed: buffer ? text.slice(0, text.length - buffer.length) : text, buffer };
+    },
+    [engine],
+  );
+
+  const { committed, buffer } = useMemo(() => split(shownText), [split, shownText]);
 
   const conversion = useMemo(
     () => (engine ? engine.convert(buffer) : { text: buffer, pending: '' }),
@@ -150,13 +180,17 @@ export function ScriptInput({
     return out;
   }, [candidates, trim]);
 
-  const emit = useCallback(
-    (nextCommitted: string, nextBuffer: string) => {
-      const settled = nextCommitted + (engine ? engine.settle(nextBuffer) : nextBuffer);
+  /** Put a string in the field and hand the parent its settled form. */
+  const apply = useCallback(
+    (next: string) => {
+      const parts = split(next);
+      const conv = engine ? engine.convert(parts.buffer) : { text: parts.buffer, pending: '' };
+      setShownText(parts.committed + conv.text + conv.pending);
+      const settled = parts.committed + (engine ? engine.settle(parts.buffer) : parts.buffer);
       emitted.current = settled;
       onChangeText(settled);
     },
-    [engine, onChangeText],
+    [engine, onChangeText, split],
   );
 
   // A value the parent changed on its own — a restored session, a cleared
@@ -164,91 +198,48 @@ export function ScriptInput({
   useEffect(() => {
     if (value === emitted.current) return;
     emitted.current = value;
-    setCommitted(value);
-    setBuffer('');
+    setShownText(value);
   }, [value]);
-
-  const apply = useCallback(
-    (nextCommitted: string, nextBuffer: string) => {
-      setCommitted(nextCommitted);
-      setBuffer(nextBuffer);
-      emit(nextCommitted, nextBuffer);
-    },
-    [emit],
-  );
 
   const pick = useCallback(
     (text: string) => {
       haptic('select');
-      apply(committed + text, '');
+      apply(committed + text);
     },
     [apply, committed],
   );
 
   /**
-   * Turn the field's new string back into composition state.
+   * Whatever the field now holds, re-read from scratch.
    *
-   * React Native hands over the whole text, not the keystroke, so the change
-   * has to be recovered by comparing against what was on screen. Typing at the
-   * end and backspacing are the two cases that matter for a one-line answer;
-   * anything else — a paste, a mid-string edit, autocorrect rewriting a word —
-   * is taken at face value and committed whole, which loses the composition
-   * but never loses the learner's text.
+   * Space is the exception: on Chinese it accepts the leading candidate, which
+   * is what every Chinese IME does and what a learner who has used one will
+   * reach for. Letting it through would leave pinyin in the answer.
    */
   const handleChange = useCallback(
     (next: string) => {
       if (!engine) {
         emitted.current = next;
-        setCommitted(next);
+        setShownText(next);
         onChangeText(next);
         return;
       }
-      if (next === displayed) return;
-
-      if (next.startsWith(displayed)) {
-        const typed = next.slice(displayed.length);
-        let nextCommitted = committed;
-        let nextBuffer = buffer;
-        for (const ch of typed) {
-          if (engine.commitOnSpace && ch === ' ' && nextBuffer) {
-            // Space is how a Chinese IME accepts the leading candidate. Falling
-            // through to a literal space would leave pinyin in the answer.
-            const top = shown[0];
-            nextCommitted += top ? top.text : engine.settle(nextBuffer);
-            nextBuffer = '';
-            continue;
-          }
-          if (/[A-Za-z'ü-]/.test(ch)) {
-            nextBuffer += ch;
-            continue;
-          }
-          // Punctuation and spaces end a word, so whatever was composing is
-          // settled before them.
-          nextCommitted += engine.settle(nextBuffer) + ch;
-          nextBuffer = '';
+      if (engine.commitOnSpace && next.endsWith(' ')) {
+        const parts = split(next.slice(0, -1));
+        if (parts.buffer) {
+          const top = shown[0];
+          apply(parts.committed + (top ? top.text : engine.settle(parts.buffer)));
+          return;
         }
-        apply(nextCommitted, nextBuffer);
-        return;
       }
-
-      if (displayed.startsWith(next)) {
-        const removed = displayed.length - next.length;
-        if (buffer.length >= removed) {
-          apply(committed, buffer.slice(0, buffer.length - removed));
-        } else {
-          apply(next, '');
-        }
-        return;
-      }
-
-      apply(next, '');
+      apply(next);
     },
-    [engine, displayed, committed, buffer, apply, onChangeText, shown],
+    [engine, onChangeText, apply, split, shown],
   );
 
   const settleNow = useCallback(() => {
     if (!engine || !buffer) return;
-    apply(committed + engine.settle(buffer), '');
+    apply(committed + engine.settle(buffer));
   }, [engine, buffer, committed, apply]);
 
   const field = (
@@ -286,7 +277,7 @@ export function ScriptInput({
               {conversion.pending || conversion.text
                 ? `${buffer} → ${conversion.text}${conversion.pending}`
                 : trim && (trim.prefix || trim.suffix)
-                  ? `${engine.hint} For a blank, type the whole word's sound.`
+                  ? `${engine.hint} · Type the whole word`
                   : engine.hint}
             </Caption>
             {pages.length ? (
@@ -355,11 +346,8 @@ export function ScriptInput({
               pages={pages}
               pageIndex={page}
               onPageChange={setPage}
-              onKey={(key) => apply(committed + engine.settle(buffer) + key, '')}
-              onBackspace={() => {
-                if (buffer) apply(committed, buffer.slice(0, -1));
-                else apply(committed.slice(0, -1), '');
-              }}
+              onKey={(key) => apply(committed + engine.settle(buffer) + key)}
+              onBackspace={() => apply(displayed.slice(0, -1))}
             />
           ) : null}
         </View>

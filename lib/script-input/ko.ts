@@ -214,7 +214,8 @@ const ROWS: readonly (readonly string[])[] = [
 export const koreanInput: ScriptInputEngine = {
   language: 'ko',
   romanization: 'romaja',
-  hint: 'Type it the way it sounds — annyeong becomes 안녕, hanguk becomes 한국.',
+  hint: 'Type it as it sounds: annyeong becomes 안녕',
+  composing: /[A-Za-z'’ü-]+$/,
   convert: romajaToHangul,
   // Romaja that formed no jamo is left as typed rather than dropped.
   settle: (buffer) => {
