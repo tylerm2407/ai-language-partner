@@ -1,0 +1,158 @@
+/**
+ * Generates lib/script-input/zh-lexicon.ts — the pinyin index the in-app
+ * Chinese input method types against.
+ *
+ * Two inputs, both local:
+ *   1. Unihan_Readings.txt (kMandarin) — the character readings. Unicode,
+ *      under the Unicode licence. Pass its path as argv[2].
+ *   2. supabase/seed.sql plus the content-patch migrations — the curriculum,
+ *      which is what bounds the lexicon.
+ *
+ * The lexicon is deliberately CURRICULUM-SCOPED rather than a general IME
+ * dictionary. A general one would be ~21,000 characters and a word list we do
+ * not have; this one is every character and short phrase the courses actually
+ * teach, which is the vocabulary a learner is ever asked to type. Anything
+ * outside it is still reachable character by character, and the system
+ * keyboard remains available to learners who have one installed.
+ *
+ * Run: node scripts/gen-zh-lexicon.mjs <path to Unihan_Readings.txt>
+ */
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const unihanPath = process.argv[2];
+if (!unihanPath) {
+  console.error('usage: node scripts/gen-zh-lexicon.mjs <Unihan_Readings.txt>');
+  process.exit(1);
+}
+
+/** char -> [toneless pinyin, ...], first entry the preferred reading. */
+const readings = new Map();
+for (const line of readFileSync(unihanPath, 'utf8').split('\n')) {
+  if (line[0] !== 'U') continue;
+  const [cp, field, value] = line.split('\t');
+  if (field !== 'kMandarin') continue;
+  const code = parseInt(cp.slice(2), 16);
+  if (code < 0x4e00 || code > 0x9fff) continue;
+  const syllables = value
+    .trim()
+    .split(/\s+/)
+    .map(stripTone)
+    .filter(Boolean);
+  if (syllables.length) readings.set(String.fromCodePoint(code), [...new Set(syllables)]);
+}
+
+/** Pinyin arrives accented (hǎo); the IME is typed without tones. */
+function stripTone(s) {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-̄̌̈]/g, '')
+    .replace(/ü/g, 'v')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+}
+
+// ─── Curriculum text ────────────────────────────────────────────────
+const sources = [join(root, 'supabase', 'seed.sql'), join(root, 'supabase', 'seed-content.sql')];
+const migrations = join(root, 'supabase', 'migrations');
+for (const f of readdirSync(migrations)) {
+  if (f.endsWith('.sql')) sources.push(join(migrations, f));
+}
+
+const HAN_RUN = /[一-鿿]+/g;
+/** Phrase -> times seen, so the common ones sort first in the candidate bar. */
+const counts = new Map();
+const chars = new Set();
+
+for (const path of sources) {
+  let text;
+  try {
+    text = readFileSync(path, 'utf8');
+  } catch {
+    continue;
+  }
+  for (const run of text.match(HAN_RUN) ?? []) {
+    for (const ch of run) chars.add(ch);
+    // A Han run bounded by non-Han and no longer than four characters is a
+    // word or a set phrase — a card's target_text, a one-word answer. Longer
+    // runs are sentences, and segmenting them needs a tokenizer we do not
+    // ship, so they contribute their characters only.
+    if (run.length <= 4) counts.set(run, (counts.get(run) ?? 0) + 1);
+  }
+}
+
+// ─── Entries ────────────────────────────────────────────────────────
+/** Cap the readings per phrase: 了 alone doubles the count of every phrase. */
+const MAX_VARIANTS = 4;
+
+function pinyinsFor(phrase) {
+  let combos = [''];
+  for (const ch of phrase) {
+    const syls = readings.get(ch);
+    if (!syls) return [];
+    const next = [];
+    for (const prefix of combos) {
+      for (const s of syls) {
+        if (next.length >= MAX_VARIANTS * 2) break;
+        next.push(prefix + s);
+      }
+    }
+    combos = next;
+  }
+  return [...new Set(combos)].slice(0, MAX_VARIANTS);
+}
+
+const entries = [];
+const seen = new Set();
+for (const ch of chars) {
+  const p = pinyinsFor(ch);
+  if (p.length) {
+    entries.push({ text: ch, pinyin: p, weight: (counts.get(ch) ?? 0) + 1 });
+    seen.add(ch);
+  }
+}
+for (const [phrase, n] of counts) {
+  if (phrase.length < 2 || seen.has(phrase)) continue;
+  const p = pinyinsFor(phrase);
+  // A multi-character phrase outranks its own characters: a learner typing
+  // `nihao` wants 你好, not 你 then 好.
+  if (p.length) entries.push({ text: phrase, pinyin: p, weight: n * 10 + phrase.length });
+}
+
+entries.sort((a, b) => b.weight - a.weight || a.text.localeCompare(b.text));
+
+const missing = [...chars].filter((c) => !readings.has(c));
+
+// ─── Emit ───────────────────────────────────────────────────────────
+// One line per entry, `pinyin|pinyin\ttext`, packed into a single string:
+// 6,000 object literals cost far more parse time and bundle size than one
+// string split at module load.
+const packed = entries.map((e) => `${e.pinyin.join('|')}\t${e.text}`).join('\n');
+
+const out = `/**
+ * Pinyin -> Chinese candidates for the in-app input method.
+ *
+ * GENERATED by scripts/gen-zh-lexicon.mjs — do not edit by hand. Readings come
+ * from Unihan's kMandarin (Unicode, Unicode licence); the vocabulary is every
+ * character and short phrase the Chinese courses teach, read out of
+ * supabase/seed.sql and the content-patch migrations.
+ *
+ * Scoped to the curriculum on purpose. A general Chinese IME needs a word list
+ * and a frequency model we do not have and would not ship in an app binary;
+ * what a learner is asked to type is bounded by the course, and the exercise's
+ * own answer is added to the candidates at runtime. Words outside the course
+ * are still reachable one character at a time.
+ *
+ * ${entries.length} entries, ${chars.size} distinct characters.
+ * Pinyin is TONELESS and writes ü as v, which is what learners type.
+ */
+
+/** \`pinyin|pinyin\\ttext\`, one entry per line, most useful first. */
+export const ZH_LEXICON = \`${packed}\`;
+`;
+
+writeFileSync(join(root, 'lib', 'script-input', 'zh-lexicon.ts'), out);
+console.log(`entries: ${entries.length}  chars: ${chars.size}  bytes: ${out.length}`);
+if (missing.length) console.log(`no reading for ${missing.length}: ${missing.join('')}`);

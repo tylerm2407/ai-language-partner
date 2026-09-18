@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -9,6 +9,8 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { setAudioSessionMode, recordingModeFor, speechRecordingOptions } from '../../lib/audio-session';
 import { chatVadForLevel, createVadState, feedVadSample, type VadState } from '../../lib/vad';
 import { LiveComposer } from './LiveComposer';
+import { ScriptInput } from '../shared/ScriptInput';
+import type { LanguageCode } from '../../types';
 import type { VoiceGender } from '../../lib/voice-preference';
 import { CHAT_MIN_CONFIDENCE, sttConfidence } from '../../lib/handsfree-grading';
 import type { Transcription } from '../../lib/ai';
@@ -571,8 +573,10 @@ export function ChatInput({
         </Pressable>
       )}
 
-      <TextInput
-        className="flex-1 border-2 rounded-[14px] px-4 py-3 text-base mr-3 max-h-24 font-sans"
+      <ScriptInput
+        language={(targetLanguage ?? null) as LanguageCode | null}
+        containerStyle={{ flex: 1, marginRight: 12 }}
+        className="border-2 rounded-[14px] px-4 py-3 text-base max-h-24 font-sans"
         style={{ borderColor: c.cardBorder, backgroundColor: c.surface2, color: c.ink }}
         placeholder="Type your message..."
         placeholderTextColor={c.idle}

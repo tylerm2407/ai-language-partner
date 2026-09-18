@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { View, TextInput, Pressable } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
+import { typedLanguageFor } from '../../lib/script-input';
+import { ScriptInput } from '../shared/ScriptInput';
 import { Body, Caption } from '../ui2/Ui2Text';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { spacing, radii } from '../../config/theme';
@@ -81,6 +83,12 @@ export function ErrorCorrectionExercise({
 
 
   const isCorrect = result?.isCorrect ?? false;
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -110,7 +118,9 @@ export function ErrorCorrectionExercise({
 
       {/* Corrected Input */}
       <View>
-        <TextInput
+        <ScriptInput
+          language={typedLanguageFor(exercise.type, language as LanguageCode | undefined)}
+          context={scriptContext}
           value={userInput}
           onChangeText={setUserInput}
           placeholder={correctionInstruction ? 'Type the rewritten sentence...' : 'Type the corrected sentence...'}

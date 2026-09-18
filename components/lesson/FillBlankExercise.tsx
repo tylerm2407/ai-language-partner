@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
+import { typedLanguageFor } from '../../lib/script-input';
+import { ScriptInput } from '../shared/ScriptInput';
 import { SlabButton } from '../ui2/SlabButton';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
+import { blankContext, exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface FillBlankExerciseProps {
@@ -73,6 +75,18 @@ export function FillBlankExercise({
   };
 
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
+  /** Lets the input bar offer the missing PIECE of the word, not the word. */
+  const blank = useMemo(
+    () => (exercise.type === 'fill_blank' ? blankContext(exercise.prompt) : undefined),
+    [exercise.type, exercise.prompt],
+  );
+
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <ExerciseCard type={exercise.type} prompt="Fill in the blank"
@@ -103,7 +117,10 @@ export function FillBlankExercise({
       {/* Deliberately NOT Ui2Input: this field's outline is graded feedback
           (neutral / green / red) and Ui2Input only models neutral, focus and
           error. Swapping it in would silently drop the "you got it" state. */}
-      <TextInput
+      <ScriptInput
+        language={typedLanguageFor(exercise.type, language as LanguageCode | undefined)}
+        context={scriptContext}
+        trim={blank}
         className="border-2 rounded-[14px] px-4 py-2.5 text-base"
         style={{ borderColor: getBorderColor(), color: c.ink }}
         placeholder="Type the missing word..."

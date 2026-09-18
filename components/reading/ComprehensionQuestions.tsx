@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { haptic } from '../../lib/haptics';
 import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { gradeReadingAnswer, gradeReadingAnswerAsync, readingQuestionOptions } from '../../lib/reading-questions';
 import { gradeOpenResponse, fallbackNote, type OpenGradeResult } from '../../lib/semantic-grading';
-import type { ReadingQuestion } from '../../types';
+import type { LanguageCode, ReadingQuestion } from '../../types';
+import { ScriptInput } from '../shared/ScriptInput';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { ReaderThemeScope } from './ReaderThemeScope';
 
@@ -20,6 +21,12 @@ interface Props {
    * current profile. Choices never leave the device.
    */
   cefrLevel?: string;
+  /**
+   * The language a short answer is written in — the passage's, not the
+   * learner's. Drives the in-app input method, so a Japanese passage's
+   * questions can be answered on a phone with no Japanese keyboard.
+   */
+  language?: LanguageCode | null;
 }
 
 /** Stays inside the reader's theme boundary so a passage read under Night
@@ -32,7 +39,7 @@ export function ComprehensionQuestions(props: Props) {
   );
 }
 
-function ComprehensionQuestionsBody({ questions, onComplete, onExit, cefrLevel }: Props) {
+function ComprehensionQuestionsBody({ questions, onComplete, onExit, cefrLevel, language }: Props) {
   const { c } = useUi2Theme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -212,7 +219,8 @@ function ComprehensionQuestionsBody({ questions, onComplete, onExit, cefrLevel }
         {/* Short Answer */}
         {question.questionType === 'short_answer' && (
           <View>
-            <TextInput
+            <ScriptInput
+              language={language ?? null}
               value={textAnswer}
               onChangeText={setTextAnswer}
               placeholder="Type your answer..."

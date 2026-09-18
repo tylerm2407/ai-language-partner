@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, type ViewStyle } from 'react-native';
+import { useRef, useState, useMemo } from 'react';
+import { View, Text, Pressable, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { typedLanguageFor } from '../../lib/script-input';
+import { ScriptInput } from '../shared/ScriptInput';
 import { FeedbackCard } from './FeedbackCard';
 import { SlabButton } from '../ui2/SlabButton';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -153,6 +155,12 @@ export function ListeningExercise({
     }
     return { backgroundColor: c.surface2, borderColor: 'transparent' };
   };
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <ExerciseCard type={exercise.type} prompt="Listen and answer">
@@ -258,7 +266,9 @@ export function ListeningExercise({
         </View>
       ) : (
         <>
-          <TextInput
+          <ScriptInput
+            language={typedLanguageFor(exercise.type, language as LanguageCode | undefined)}
+            context={scriptContext}
             className="border-2 rounded-[14px] px-4 py-2.5 text-base"
             style={{
               borderColor: submitted ? (result?.isCorrect ? c.green : c.error) : c.cardBorder,

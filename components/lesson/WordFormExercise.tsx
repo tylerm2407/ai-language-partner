@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
+import { typedLanguageFor } from '../../lib/script-input';
+import { ScriptInput } from '../shared/ScriptInput';
 import { SlabButton } from '../ui2/SlabButton';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
@@ -76,6 +78,12 @@ export function WordFormExercise({
     if (result?.isCorrect) return c.green;
     return c.error;
   };
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <ExerciseCard type={exercise.type} prompt="Complete the word form"
@@ -119,7 +127,11 @@ export function WordFormExercise({
 
       <ExerciseHint hint={exercise.hintText} revealed={submitted || showResult} />
 
-      <TextInput
+      <ScriptInput
+
+        language={typedLanguageFor(exercise.type, language as LanguageCode | undefined)}
+
+        context={scriptContext}
         className="border-2 rounded-[14px] px-4 py-2.5 text-base"
         style={{ borderColor: getBorderColor(), color: c.ink }}
         placeholder="Type the correct word form..."

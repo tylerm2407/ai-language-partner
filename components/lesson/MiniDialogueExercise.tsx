@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { View, Text, type ViewStyle } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { typedLanguageFor } from '../../lib/script-input';
+import { ScriptInput } from '../shared/ScriptInput';
 import { FeedbackCard } from './FeedbackCard';
 import { SlabButton } from '../ui2/SlabButton';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -181,6 +183,12 @@ export function MiniDialogueExercise({
   const bubbleStyle = (isEven: boolean): ViewStyle => ({
     backgroundColor: isEven ? c.surface2 : c.primaryTint,
   });
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <ExerciseCard type={exercise.type} prompt={exercise.prompt}
@@ -209,7 +217,9 @@ export function MiniDialogueExercise({
                   {line.speaker}
                 </Text>
                 {isBlank ? (
-                  <TextInput
+                  <ScriptInput
+                    language={typedLanguageFor(exercise.type, language as LanguageCode | undefined)}
+                    context={scriptContext}
                     className="border-2 rounded-[10px] px-3 py-2 text-base min-w-[150px]"
                     style={{ borderColor: getBorderColor(index), color: c.ink }}
                     placeholder="Type your line..."

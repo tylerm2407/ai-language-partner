@@ -2,7 +2,8 @@ import { useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { WritingPrompt } from '../../types';
+import type { LanguageCode, WritingPrompt } from '../../types';
+import { ScriptInput } from '../shared/ScriptInput';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { haptic } from '../../lib/haptics';
 import { cefrAccessibilityLabel, cefrCanDo } from '../../lib/cefr-labels';
@@ -206,7 +207,8 @@ export function WritingExercise({ prompt, language, isGrading, attemptNumber = 1
           {/* Free-form text input (for essay, academic, free types) */}
           {(scaffoldType === 'free' || scaffoldType === 'essay' || scaffoldType === 'academic') && (
             <>
-              <TextInput
+              <ScriptInput
+                language={(language ?? null) as LanguageCode | null}
                 value={text}
                 onChangeText={setText}
                 placeholder="Start writing..."

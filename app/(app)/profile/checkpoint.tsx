@@ -59,7 +59,7 @@
  * check-in.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,6 +72,7 @@ import { usePressed } from '../../../hooks/usePressed';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useAppStore } from '../../../stores/useAppStore';
 import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { ScriptInput } from '../../../components/shared/ScriptInput';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
 import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
@@ -345,7 +346,8 @@ function CheckpointQuestion({ item, label, value, onAnswer, userId, language, lo
           locked={locked}
         />
       ) : (
-        <TextInput
+        <ScriptInput
+          language={language}
           value={value}
           onChangeText={(text) => onAnswer(item.id, text)}
           editable={!locked}

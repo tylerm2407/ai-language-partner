@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
+import { ScriptInput } from '../shared/ScriptInput';
+import { typedLanguageFor } from '../../lib/script-input';
 import { FeedbackCard } from './FeedbackCard';
 import { Body, Caption } from '../ui2/Ui2Text';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -87,6 +89,12 @@ export function DictationExercise({
 
 
   const isCorrect = result?.isCorrect ?? false;
+  /** Ranks the candidate bar toward what this row teaches; never adds to it. */
+  const scriptContext = useMemo(
+    () => [exercise.correctAnswer, ...(exercise.acceptedAnswers ?? [])],
+    [exercise.correctAnswer, exercise.acceptedAnswers],
+  );
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -183,7 +191,9 @@ export function DictationExercise({
 
       {/* Text Input */}
       <View>
-        <TextInput
+        <ScriptInput
+          language={typedLanguageFor(exercise.type, effectiveLanguage as LanguageCode | undefined)}
+          context={scriptContext}
           value={userInput}
           onChangeText={setUserInput}
           placeholder="Type what you heard..."
