@@ -235,6 +235,37 @@ CREATE TRIGGER fluenci_guard_language_limit
   ON public.user_profiles
   FOR EACH ROW EXECUTE FUNCTION public.fluenci_guard_language_limit();
 
+/**
+ * onboarding_completed is one-way for end users. Nothing in the app ever sets
+ * it back to false, and the placeholder exemption above trusts "not completed"
+ * to mean "never onboarded" — without this, resetting it would let a learner
+ * with no SRS or lesson history (a tutor-only learner, say) trade languages
+ * on the free tier indefinitely.
+ */
+CREATE OR REPLACE FUNCTION public.fluenci_guard_onboarding_one_way()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF COALESCE(auth.role(), '') IN ('authenticated', 'anon')
+     AND OLD.onboarding_completed IS TRUE
+     AND NEW.onboarding_completed IS NOT TRUE THEN
+    RAISE EXCEPTION 'onboarding_completed cannot be reset' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.fluenci_guard_onboarding_one_way() FROM public, anon, authenticated;
+
+DROP TRIGGER IF EXISTS fluenci_guard_onboarding_one_way ON public.user_profiles;
+CREATE TRIGGER fluenci_guard_onboarding_one_way
+  BEFORE UPDATE OF onboarding_completed
+  ON public.user_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.fluenci_guard_onboarding_one_way();
+
 -- The active language is never locked: whichever path made it active (and got
 -- past the gate above) reopens it here.
 CREATE OR REPLACE FUNCTION public.fluenci_sync_active_enrollment()
