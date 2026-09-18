@@ -10,6 +10,7 @@ import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconcilia
 import { useEnsurePlacement } from '../../hooks/useEnsurePlacement';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { LanguageKeepSheet } from '../../components/ui2/LanguageKeepSheet';
 
 export default function AppLayout() {
   const { c } = useUi2Theme();
@@ -100,6 +101,10 @@ export default function AppLayout() {
           <Tabs.Screen name="news" options={{ href: null }} />
           <Tabs.Screen name="assignments" options={{ href: null }} />
         </Tabs>
+        {/* A lapsed paid plan with several languages open: pick which to keep
+            (migration 147). Here rather than on a screen because the server
+            refuses every switch until it is resolved, wherever the learner is. */}
+        <LanguageKeepSheet />
       </View>
     </ErrorBoundary>
   );

@@ -126,6 +126,15 @@ type EventName =
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'
   | 'feature_unavailable'
+  /** The one-open-language wall was shown (migration 147). `code` says which:
+   *  FLL01 limit, FLL02 locked, FLL03 a lapsed plan must pick what to keep.
+   *  `screen` = 'switcher' | 'keep'; `count` = open languages on the keep sheet. */
+  | 'language_limit_shown'
+  /** What the learner did at that wall. `outcome` = 'upgrade' (opened the
+   *  plans) | 'switch_instead' (locked the current language) | 'kept'
+   *  (resolved a lapse; `count` = languages kept). `language` is the code of
+   *  the language started, never anything the learner wrote. */
+  | 'language_limit_resolved'
 
   /**
    * A screen was shown.
